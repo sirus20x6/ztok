@@ -80,5 +80,8 @@
     "@vscode/test-electron": "^2.3.9",
     "mocha": "^10.4.0",
     "typescript": "^5.4.0"
+  },
+  "overrides": {
+    "serialize-javascript": "^7.0.5"
   }
 }
