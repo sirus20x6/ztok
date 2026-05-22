@@ -68,6 +68,13 @@ version: headline, perf numbers, equivalence deltas).
 
 <sub>Same vocab, same corpus bytes, same machine; both emit ~2.688 M ids. Regenerate with `python3 docs/throughput_chart.py`.</sub>
 
+ztok is faster than each reference library on *its own vocab*, too —
+single-thread, same 9 MB corpus, id-matched per pair:
+
+![ztok single-thread throughput vs tiktoken, HF tokenizers, and SentencePiece, each on its own vocab](docs/competitors.png)
+
+<sub>**1.9×** vs tiktoken (cl100k), **3.2×** vs HF tokenizers (gpt2), **2.0×** vs SentencePiece BPE (llama2), **1.6×** vs SentencePiece Unigram (t5). The multithreaded gap is wider: **3.3–5.6×** vs SentencePiece at batch ×48. Regenerate with `python3 docs/competitors_chart.py`.</sub>
+
 ## Beyond bit-identical (post-1.25)
 
 ztok matches tiktoken / HF / SentencePiece bit-for-bit (13/13 pairs at
