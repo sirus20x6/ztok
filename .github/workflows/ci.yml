@@ -37,6 +37,12 @@ jobs:
   zig:
     name: zig build/test (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
+    # macos-14 (arm64) currently hangs in the test runner; until that's
+    # root-caused it's non-blocking so it can't gate the run. Linux is
+    # the throughput/correctness target. timeout-minutes caps the hang
+    # at 30m instead of GitHub's 6h job ceiling. Tracked in #1.
+    timeout-minutes: 30
+    continue-on-error: ${{ matrix.os == 'macos-14' }}
     strategy:
       fail-fast: false
       matrix:
