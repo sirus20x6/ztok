@@ -80,6 +80,7 @@ pub const vocab_extend = @import("vocab_extend.zig");
 pub const vocab_prune = @import("vocab_prune.zig");
 pub const vocab_merge = @import("vocab_merge.zig");
 pub const transcode = @import("transcode.zig");
+pub const tokenize_dataset = @import("tokenize_dataset.zig");
 pub const vocab_continued_pretrain = @import("vocab_continued_pretrain.zig");
 pub const vocab_viz = @import("vocab_viz.zig");
 
@@ -203,6 +204,7 @@ test {
     _ = vocab_prune;
     _ = vocab_merge;
     _ = transcode;
+    _ = tokenize_dataset;
     _ = vocab_continued_pretrain;
     _ = vocab_viz;
     _ = cl100k;

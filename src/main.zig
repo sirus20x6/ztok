@@ -22,7 +22,7 @@ const ztok = @import("ztok");
 // build.zig.zon at build time via addOptions.
 const VERSION = ztok.VERSION;
 
-const Cmd = enum { encode, encode_multimodal, decode, info, explain, train, chunk, validate, roundtrip, diff, eval, transcode, serve, grpc_serve, bench, fingerprint, adapt_vocab, merge_vocab, visualize, help, version };
+const Cmd = enum { encode, encode_multimodal, decode, info, explain, train, tokenize_dataset, chunk, validate, roundtrip, diff, eval, transcode, serve, grpc_serve, bench, fingerprint, adapt_vocab, merge_vocab, visualize, help, version };
 
 pub fn main(init: std.process.Init) !void {
     const gpa = init.gpa;
@@ -65,6 +65,7 @@ pub fn main(init: std.process.Init) !void {
         .info => try cmdInfo(gpa, rest, out),
         .explain => try cmdExplain(gpa, io, rest, out),
         .train => try cmdTrain(gpa, io, rest, out),
+        .tokenize_dataset => try cmdTokenizeDataset(gpa, io, rest, out),
         .chunk => try cmdChunk(gpa, io, rest, out),
         .validate => try cmdValidate(gpa, io, rest, out),
         .roundtrip => try cmdRoundtrip(gpa, io, rest, out),
@@ -88,6 +89,7 @@ fn parseCmd(s: []const u8) ?Cmd {
     if (std.mem.eql(u8, s, "info")) return .info;
     if (std.mem.eql(u8, s, "explain")) return .explain;
     if (std.mem.eql(u8, s, "train")) return .train;
+    if (std.mem.eql(u8, s, "tokenize-dataset")) return .tokenize_dataset;
     if (std.mem.eql(u8, s, "chunk")) return .chunk;
     if (std.mem.eql(u8, s, "validate")) return .validate;
     if (std.mem.eql(u8, s, "roundtrip")) return .roundtrip;
@@ -121,6 +123,10 @@ fn printUsage(out: *std.Io.Writer) !void {
         \\                 [--em-iterations N] [--shrink-rate F]   (unigram)
         \\                 [--branches N]                          (monster)
         \\                 [--avoid PATH] [--avoid-mode penalize|exclude]
+        \\  ztok tokenize-dataset --model PATH --input PATH --output PATH [--cl100k]
+        \\                 [--format bin|npy] [--seq-len N] [--dtype auto|u16|u32]
+        \\                 [--doc-mode lines|whole] [--add-bos --bos-id N]
+        \\                 [--add-eos --eos-id N] [--pad-last --pad-id N]
         \\  ztok chunk     --model PATH [--cl100k] --max-tokens N [--overlap N]
         \\                 [--boundary token|codepoint|word|sentence|paragraph]
         \\                 [--format jsonl|text] [TEXT]
@@ -269,6 +275,16 @@ const Args = struct {
     to_path: ?[]const u8 = null,
     // encode-multimodal
     spec_path: ?[]const u8 = null,
+    // tokenize-dataset
+    seq_len: ?usize = null,
+    dtype: ?[]const u8 = null,
+    add_bos: bool = false,
+    add_eos: bool = false,
+    bos_id: ?u32 = null,
+    eos_id: ?u32 = null,
+    pad_last: bool = false,
+    pad_id: ?u32 = null,
+    doc_mode: ?[]const u8 = null,
     positional: std.ArrayList([]const u8) = .empty,
 
     fn parse(allocator: std.mem.Allocator, raw: []const []const u8) !Args {
@@ -493,6 +509,36 @@ const Args = struct {
             } else if (std.mem.eql(u8, tok, "--corpus-bytes")) {
                 if (i + 1 >= raw.len) return error.MissingValue;
                 a.corpus_bytes = try std.fmt.parseInt(usize, raw[i + 1], 10);
+                i += 1;
+            } else if (std.mem.eql(u8, tok, "--seq-len")) {
+                if (i + 1 >= raw.len) return error.MissingValue;
+                a.seq_len = try std.fmt.parseInt(usize, raw[i + 1], 10);
+                i += 1;
+            } else if (std.mem.eql(u8, tok, "--dtype")) {
+                if (i + 1 >= raw.len) return error.MissingValue;
+                a.dtype = raw[i + 1];
+                i += 1;
+            } else if (std.mem.eql(u8, tok, "--add-bos")) {
+                a.add_bos = true;
+            } else if (std.mem.eql(u8, tok, "--add-eos")) {
+                a.add_eos = true;
+            } else if (std.mem.eql(u8, tok, "--bos-id")) {
+                if (i + 1 >= raw.len) return error.MissingValue;
+                a.bos_id = try std.fmt.parseInt(u32, raw[i + 1], 10);
+                i += 1;
+            } else if (std.mem.eql(u8, tok, "--eos-id")) {
+                if (i + 1 >= raw.len) return error.MissingValue;
+                a.eos_id = try std.fmt.parseInt(u32, raw[i + 1], 10);
+                i += 1;
+            } else if (std.mem.eql(u8, tok, "--pad-last")) {
+                a.pad_last = true;
+            } else if (std.mem.eql(u8, tok, "--pad-id")) {
+                if (i + 1 >= raw.len) return error.MissingValue;
+                a.pad_id = try std.fmt.parseInt(u32, raw[i + 1], 10);
+                i += 1;
+            } else if (std.mem.eql(u8, tok, "--doc-mode")) {
+                if (i + 1 >= raw.len) return error.MissingValue;
+                a.doc_mode = raw[i + 1];
                 i += 1;
             } else if (std.mem.eql(u8, tok, "--base")) {
                 if (i + 1 >= raw.len) return error.MissingValue;
@@ -1087,6 +1133,118 @@ fn writePathpieceFile(io: std.Io, path: []const u8, r: *const ztok.train_pathpie
         std.debug.assert(b64.calcSize(bytes.len) <= enc_buf.len);
         const encoded = b64.encode(&enc_buf, bytes);
         try w.print("{s} {d}\n", .{ encoded, id });
+    }
+}
+
+fn cmdTokenizeDataset(gpa: std.mem.Allocator, io: std.Io, raw: []const []const u8, out: *std.Io.Writer) !void {
+    var args = try Args.parse(gpa, raw);
+    defer args.deinit(gpa);
+
+    const model_path = args.model_path orelse {
+        try out.writeAll("tokenize-dataset: --model PATH required\n");
+        return;
+    };
+    const input_path = args.input_path orelse {
+        try out.writeAll("tokenize-dataset: --input PATH required\n");
+        return;
+    };
+    const output_path = args.output_path orelse {
+        try out.writeAll("tokenize-dataset: --output PATH required\n");
+        return;
+    };
+
+    const fmt: ztok.tokenize_dataset.Format = blk: {
+        const f = args.format orelse "bin";
+        if (std.mem.eql(u8, f, "bin")) break :blk .bin;
+        if (std.mem.eql(u8, f, "npy")) break :blk .npy;
+        try out.print("tokenize-dataset: unknown --format '{s}' (expected bin|npy)\n", .{f});
+        return;
+    };
+
+    const doc_per_line: bool = blk: {
+        const m = args.doc_mode orelse "lines";
+        if (std.mem.eql(u8, m, "lines")) break :blk true;
+        if (std.mem.eql(u8, m, "whole")) break :blk false;
+        try out.print("tokenize-dataset: unknown --doc-mode '{s}' (expected lines|whole)\n", .{m});
+        return;
+    };
+
+    var loaded = loadPipelineAutoDetect(gpa, io, model_path) catch |err| {
+        try out.print("tokenize-dataset: failed to load {s}: {s}\n", .{ model_path, @errorName(err) });
+        std.process.exit(2);
+    };
+    defer loaded.deinit();
+
+    const dtype_bytes: u8 = blk: {
+        const d = args.dtype orelse "auto";
+        if (std.mem.eql(u8, d, "auto")) break :blk ztok.tokenize_dataset.pickDtypeBytes(loaded.vocabSize());
+        if (std.mem.eql(u8, d, "u16")) break :blk 2;
+        if (std.mem.eql(u8, d, "u32")) break :blk 4;
+        try out.print("tokenize-dataset: unknown --dtype '{s}' (expected auto|u16|u32)\n", .{d});
+        return;
+    };
+
+    var v = ztok.Vocab.empty(gpa);
+    defer v.deinit();
+    const pipe: ztok.Pipeline = .{
+        .normalizer = .identity,
+        .pre_tokenizer = if (args.cl100k) .cl100k else .identity,
+        .model = loaded.modelValue(),
+        .decoder = .concat,
+        .vocab = &v,
+    };
+
+    const opts: ztok.tokenize_dataset.Options = .{
+        .seq_len = args.seq_len orelse 2048,
+        .format = fmt,
+        .dtype_bytes = dtype_bytes,
+        .add_bos = args.add_bos,
+        .bos_id = args.bos_id orelse 0,
+        .add_eos = args.add_eos,
+        .eos_id = args.eos_id orelse 0,
+        .pad_last = args.pad_last,
+        .pad_id = args.pad_id orelse 0,
+        .doc_per_line = doc_per_line,
+    };
+
+    const input = std.Io.Dir.cwd().readFileAlloc(io, input_path, gpa, .unlimited) catch |err| {
+        try out.print("tokenize-dataset: failed to read {s}: {s}\n", .{ input_path, @errorName(err) });
+        std.process.exit(2);
+    };
+    defer gpa.free(input);
+
+    var ids: std.ArrayList(ztok.TokenId) = .empty;
+    defer ids.deinit(gpa);
+    const docs = try ztok.tokenize_dataset.tokenize(gpa, &pipe, input, opts, &ids);
+
+    var bytes: std.ArrayList(u8) = .empty;
+    defer bytes.deinit(gpa);
+    var sequences: usize = 0;
+    switch (fmt) {
+        .bin => try ztok.tokenize_dataset.serializeBin(gpa, ids.items, dtype_bytes, &bytes),
+        .npy => sequences = try ztok.tokenize_dataset.serializeNpy(gpa, ids.items, opts.seq_len, dtype_bytes, opts.pad_last, opts.pad_id, &bytes),
+    }
+
+    {
+        var file = try std.Io.Dir.cwd().createFile(io, output_path, .{ .truncate = true });
+        defer file.close(io);
+        var wbuf: [64 * 1024]u8 = undefined;
+        var fw = file.writer(io, &wbuf);
+        const w = &fw.interface;
+        defer w.flush() catch {};
+        try w.writeAll(bytes.items);
+    }
+
+    const dtype_name = if (dtype_bytes == 2) "uint16" else "uint32";
+    switch (fmt) {
+        .bin => try out.print(
+            "tokenize-dataset: wrote {s} — {d} docs, {d} tokens, flat {s} .bin ({d} bytes)\n",
+            .{ output_path, docs, ids.items.len, dtype_name, bytes.items.len },
+        ),
+        .npy => try out.print(
+            "tokenize-dataset: wrote {s} — {d} docs, {d} tokens -> {d} sequences × {d} ({s}) .npy\n",
+            .{ output_path, docs, ids.items.len, sequences, opts.seq_len, dtype_name },
+        ),
     }
 }
 
