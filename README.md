@@ -15,10 +15,11 @@ tie-break on `t5 × code`). Then it goes past parity — see
 
 - **Four model families** — byte-level BPE (greedy / longest-match /
   optimal), Unigram (Viterbi), WordPiece, and TokenMonster ungreedy.
-- **Fast, parallel by default** — cl100k at **19.6 MB/s** single-thread
-  scaling to **291 MB/s** batched ×48 +pin, **1.9–3.8× faster than
-  tiktoken** on the same corpus (chart below); portable AVX2/NEON SIMD
-  byte scanners; per-thread arenas, no hot-path allocs.
+- **Fast, parallel by default** — cl100k at **~20–23 MB/s** single-thread
+  scaling to **~291–425 MB/s** batched ×48 +pin (multilingual mix →
+  ASCII-heavy corpus), **1.9–5.5× faster than tiktoken** on identical
+  bytes (chart below); portable AVX2/NEON SIMD byte scanners; per-thread
+  arenas, no hot-path allocs.
 - **8 language bindings** over one stable C ABI — Python, Node.js, Ruby,
   Go, Rust, .NET, Java, Swift.
 - **Loads everything** — `.tiktoken`, HF `tokenizer.json`, SentencePiece
@@ -53,7 +54,7 @@ version: headline, perf numbers, equivalence deltas).
 | **Loaders** | `.tiktoken`, HF `tokenizer.json` (BPE / WordPiece / Unigram), SentencePiece `.model` (BPE / Unigram + byte_fallback), ztok `.ztm` (Monster), Mistral Tekken `.json`, HF `tokenizer_config.json` — with format auto-detect |
 | **Writers** | HF `tokenizer.json` (+ post-processors), SentencePiece `.model`, ztok `.ztm` |
 | **Training** | BPE, Unigram (EM + subword regularization), WordPiece, TokenMonster distillation, PathPiece (CTC-minimizing) |
-| **Performance** | cl100k vs **tiktoken** on an identical 9 MB corpus (EPYC 24c/48t, ReleaseFast): **19.6 vs 10.4 MB/s** single-thread (1.9×), **104.7 vs 48.8** batch ×8 (2.1×), **291 vs 76** batch ×48 +pin (3.8×). Gap widens with core count — chart below. |
+| **Performance** | cl100k vs **tiktoken** on identical corpus bytes (EPYC 24c/48t, ReleaseFast), shown as a range across a multilingual mix and an ASCII-heavy corpus: **~20–23 vs 10 MB/s** single-thread (1.9–2.2×), **~105–132 vs 49–52** batch ×8 (2.0–2.7×), **~291–425 vs 76–78** batch ×48 +pin (3.8–5.5×). Gap widens with core count — chart below. |
 | **Targets** | x86_64 / aarch64 native; wasm32-wasi (static lib); wasm32-freestanding (browser, SIMD128) |
 | **C ABI** | `libztok.{a,so}` + `include/ztok.h` — persistent batch pools, streaming encode, overlay channels, format auto-detect; CMake + pkg-config install via `zig build -p <prefix>` |
 | **Language bindings** | **8** — Python, Node.js, Ruby, Go, Rust, .NET, Java, Swift — over one C ABI, each with round-trip fuzz harnesses |
@@ -66,7 +67,7 @@ version: headline, perf numbers, equivalence deltas).
 
 ![ztok vs tiktoken cl100k throughput on an identical corpus: single-thread, batch ×8, batch ×48](docs/throughput.png)
 
-<sub>Same vocab, same corpus bytes, same machine; both emit ~2.688 M ids. Regenerate with `python3 docs/throughput_chart.py`.</sub>
+<sub>Bar = multilingual mix (conservative); whisker = ASCII-heavy peak. Same vocab & corpus bytes per pair, same machine; both tokenizers emit equal id counts. Regenerate with `python3 docs/throughput_chart.py`.</sub>
 
 ztok is faster than each reference library on *its own vocab*, too —
 single-thread, same 9 MB corpus, id-matched per pair:
