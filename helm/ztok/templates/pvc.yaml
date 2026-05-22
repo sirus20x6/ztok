@@ -1,0 +1,22 @@
+{{- if .Values.persistentCache.enabled -}}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "ztok.fullname" . }}-cache
+  namespace: {{ .Release.Namespace | quote }}
+  labels:
+    {{- include "ztok.labels" . | nindent 4 }}
+  {{- with .Values.persistentCache.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  accessModes:
+    - {{ .Values.persistentCache.accessMode }}
+  resources:
+    requests:
+      storage: {{ .Values.persistentCache.size | quote }}
+  {{- with .Values.persistentCache.storageClass }}
+  storageClassName: {{ . | quote }}
+  {{- end }}
+{{- end }}

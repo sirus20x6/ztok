@@ -1,0 +1,43 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ztok"
+version = "1.16.0"
+description = "Python bindings for ztok — a fast, multithreaded tokenizer toolkit (ctypes wrapper around libztok)."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "AGPL-3.0-only" }
+authors = [{ name = "ztok contributors" }]
+keywords = ["tokenizer", "bpe", "tiktoken", "sentencepiece", "tokenmonster", "wordpiece", "unigram", "nlp"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: GNU Affero General Public License v3",
+    "Operating System :: POSIX :: Linux",
+    "Operating System :: MacOS",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Text Processing :: Linguistic",
+]
+# Stdlib-only at runtime: ctypes ships with CPython.
+dependencies = []
+
+[project.optional-dependencies]
+dev = ["pytest>=7"]
+
+[project.urls]
+Homepage = "https://github.com/sirus20x6/ztok"
+Repository = "https://github.com/sirus20x6/ztok"
+
+[tool.setuptools]
+packages = ["ztok"]
+
+[tool.setuptools.package-data]
+ztok = ["*.so", "*.dylib"]

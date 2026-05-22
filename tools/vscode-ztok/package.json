@@ -1,0 +1,84 @@
+{
+  "name": "vscode-ztok",
+  "displayName": "ZTok Tokenizer",
+  "description": "Live token highlighting, count, and hover info backed by the ztok tokenizer library.",
+  "version": "0.1.0",
+  "publisher": "anthropic-ztok",
+  "license": "AGPL-3.0-only",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/sirus20x6/ztok.git",
+    "directory": "tools/vscode-ztok"
+  },
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Other",
+    "Visualization"
+  ],
+  "main": "./out/src/extension.js",
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "contributes": {
+    "commands": [
+      {
+        "command": "ztok.chooseVocab",
+        "title": "ZTok: Choose tokenizer..."
+      },
+      {
+        "command": "ztok.toggleHighlight",
+        "title": "ZTok: Toggle token highlighting"
+      },
+      {
+        "command": "ztok.refresh",
+        "title": "ZTok: Refresh tokenization"
+      }
+    ],
+    "configuration": {
+      "title": "ZTok",
+      "properties": {
+        "ztok.vocabPath": {
+          "type": "string",
+          "default": "",
+          "description": "Absolute path to a tokenizer vocab file (.tiktoken / tokenizer.json / .model / .ztm). When empty, falls back to the bundled cl100k_base vocab."
+        },
+        "ztok.highlightEnabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Render alternating-color decorations over each token in the active editor."
+        },
+        "ztok.maxTokensRendered": {
+          "type": "number",
+          "default": 5000,
+          "description": "Maximum number of tokens to decorate per visible viewport. Tokens beyond this cap are skipped."
+        },
+        "ztok.debounceMs": {
+          "type": "number",
+          "default": 300,
+          "description": "Milliseconds to wait after the last edit before re-tokenizing."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "pretest": "npm run compile",
+    "test": "node ./out/test/runTest.js",
+    "clean": "rm -rf out"
+  },
+  "dependencies": {
+    "ztok": "file:../../bindings/nodejs"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/vscode": "^1.85.0",
+    "@types/mocha": "^10.0.6",
+    "@vscode/test-electron": "^2.3.9",
+    "mocha": "^10.4.0",
+    "typescript": "^5.4.0"
+  }
+}

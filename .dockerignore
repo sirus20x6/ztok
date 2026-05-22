@@ -1,0 +1,54 @@
+# Keep the docker build context small — Zig pulls deps fresh from the
+# global cache anyway, so the host's stale .zig-cache only bloats the
+# context tarball. Likewise for the host-built artefacts.
+.zig-cache/
+zig-out/
+.git/
+.gitignore
+.github/
+
+# Editor/OS leftovers.
+.DS_Store
+*.swp
+*~
+
+# Local benchmarks + corpus dumps — none of this needs to ship in the
+# image. The runtime stage mounts vocabs from the host via -v.
+bench/vocabs/*.json
+bench/vocabs/*.model
+bench/vocabs/*.ztm
+bench/vocabs/*.vocab
+bench/vocabs/*.tiktoken
+bench/__pycache__/
+bench/.benchmarks/
+.benchmarks/
+
+# Bindings have their own toolchain envs that don't help libztok build.
+bindings/python/.pytest_cache/
+bindings/python/__pycache__/
+bindings/python/ztok.egg-info/
+bindings/python/.benchmarks/
+bindings/python/dist/
+bindings/python/build/
+bindings/nodejs/node_modules/
+bindings/ruby/vendor/
+bindings/ruby/.bundle/
+bindings/ruby/Gemfile.lock
+
+# Fuzz corpus + crash dumps don't belong in a container.
+fuzz/corpus/crash-*
+fuzz/corpus/leak-*
+vgcore.*
+
+# Reference vendored corpora used by training tests; not needed at
+# runtime and they're heavy.
+refs/
+
+# Local Docker scratch outputs.
+*.tar
+*.tar.gz
+
+# CI/IDE artefacts.
+.vscode/
+.idea/
+*.iml

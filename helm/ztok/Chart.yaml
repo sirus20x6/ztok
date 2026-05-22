@@ -1,0 +1,30 @@
+apiVersion: v2
+name: ztok
+description: ztok HTTP tokenizer server (`ztok serve`) for Kubernetes
+type: application
+# Chart version is independent of the application version. Bump the
+# MINOR component when the chart gains a feature, MAJOR on breaking
+# values.yaml changes, PATCH for template-only fixes.
+version: 0.1.0
+# appVersion tracks the ztok binary inside the published image. Keep
+# in sync with .image.tag default in values.yaml.
+appVersion: "1.22.0"
+kubeVersion: ">=1.23.0-0"
+home: https://github.com/sirus20x6/ztok
+sources:
+  - https://github.com/sirus20x6/ztok
+keywords:
+  - tokenizer
+  - nlp
+  - llm
+  - bpe
+  - sentencepiece
+  - http
+maintainers:
+  - name: ztok maintainers
+    url: https://github.com/sirus20x6/ztok
+annotations:
+  # Surface useful metadata to Artifact Hub without making it a hard
+  # requirement (these annotations are ignored by `helm install`).
+  category: AI
+  licenses: AGPL-3.0-only

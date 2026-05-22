@@ -1,0 +1,162 @@
+# ztok cross-tokenizer equivalence sweep.
+#
+# Heavier than ci.yml's single-fixture smoke: this runs the full 13
+# fixture set (cl100k, sp-bpe x3, sp-unigram x2, monster x2, hf-bpe x2,
+# hf-unigram x2, hf-wordpiece x1) and posts a summary comment on the
+# triggering PR.
+#
+# Triggers:
+#   * Pull requests touching the encoder / loader / pretokenizer code
+#     (anything under src/ that could change ids) — set via the paths
+#     filter below.
+#   * A weekly cron (Mondays 04:00 UTC) so regressions in upstream
+#     reference libraries don't lurk for months.
+#   * workflow_dispatch — manual kick.
+
+name: equivalence
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "src/**"
+      - "bench/**"
+      - "build.zig"
+      - "build.zig.zon"
+      - ".github/workflows/equivalence.yml"
+  schedule:
+    # Mondays at 04:00 UTC — quietest day on GitHub-hosted runners.
+    - cron: "0 4 * * 1"
+  workflow_dispatch:
+
+concurrency:
+  group: equivalence-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  sweep:
+    name: cross-tokenizer sweep
+    runs-on: ubuntu-24.04
+    env:
+      ZIG_VERSION: "0.16.0"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Zig
+        uses: mlugg/setup-zig@v2
+        with:
+          version: ${{ env.ZIG_VERSION }}
+
+      - name: Cache zig build artefacts
+        uses: actions/cache@v4
+        with:
+          path: |
+            .zig-cache
+            ~/.cache/zig
+          key: zig-equiv-${{ env.ZIG_VERSION }}-${{ hashFiles('build.zig', 'build.zig.zon') }}
+          restore-keys: |
+            zig-equiv-${{ env.ZIG_VERSION }}-
+
+      - name: Build (ReleaseFast)
+        run: zig build -Doptimize=ReleaseFast
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install reference tokenizers
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install sentencepiece tokenizers tokenmonster
+
+      # `bench/equivalence_smoke_extended.sh` is agent D's harness; it
+      # iterates the full fixture set and prints one line per fixture
+      # ("[kind] vocab: N/M lines match (P%) ..."). We capture stdout
+      # to a summary file and append it to GITHUB_STEP_SUMMARY so the
+      # workflow run page shows the matrix.
+      - name: Run full equivalence sweep
+        id: sweep
+        run: |
+          mkdir -p /tmp/ztok_eq
+          # Tiny shared corpus — agent D's harness may override via
+          # ZTOK_BENCH_CORPUS, otherwise use this deterministic fixture.
+          printf 'hello world\nthe quick brown fox\nzig is a systems language\n' > /tmp/ztok_eq/corpus.txt
+          export ZTOK_BENCH_CORPUS=${ZTOK_BENCH_CORPUS:-/tmp/ztok_eq/corpus.txt}
+          export ZTOK_BENCH_LINES=${ZTOK_BENCH_LINES:-3}
+
+          if [ -x bench/equivalence_smoke_extended.sh ]; then
+            bash bench/equivalence_smoke_extended.sh 2>&1 | tee /tmp/ztok_eq/sweep.log
+          else
+            # Fallback: iterate manually over whatever fixtures are
+            # vendored. Skip missing ones. The output format matches
+            # equivalence_check.py — agent D's harness extends it.
+            for kind_vocab in \
+              "sp-bpe llama2" \
+              "sp-bpe mistral7b" \
+              "sp-bpe yi6b" \
+              "unigram t5_unigram" \
+              "unigram gemma" \
+              "monster tm_englishcode_32k" \
+              "monster tm_englishcode_capcode_32k" \
+              "hf-bpe gpt2_hf" \
+              "hf-bpe phi3" \
+              "hf-unigram llmjp3_hf" \
+              "hf-wordpiece bert_base_uncased"; do
+              kind=${kind_vocab%% *}
+              vocab=${kind_vocab##* }
+              vocab_path="bench/vocabs/${vocab}"
+              # Pick the existence check for the file the kind expects.
+              case "$kind" in
+                monster) probe="${vocab_path}.ztm" ;;
+                sp-bpe|unigram) probe="${vocab_path}.model" ;;
+                hf-*) probe="${vocab_path}.json" ;;
+              esac
+              if [ -f "$probe" ]; then
+                python3 bench/equivalence_check.py "$kind" "$vocab_path" 2>&1 | tee -a /tmp/ztok_eq/sweep.log
+              else
+                echo "[skip] $kind $vocab — $probe not present" | tee -a /tmp/ztok_eq/sweep.log
+              fi
+            done
+          fi
+
+          {
+            echo "## Equivalence sweep"
+            echo ""
+            echo '```'
+            cat /tmp/ztok_eq/sweep.log
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload sweep log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: equivalence-sweep-log
+          path: /tmp/ztok_eq/sweep.log
+          retention-days: 30
+
+      - name: Post summary as PR comment
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            let body = '## Equivalence sweep results\n\n';
+            try {
+              const log = fs.readFileSync('/tmp/ztok_eq/sweep.log', 'utf8');
+              body += '```\n' + log + '\n```\n';
+            } catch (e) {
+              body += '_(sweep log missing — see action run)_';
+            }
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body,
+            });

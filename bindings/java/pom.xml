@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Maven POM for the ztok Java binding.
+
+  Maven (not Gradle) because:
+    - the binding is a single thin module with zero runtime dependencies,
+    - every JDK ships with Maven-compatible POM consumption built into
+      tooling (IDEs, dependency-resolution downstream),
+    - the wrapper avoids the Gradle build-cache / daemon startup cost,
+      which dominates wall-clock time for a project this small.
+
+  Java 21+ is required for the Foreign Function & Memory API. JNI was
+  not used anywhere — the binding talks to libztok exclusively through
+  java.lang.foreign.Linker downcall handles.
+-->
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+                             http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>com.anthropic</groupId>
+    <artifactId>ztok</artifactId>
+    <version>1.23.0</version>
+    <packaging>jar</packaging>
+
+    <name>ztok</name>
+    <description>Java binding for libztok (FFM, Java 21+).</description>
+
+    <properties>
+        <maven.compiler.source>21</maven.compiler.source>
+        <maven.compiler.target>21</maven.compiler.target>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <junit.version>5.10.2</junit.version>
+    </properties>
+
+    <dependencies>
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter-api</artifactId>
+            <version>${junit.version}</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter-engine</artifactId>
+            <version>${junit.version}</version>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.13.0</version>
+                <configuration>
+                    <release>21</release>
+                    <!--
+                      FFM was finalized in Java 22 (JEP 454) and shipped
+                      as preview in Java 21 (JEP 442). To support both
+                      LTS 21 and current 22+, compile against the
+                      preview surface. Code stays binary-compatible with
+                      the final API in 22+; consumers on 22+ can drop
+                      the enable-preview flag.
+                    -->
+                    <compilerArgs>
+                        <arg>--enable-preview</arg>
+                    </compilerArgs>
+                </configuration>
+            </plugin>
+
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>3.2.5</version>
+                <configuration>
+                    <!--
+                      FFM requires explicit native-access enablement.
+                      On Java 21, also pass the enable-preview flag (the
+                      FFM API is preview there). Tests inherit
+                      ZTOK_LIB_PATH from the environment.
+                    -->
+                    <argLine>--enable-native-access=ALL-UNNAMED --enable-preview</argLine>
+                    <environmentVariables>
+                        <ZTOK_LIB_PATH>${env.ZTOK_LIB_PATH}</ZTOK_LIB_PATH>
+                    </environmentVariables>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+</project>

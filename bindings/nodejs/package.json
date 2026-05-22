@@ -1,0 +1,41 @@
+{
+  "name": "ztok",
+  "version": "1.19.0",
+  "description": "Node.js bindings for ztok — a fast, multithreaded, data-oriented tokenizer library (Zig).",
+  "main": "index.js",
+  "types": "index.d.ts",
+  "files": [
+    "index.js",
+    "index.d.ts",
+    "ffi.js",
+    "lib.js",
+    "README.md"
+  ],
+  "scripts": {
+    "test": "node --test test/"
+  },
+  "engines": {
+    "node": ">=16"
+  },
+  "dependencies": {
+    "koffi": "^2.8.0"
+  },
+  "keywords": [
+    "tokenizer",
+    "tiktoken",
+    "bpe",
+    "wordpiece",
+    "unigram",
+    "sentencepiece",
+    "tokenmonster",
+    "llm",
+    "nlp",
+    "ztok"
+  ],
+  "license": "AGPL-3.0-only",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/sirus20x6/ztok.git",
+    "directory": "bindings/nodejs"
+  }
+}

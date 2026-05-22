@@ -1,0 +1,4 @@
+fn main() void {
+    const x: u32 = 42;
+    std.debug.print("{}\n", .{x});
+}

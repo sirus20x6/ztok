@@ -1,0 +1,27 @@
+# Imported target: ztok::ztok
+# Points at the shared library installed alongside this file
+# (`<prefix>/lib/libztok.so`) and the C header (`<prefix>/include/ztok.h`).
+#
+# Consumers:
+#   find_package(ztok REQUIRED)
+#   target_link_libraries(myapp PRIVATE ztok::ztok)
+#
+# A second imported target `ztok::ztok_static` is exposed for callers
+# who want the static archive instead. Both targets share the same
+# include directory.
+
+if(NOT TARGET ztok::ztok)
+    add_library(ztok::ztok SHARED IMPORTED)
+    set_target_properties(ztok::ztok PROPERTIES
+        IMPORTED_LOCATION "@PACKAGE_LIB_DIR@/libztok.so"
+        INTERFACE_INCLUDE_DIRECTORIES "@PACKAGE_INCLUDE_DIR@"
+    )
+endif()
+
+if(NOT TARGET ztok::ztok_static)
+    add_library(ztok::ztok_static STATIC IMPORTED)
+    set_target_properties(ztok::ztok_static PROPERTIES
+        IMPORTED_LOCATION "@PACKAGE_LIB_DIR@/libztok.a"
+        INTERFACE_INCLUDE_DIRECTORIES "@PACKAGE_INCLUDE_DIR@"
+    )
+endif()

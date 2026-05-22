@@ -1,0 +1,56 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: {{ include "ztok.fullname" . }}-test-connection
+  namespace: {{ .Release.Namespace | quote }}
+  labels:
+    {{- include "ztok.labels" . | nindent 4 }}
+  annotations:
+    # `helm test` looks for this hook annotation. `hook-delete-policy`
+    # cleans the Pod up after success so repeated `helm test` runs
+    # don't trip on "Pod already exists".
+    "helm.sh/hook": test
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+spec:
+  restartPolicy: Never
+  securityContext:
+    runAsNonRoot: true
+    runAsUser: 65534
+    runAsGroup: 65534
+    seccompProfile:
+      type: RuntimeDefault
+  containers:
+    - name: wget
+      # busybox provides `wget` and a POSIX shell in a tiny image.
+      # Pin the digest in your fork if reproducibility matters.
+      image: busybox:1.36
+      imagePullPolicy: IfNotPresent
+      securityContext:
+        allowPrivilegeEscalation: false
+        readOnlyRootFilesystem: true
+        capabilities:
+          drop:
+            - ALL
+      command:
+        - /bin/sh
+        - -c
+        - |
+          set -eu
+          URL="http://{{ include "ztok.fullname" . }}:{{ .Values.service.port }}/health"
+          echo "GET $URL"
+          # /health is exempt from auth + rate-limit, so no Authorization
+          # header is needed even when auth.enabled=true.
+          BODY=$(wget -q -O- --tries=3 --timeout=5 "$URL")
+          echo "response: $BODY"
+          # ztok serve's /health returns the literal JSON `{"ok":true}`
+          # (see src/cli_serve.zig). Match defensively in case the
+          # server ever inserts whitespace.
+          echo "$BODY" | grep -q '"ok"[[:space:]]*:[[:space:]]*true'
+          echo "OK"
+      resources:
+        limits:
+          cpu: 100m
+          memory: 64Mi
+        requests:
+          cpu: 10m
+          memory: 16Mi

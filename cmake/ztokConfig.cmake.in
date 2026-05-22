@@ -1,0 +1,9 @@
+@PACKAGE_INIT@
+
+# Imported targets for ztok. Provides `ztok::ztok` linking against
+# libztok.so with the C header on the include path. Versioned via
+# `find_package(ztok 1.16.0)` semantics (handled by ztokConfigVersion.cmake
+# when present; an exact match is not required — minor revs are ABI-additive
+# per include/ztok.h).
+include("${CMAKE_CURRENT_LIST_DIR}/ztokTargets.cmake")
+check_required_components(ztok)

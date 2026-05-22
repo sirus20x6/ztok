@@ -1,0 +1,197 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "ztok.fullname" . }}
+  namespace: {{ .Release.Namespace | quote }}
+  labels:
+    {{- include "ztok.labels" . | nindent 4 }}
+spec:
+  {{- if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.replicaCount }}
+  {{- end }}
+  # RollingUpdate with maxUnavailable=0 keeps full serving capacity
+  # during rollouts. maxSurge=25% caps the burst.
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 25%
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      {{- include "ztok.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "ztok.labels" . | nindent 8 }}
+        {{- with .Values.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      annotations:
+        # Re-roll pods whenever the auth secret changes. checksum
+        # annotations are the standard helm idiom for this — see
+        # https://helm.sh/docs/howto/charts_tips_and_tricks/#automatically-roll-deployments
+        {{- if and .Values.auth.enabled .Values.auth.create }}
+        checksum/auth-secret: {{ include (print $.Template.BasePath "/secret.yaml") . | sha256sum }}
+        {{- end }}
+        {{- with .Values.podAnnotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+    spec:
+      {{- include "ztok.imagePullSecrets" . | nindent 6 }}
+      serviceAccountName: {{ include "ztok.serviceAccountName" . }}
+      automountServiceAccountToken: {{ .Values.serviceAccount.automountServiceAccountToken }}
+      terminationGracePeriodSeconds: {{ .Values.terminationGracePeriodSeconds }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.topologySpreadConstraints }}
+      topologySpreadConstraints:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: ztok
+          image: {{ include "ztok.image" . | quote }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          # The container image's ENTRYPOINT is `/usr/local/bin/ztok`;
+          # the `args` array is the subcommand + flags.
+          args:
+            - serve
+            - --model
+            - {{ .Values.vocab.path | quote }}
+            - --host
+            - "0.0.0.0"
+            - --port
+            - {{ .Values.service.port | quote }}
+            {{- if .Values.auth.enabled }}
+            - --auth-token-file
+            - /etc/ztok/auth/token
+            {{- end }}
+            {{- if .Values.rateLimit.enabled }}
+            - --rate-limit
+            - {{ .Values.rateLimit.reqPerSec | quote }}
+            {{- end }}
+            {{- with .Values.extraArgs }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          env:
+            # Reduces tcmalloc / glibc heap fragmentation on long-lived
+            # serving processes that allocate/free large blocks of
+            # vocab metadata. Cheap insurance.
+            - name: MALLOC_ARENA_MAX
+              value: "2"
+            {{- with .Values.extraEnv }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.service.port }}
+              protocol: TCP
+          {{- if .Values.probes.startup.enabled }}
+          startupProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: {{ .Values.probes.startup.initialDelaySeconds }}
+            periodSeconds: {{ .Values.probes.startup.periodSeconds }}
+            timeoutSeconds: {{ .Values.probes.startup.timeoutSeconds }}
+            failureThreshold: {{ .Values.probes.startup.failureThreshold }}
+          {{- end }}
+          {{- if .Values.probes.liveness.enabled }}
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: {{ .Values.probes.liveness.initialDelaySeconds }}
+            periodSeconds: {{ .Values.probes.liveness.periodSeconds }}
+            timeoutSeconds: {{ .Values.probes.liveness.timeoutSeconds }}
+            failureThreshold: {{ .Values.probes.liveness.failureThreshold }}
+          {{- end }}
+          {{- if .Values.probes.readiness.enabled }}
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: {{ .Values.probes.readiness.initialDelaySeconds }}
+            periodSeconds: {{ .Values.probes.readiness.periodSeconds }}
+            timeoutSeconds: {{ .Values.probes.readiness.timeoutSeconds }}
+            failureThreshold: {{ .Values.probes.readiness.failureThreshold }}
+          {{- end }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          securityContext:
+            {{- toYaml .Values.containerSecurityContext | nindent 12 }}
+          volumeMounts:
+            # /tmp is writable via emptyDir so the rest of the
+            # filesystem can stay read-only (allocators, log
+            # buffering, syscall scratch space all want /tmp).
+            - name: tmp
+              mountPath: /tmp
+            {{- if .Values.vocab.configMap.enabled }}
+            - name: vocab
+              mountPath: {{ .Values.vocab.path | quote }}
+              subPath: {{ .Values.vocab.configMap.key | quote }}
+              readOnly: true
+            {{- else if .Values.vocab.pvc.enabled }}
+            - name: vocab
+              mountPath: {{ .Values.vocab.path | quote }}
+              {{- with .Values.vocab.pvc.subPath }}
+              subPath: {{ . | quote }}
+              {{- end }}
+              readOnly: {{ .Values.vocab.pvc.readOnly }}
+            {{- end }}
+            {{- if .Values.auth.enabled }}
+            - name: auth
+              mountPath: /etc/ztok/auth
+              readOnly: true
+            {{- end }}
+            {{- if .Values.persistentCache.enabled }}
+            - name: cache
+              mountPath: {{ .Values.persistentCache.mountPath | quote }}
+            {{- end }}
+            {{- with .Values.extraVolumeMounts }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+      volumes:
+        - name: tmp
+          emptyDir:
+            # Cap /tmp so a runaway syscall can't fill the node.
+            sizeLimit: 64Mi
+        {{- if .Values.vocab.configMap.enabled }}
+        - name: vocab
+          configMap:
+            name: {{ .Values.vocab.configMap.name | quote }}
+        {{- else if .Values.vocab.pvc.enabled }}
+        - name: vocab
+          persistentVolumeClaim:
+            claimName: {{ .Values.vocab.pvc.claimName | quote }}
+            readOnly: {{ .Values.vocab.pvc.readOnly }}
+        {{- end }}
+        {{- if .Values.auth.enabled }}
+        - name: auth
+          secret:
+            secretName: {{ include "ztok.authSecretName" . | quote }}
+            defaultMode: 0400
+            items:
+              - key: token
+                path: token
+        {{- end }}
+        {{- if .Values.persistentCache.enabled }}
+        - name: cache
+          persistentVolumeClaim:
+            claimName: {{ include "ztok.fullname" . }}-cache
+        {{- end }}
+        {{- with .Values.extraVolumes }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}

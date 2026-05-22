@@ -1,0 +1,85 @@
+# deploy-demo — publish the static demo at `demo/` to GitHub Pages.
+#
+# Triggers on pushes to `main` that touch the demo dir or the WASM
+# binding source, plus manual runs. The job:
+#
+#   1. Checks out the repo.
+#   2. Installs Zig 0.16.0 (matches CI + Dockerfile + build.zig.zon
+#      minimum_zig_version).
+#   3. Builds both WASM targets (SIMD128 + scalar fallback).
+#   4. Copies the WASM artifacts into `demo/vendor/`, overwriting any
+#      checked-in copies so production always ships a fresh build.
+#   5. Uploads `demo/` as a Pages artifact and deploys it.
+#
+# Concurrency: only one deploy runs at a time per ref; superseded runs
+# are cancelled so a quick re-push doesn't pile up redundant minutes.
+#
+# Action pins: every action is pinned to a tagged release per the
+# project ops constraints (never @main / @master).
+
+name: deploy-demo
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "demo/**"
+      - "src/wasm_browser_root.zig"
+      - "build.zig"
+      - ".github/workflows/deploy-demo.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: build demo + wasm
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Zig 0.16.0
+        uses: mlugg/setup-zig@v2
+        with:
+          version: 0.16.0
+
+      - name: Build WASM (SIMD128)
+        run: zig build ztok-wasm-browser
+
+      - name: Build WASM (scalar fallback)
+        run: zig build ztok-wasm-browser-scalar
+
+      - name: Stage WASM into demo/vendor
+        run: |
+          mkdir -p demo/vendor
+          cp zig-out/bin/ztok_browser.wasm        demo/vendor/ztok-wasm.wasm
+          cp zig-out/bin/ztok_browser_scalar.wasm demo/vendor/ztok-wasm-scalar.wasm
+          ls -lh demo/vendor
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./demo
+
+  deploy:
+    name: deploy to github pages
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@v4

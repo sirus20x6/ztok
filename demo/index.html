@@ -1,0 +1,201 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<meta name="description" content="ztok — an in-browser BPE tokenizer running on WebAssembly. Visualize token boundaries, compare tokenizers, estimate API costs.">
+<title>ztok — tokenize in your browser</title>
+<link rel="stylesheet" href="style.css">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23ff6f3c'/%3E%3Ctext x='50%25' y='58%25' text-anchor='middle' font-family='ui-monospace,monospace' font-size='16' font-weight='700' fill='white'%3Ezt%3C/text%3E%3C/svg%3E">
+</head>
+<body>
+
+<header class="site-header">
+  <div class="brand">
+    <div class="brand-mark" aria-hidden="true">zt</div>
+    <div class="brand-text">
+      <h1>ztok</h1>
+      <p class="tagline">BPE tokenization, in your browser.</p>
+    </div>
+  </div>
+  <nav class="site-nav">
+    <a href="#playground">Playground</a>
+    <a href="#compare">Compare</a>
+    <a href="#cost">Cost</a>
+    <a href="#about">About</a>
+  </nav>
+  <div class="status-pill" id="status-pill" data-state="loading">
+    <span class="dot"></span><span id="status-label">loading wasm</span>
+  </div>
+</header>
+
+<main>
+
+  <!-- ============================ HERO ============================ -->
+  <section class="hero">
+    <div class="hero-copy">
+      <h2>See exactly how a tokenizer carves your text.</h2>
+      <p class="lede">
+        ztok is a tiny BPE tokenizer compiled to WebAssembly. Type below
+        and watch token boundaries appear in real time — every keystroke,
+        encoded and decoded locally. Nothing leaves your machine.
+      </p>
+      <ul class="hero-stats">
+        <li><span class="num" id="hero-tokens">0</span><span class="lbl">tokens</span></li>
+        <li><span class="num" id="hero-bytes">0</span><span class="lbl">bytes</span></li>
+        <li><span class="num" id="hero-ratio">—</span><span class="lbl">bytes/tok</span></li>
+        <li><span class="num" id="hero-time">—</span><span class="lbl">ms/encode</span></li>
+      </ul>
+    </div>
+    <div class="hero-visual" aria-hidden="true">
+      <div class="ticker" id="ticker"></div>
+    </div>
+  </section>
+
+  <!-- ======================= PLAYGROUND ======================== -->
+  <section id="playground" class="card">
+    <header class="card-head">
+      <h3>Playground</h3>
+      <div class="card-tools">
+        <label class="select-label">
+          Tokenizer
+          <select id="tokenizer-select"></select>
+        </label>
+        <label class="upload-label">
+          <input id="custom-vocab" type="file" accept=".tiktoken,application/octet-stream" hidden>
+          <span>Upload .tiktoken</span>
+        </label>
+      </div>
+    </header>
+
+    <div class="vocab-status" id="vocab-status">no vocab loaded yet</div>
+
+    <div class="playground-grid">
+      <div class="playground-input">
+        <label for="input" class="visually-hidden">Input text</label>
+        <textarea
+          id="input"
+          spellcheck="false"
+          placeholder="Type or paste text here. Every keystroke re-tokenizes."
+        >The quick brown fox jumps over the lazy dog. In the beginning was the Word, and the Word was with the tokenizer.</textarea>
+        <div class="textarea-overlay" id="overlay" aria-hidden="true"></div>
+      </div>
+
+      <aside class="playground-side">
+        <div class="metric">
+          <div class="metric-row"><span class="metric-lbl">tokens</span><span class="metric-val" id="m-tokens">—</span></div>
+          <div class="metric-row"><span class="metric-lbl">bytes</span><span class="metric-val" id="m-bytes">—</span></div>
+          <div class="metric-row"><span class="metric-lbl">bytes / token</span><span class="metric-val" id="m-ratio">—</span></div>
+          <div class="metric-row"><span class="metric-lbl">encode time</span><span class="metric-val" id="m-time">—</span></div>
+        </div>
+        <h4>Token IDs</h4>
+        <div class="id-list" id="id-list"></div>
+        <div class="hover-info" id="hover-info">hover a token to inspect</div>
+      </aside>
+    </div>
+  </section>
+
+  <!-- ======================= COMPARE ============================ -->
+  <section id="compare" class="card">
+    <header class="card-head">
+      <h3>Compare two tokenizers</h3>
+      <label class="switch">
+        <input type="checkbox" id="compare-toggle">
+        <span class="slider"></span>
+        <span>side-by-side</span>
+      </label>
+    </header>
+
+    <div class="compare-pickers" hidden>
+      <label class="select-label">A
+        <select id="compare-a"></select>
+      </label>
+      <label class="select-label">B
+        <select id="compare-b"></select>
+      </label>
+    </div>
+
+    <div class="compare-grid" id="compare-grid" hidden>
+      <div class="compare-pane" data-side="a">
+        <h4><span class="dot-a"></span><span id="compare-a-name">—</span></h4>
+        <div class="compare-overlay" id="compare-a-overlay"></div>
+        <div class="compare-meta" id="compare-a-meta">—</div>
+      </div>
+      <div class="compare-pane" data-side="b">
+        <h4><span class="dot-b"></span><span id="compare-b-name">—</span></h4>
+        <div class="compare-overlay" id="compare-b-overlay"></div>
+        <div class="compare-meta" id="compare-b-meta">—</div>
+      </div>
+    </div>
+
+    <p class="compare-hint" id="compare-hint" hidden>
+      Both panes tokenize the playground text above. Only vocabs you have
+      loaded (bundled or uploaded) appear in the dropdowns.
+    </p>
+  </section>
+
+  <!-- ======================= COST =============================== -->
+  <section id="cost" class="card">
+    <header class="card-head">
+      <h3>Cost estimator</h3>
+      <label class="select-label">
+        Price preset
+        <select id="price-preset">
+          <option value="0.005">GPT-4o input — $0.005 / 1K tok</option>
+          <option value="0.015">GPT-4o output — $0.015 / 1K tok</option>
+          <option value="0.015" data-preset="claude-sonnet">Claude Sonnet 4.6 input — $0.015 / 1K tok</option>
+          <option value="0.075" data-preset="claude-opus">Claude Opus 4.7 input — $0.075 / 1K tok</option>
+          <option value="0.00015">GPT-4o-mini input — $0.00015 / 1K tok</option>
+          <option value="custom">Custom…</option>
+        </select>
+      </label>
+    </header>
+
+    <div class="cost-grid">
+      <div class="cost-input">
+        <label>Price per 1M tokens (USD)
+          <input id="price-per-million" type="number" step="0.01" min="0" value="5.00">
+        </label>
+        <label>Requests per day
+          <input id="reqs-per-day" type="number" step="1" min="0" value="1000">
+        </label>
+      </div>
+      <div class="cost-output">
+        <div class="metric-row"><span class="metric-lbl">per request</span><span class="metric-val" id="cost-per-req">$0.00</span></div>
+        <div class="metric-row"><span class="metric-lbl">per day</span><span class="metric-val" id="cost-per-day">$0.00</span></div>
+        <div class="metric-row"><span class="metric-lbl">per month</span><span class="metric-val" id="cost-per-month">$0.00</span></div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer id="about" class="site-footer">
+  <div class="footer-cols">
+    <div>
+      <h4>ztok</h4>
+      <p>A fast BPE tokenizer written in Zig. The browser build is a 376 KB WASM module with no JS dependencies.</p>
+    </div>
+    <div>
+      <h4>Docs</h4>
+      <ul>
+        <li><a href="https://github.com/sirus20x6/ztok#readme" rel="noopener">README</a></li>
+        <li><a href="https://github.com/sirus20x6/ztok/blob/main/COMPARISON.md" rel="noopener">COMPARISON.md</a></li>
+        <li><a href="https://github.com/sirus20x6/ztok" rel="noopener">GitHub</a></li>
+      </ul>
+    </div>
+    <div>
+      <h4>About this page</h4>
+      <p>
+        All tokenization runs in your browser via WebAssembly. No
+        analytics, no fonts loaded from CDNs, no requests after the
+        initial page + WASM + vocab load. View source on GitHub.
+      </p>
+    </div>
+  </div>
+  <p class="copy">ztok <span id="ver-string">—</span></p>
+</footer>
+
+<script type="module" src="app.js"></script>
+</body>
+</html>

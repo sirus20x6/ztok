@@ -1,0 +1,2355 @@
+
+---
+events:
+  -
+    kind: "find-v1"
+    backtrace:
+      - "/usr/share/cmake/Modules/CMakeDetermineSystem.cmake:12 (find_program)"
+      - "CMakeLists.txt:2 (project)"
+    mode: "program"
+    variable: "CMAKE_UNAME"
+    description: "Path to a program."
+    settings:
+      SearchFramework: "NEVER"
+      SearchAppBundle: "NEVER"
+      CMAKE_FIND_USE_CMAKE_PATH: true
+      CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
+      CMAKE_FIND_USE_INSTALL_PREFIX: true
+    names:
+      - "uname"
+    candidate_directories:
+      - "/tmp/ztok_install_test/bin/"
+      - "/tmp/ztok_install_test/sbin/"
+      - "/tmp/ztok_install_test/"
+      - "/home/sirus/.bun/bin/"
+      - "/home/sirus/.opencode/bin/"
+      - "/opt/anaconda/condabin/"
+      - "/home/sirus/.cargo/bin/"
+      - "/home/sirus/.nix-profile/bin/"
+      - "/home/sirus/.emacs.d/bin/"
+      - "/home/sirus/scripts/"
+      - "/home/sirus/.local/bin/"
+      - "/usr/lib/ccache/bin/"
+      - "/nix/var/nix/profiles/default/bin/"
+      - "/usr/local/bin/"
+      - "/usr/bin/"
+      - "/bin/"
+      - "/home/sirus/.config/.foundry/bin/"
+      - "/usr/local/sbin/"
+      - "/opt/android-sdk/cmdline-tools/latest/bin/"
+      - "/opt/android-sdk/platform-tools/"
+      - "/opt/android-sdk/tools/"
+      - "/opt/android-sdk/tools/bin/"
+      - "/opt/cuda/bin/"
+      - "/var/lib/flatpak/exports/bin/"
+      - "/usr/lib/jvm/default/bin/"
+      - "/usr/bin/site_perl/"
+      - "/usr/bin/vendor_perl/"
+      - "/usr/bin/core_perl/"
+      - "/usr/lib/rustup/bin/"
+      - "/home/sirus/.lmstudio/bin/"
+      - "/home/sirus/.claude/plugins/cache/claude-plugins-official/clangd-lsp/1.0.0/bin/"
+      - "/home/sirus/.claude/plugins/cache/claude-plugins-official/rust-analyzer-lsp/1.0.0/bin/"
+      - "/home/sirus/.claude/plugins/cache/claude-plugins-official/frontend-design/unknown/bin/"
+    searched_directories:
+      - "/tmp/ztok_install_test/bin/uname"
+      - "/tmp/ztok_install_test/sbin/uname"
+      - "/tmp/ztok_install_test/uname"
+      - "/home/sirus/.bun/bin/uname"
+      - "/home/sirus/.opencode/bin/uname"
+      - "/opt/anaconda/condabin/uname"
+      - "/home/sirus/.cargo/bin/uname"
+      - "/home/sirus/.nix-profile/bin/uname"
+      - "/home/sirus/.emacs.d/bin/uname"
+      - "/home/sirus/scripts/uname"
+      - "/home/sirus/.local/bin/uname"
+      - "/usr/lib/ccache/bin/uname"
+      - "/nix/var/nix/profiles/default/bin/uname"
+      - "/usr/local/bin/uname"
+    found: "/usr/bin/uname"
+    search_context:
+      CMAKE_PREFIX_PATH:
+        - "/tmp/ztok_install_test"
+      ENV{PATH}:
+        - "/home/sirus/.bun/bin"
+        - "/home/sirus/.opencode/bin"
+        - "/opt/anaconda/condabin"
+        - "/home/sirus/.cargo/bin"
+        - "/home/sirus/.nix-profile/bin"
+        - "/home/sirus/.emacs.d/bin"
+        - "/home/sirus/scripts"
+        - "/home/sirus/.local/bin"
+        - "/usr/lib/ccache/bin/"
+        - "/home/sirus/.local/bin"
+        - "/home/sirus/.local/bin"
+        - "/home/sirus/.nix-profile/bin"
+        - "/nix/var/nix/profiles/default/bin"
+        - "/home/sirus/.local/bin"
+        - "/usr/local/bin"
+        - "/usr/bin"
+        - "/bin"
+        - "/home/sirus/.config/.foundry/bin"
+        - "/usr/local/sbin"
+        - "/opt/android-sdk/cmdline-tools/latest/bin"
+        - "/opt/android-sdk/platform-tools"
+        - "/opt/android-sdk/tools"
+        - "/opt/android-sdk/tools/bin"
+        - "/opt/cuda/bin"
+        - "/var/lib/flatpak/exports/bin"
+        - "/usr/lib/jvm/default/bin"
+        - "/usr/bin/site_perl"
+        - "/usr/bin/vendor_perl"
+        - "/usr/bin/core_perl"
+        - "/usr/lib/rustup/bin"
+        - "/home/sirus/.config/.foundry/bin"
+        - "/home/sirus/.lmstudio/bin"
+        - "/home/sirus/.claude/plugins/cache/claude-plugins-official/clangd-lsp/1.0.0/bin"
+        - "/home/sirus/.claude/plugins/cache/claude-plugins-official/rust-analyzer-lsp/1.0.0/bin"
+        - "/home/sirus/.claude/plugins/cache/claude-plugins-official/frontend-design/unknown/bin"
+  -
+    kind: "message-v1"
+    backtrace:
+      - "/usr/share/cmake/Modules/CMakeDetermineSystem.cmake:212 (message)"
+      - "CMakeLists.txt:2 (project)"
+    message: |
+      The system is: Linux - 7.0.3-zen1-2.1-zen - x86_64
+  -
+    kind: "find-v1"
+    backtrace:
+      - "/usr/share/cmake/Modules/CMakeUnixFindMake.cmake:5 (find_program)"
+      - "CMakeLists.txt:2 (project)"
+    mode: "program"
+    variable: "CMAKE_MAKE_PROGRAM"
+    description: "Path to a program."
+    settings:
+      SearchFramework: "NEVER"
+      SearchAppBundle: "NEVER"
+      CMAKE_FIND_USE_CMAKE_PATH: true
+      CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
+      CMAKE_FIND_USE_INSTALL_PREFIX: true
+    names:
+      - "gmake"
+      - "make"
+      - "smake"
+    candidate_directories:
+      - "/tmp/ztok_install_test/bin/"
+      - "/tmp/ztok_install_test/sbin/"
+      - "/tmp/ztok_install_test/"
+      - "/home/sirus/.bun/bin/"
+      - "/home/sirus/.opencode/bin/"
+      - "/opt/anaconda/condabin/"
+      - "/home/sirus/.cargo/bin/"
+      - "/home/sirus/.nix-profile/bin/"
+      - "/home/sirus/.emacs.d/bin/"
+      - "/home/sirus/scripts/"
+      - "/home/sirus/.local/bin/"
+      - "/usr/lib/ccache/bin/"
+      - "/nix/var/nix/profiles/default/bin/"
+      - "/usr/local/bin/"
+      - "/usr/bin/"
+      - "/bin/"
+      - "/home/sirus/.config/.foundry/bin/"
+      - "/usr/local/sbin/"
+      - "/opt/android-sdk/cmdline-tools/latest/bin/"
+      - "/opt/android-sdk/platform-tools/"
+      - "/opt/android-sdk/tools/"
+      - "/opt/android-sdk/tools/bin/"
+      - "/opt/cuda/bin/"
+      - "/var/lib/flatpak/exports/bin/"
+      - "/usr/lib/jvm/default/bin/"
+      - "/usr/bin/site_perl/"
+      - "/usr/bin/vendor_perl/"
+      - "/usr/bin/core_perl/"
+      - "/usr/lib/rustup/bin/"
+      - "/home/sirus/.lmstudio/bin/"
+      - "/home/sirus/.claude/plugins/cache/claude-plugins-official/clangd-lsp/1.0.0/bin/"
+      - "/home/sirus/.claude/plugins/cache/claude-plugins-official/rust-analyzer-lsp/1.0.0/bin/"
+      - "/home/sirus/.claude/plugins/cache/claude-plugins-official/frontend-design/unknown/bin/"
+    searched_directories:
+      - "/tmp/ztok_install_test/bin/gmake"
+      - "/tmp/ztok_install_test/sbin/gmake"
+      - "/tmp/ztok_install_test/gmake"
+      - "/home/sirus/.bun/bin/gmake"
+      - "/home/sirus/.opencode/bin/gmake"
+      - "/opt/anaconda/condabin/gmake"
+      - "/home/sirus/.cargo/bin/gmake"
+      - "/home/sirus/.nix-profile/bin/gmake"
+      - "/home/sirus/.emacs.d/bin/gmake"
+      - "/home/sirus/scripts/gmake"
+      - "/home/sirus/.local/bin/gmake"
+      - "/usr/lib/ccache/bin/gmake"
+      - "/nix/var/nix/profiles/default/bin/gmake"
+      - "/usr/local/bin/gmake"
+      - "/usr/bin/gmake"
+      - "/bin/gmake"
+      - "/home/sirus/.config/.foundry/bin/gmake"
+      - "/usr/local/sbin/gmake"
+      - "/opt/android-sdk/cmdline-tools/latest/bin/gmake"
+      - "/opt/android-sdk/platform-tools/gmake"
+      - "/opt/android-sdk/tools/gmake"
+      - "/opt/android-sdk/tools/bin/gmake"
+      - "/opt/cuda/bin/gmake"
+      - "/var/lib/flatpak/exports/bin/gmake"
+      - "/usr/lib/jvm/default/bin/gmake"
+      - "/usr/bin/site_perl/gmake"
+      - "/usr/bin/vendor_perl/gmake"
+      - "/usr/bin/core_perl/gmake"
+      - "/usr/lib/rustup/bin/gmake"
+      - "/home/sirus/.lmstudio/bin/gmake"
+      - "/home/sirus/.claude/plugins/cache/claude-plugins-official/clangd-lsp/1.0.0/bin/gmake"
+      - "/home/sirus/.claude/plugins/cache/claude-plugins-official/rust-analyzer-lsp/1.0.0/bin/gmake"
+      - "/home/sirus/.claude/plugins/cache/claude-plugins-official/frontend-design/unknown/bin/gmake"
+      - "/tmp/ztok_install_test/bin/make"
+      - "/tmp/ztok_install_test/sbin/make"
+      - "/tmp/ztok_install_test/make"
+      - "/home/sirus/.bun/bin/make"
+      - "/home/sirus/.opencode/bin/make"
+      - "/opt/anaconda/condabin/make"
+      - "/home/sirus/.cargo/bin/make"
+      - "/home/sirus/.nix-profile/bin/make"
+      - "/home/sirus/.emacs.d/bin/make"
+      - "/home/sirus/scripts/make"
+      - "/home/sirus/.local/bin/make"
+      - "/usr/lib/ccache/bin/make"
+      - "/nix/var/nix/profiles/default/bin/make"
+      - "/usr/local/bin/make"
+    found: "/usr/bin/make"
+    search_context:
+      CMAKE_PREFIX_PATH:
+        - "/tmp/ztok_install_test"
+      ENV{PATH}:
+        - "/home/sirus/.bun/bin"
+        - "/home/sirus/.opencode/bin"
+        - "/opt/anaconda/condabin"
+        - "/home/sirus/.cargo/bin"
+        - "/home/sirus/.nix-profile/bin"
+        - "/home/sirus/.emacs.d/bin"
+        - "/home/sirus/scripts"
+        - "/home/sirus/.local/bin"
+        - "/usr/lib/ccache/bin/"
+        - "/home/sirus/.local/bin"
+        - "/home/sirus/.local/bin"
+        - "/home/sirus/.nix-profile/bin"
+        - "/nix/var/nix/profiles/default/bin"
+        - "/home/sirus/.local/bin"
+        - "/usr/local/bin"
+        - "/usr/bin"
+        - "/bin"
+        - "/home/sirus/.config/.foundry/bin"
+        - "/usr/local/sbin"
+        - "/opt/android-sdk/cmdline-tools/latest/bin"
+        - "/opt/android-sdk/platform-tools"
+        - "/opt/android-sdk/tools"
+        - "/opt/android-sdk/tools/bin"
+        - "/opt/cuda/bin"
+        - "/var/lib/flatpak/exports/bin"
+        - "/usr/lib/jvm/default/bin"
+        - "/usr/bin/site_perl"
+        - "/usr/bin/vendor_perl"
+        - "/usr/bin/core_perl"
+        - "/usr/lib/rustup/bin"
+        - "/home/sirus/.config/.foundry/bin"
+        - "/home/sirus/.lmstudio/bin"
+        - "/home/sirus/.claude/plugins/cache/claude-plugins-official/clangd-lsp/1.0.0/bin"
+        - "/home/sirus/.claude/plugins/cache/claude-plugins-official/rust-analyzer-lsp/1.0.0/bin"
+        - "/home/sirus/.claude/plugins/cache/claude-plugins-official/frontend-design/unknown/bin"
+  -
+    kind: "find-v1"
+    backtrace:
+      - "/usr/share/cmake/Modules/CMakeDetermineCompiler.cmake:73 (find_program)"
+      - "/usr/share/cmake/Modules/CMakeDetermineCCompiler.cmake:64 (_cmake_find_compiler)"
+      - "CMakeLists.txt:2 (project)"
+    mode: "program"
+    variable: "CMAKE_C_COMPILER"
+    description: "C compiler"
+    settings:
+      SearchFramework: "NEVER"
+      SearchAppBundle: "NEVER"
+      CMAKE_FIND_USE_CMAKE_PATH: true
+      CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
+      CMAKE_FIND_USE_INSTALL_PREFIX: true
+    names:
+      - "cc"
+      - "gcc"
+      - "cl"
+      - "bcc"
+      - "xlc"
+      - "icx"
+      - "clang"
+    candidate_directories:
+      - "/tmp/ztok_install_test/bin/"
+      - "/tmp/ztok_install_test/sbin/"
+      - "/tmp/ztok_install_test/"
+      - "/home/sirus/.bun/bin/"
+      - "/home/sirus/.opencode/bin/"
+      - "/opt/anaconda/condabin/"
+      - "/home/sirus/.cargo/bin/"
+      - "/home/sirus/.nix-profile/bin/"
+      - "/home/sirus/.emacs.d/bin/"
+      - "/home/sirus/scripts/"
+      - "/home/sirus/.local/bin/"
+      - "/usr/lib/ccache/bin/"
+      - "/nix/var/nix/profiles/default/bin/"
+      - "/usr/local/bin/"
+      - "/usr/bin/"
+      - "/bin/"
+      - "/home/sirus/.config/.foundry/bin/"
+      - "/usr/local/sbin/"
+      - "/opt/android-sdk/cmdline-tools/latest/bin/"
+      - "/opt/android-sdk/platform-tools/"
+      - "/opt/android-sdk/tools/"
+      - "/opt/android-sdk/tools/bin/"
+      - "/opt/cuda/bin/"
+      - "/var/lib/flatpak/exports/bin/"
+      - "/usr/lib/jvm/default/bin/"
+      - "/usr/bin/site_perl/"
+      - "/usr/bin/vendor_perl/"
+      - "/usr/bin/core_perl/"
+      - "/usr/lib/rustup/bin/"
+      - "/home/sirus/.lmstudio/bin/"
+      - "/home/sirus/.claude/plugins/cache/claude-plugins-official/clangd-lsp/1.0.0/bin/"
+      - "/home/sirus/.claude/plugins/cache/claude-plugins-official/rust-analyzer-lsp/1.0.0/bin/"
+      - "/home/sirus/.claude/plugins/cache/claude-plugins-official/frontend-design/unknown/bin/"
+    searched_directories:
+      - "/tmp/ztok_install_test/bin/cc"
+      - "/tmp/ztok_install_test/sbin/cc"
+      - "/tmp/ztok_install_test/cc"
+      - "/home/sirus/.bun/bin/cc"
+      - "/home/sirus/.opencode/bin/cc"
+      - "/opt/anaconda/condabin/cc"
+      - "/home/sirus/.cargo/bin/cc"
+      - "/home/sirus/.nix-profile/bin/cc"
+      - "/home/sirus/.emacs.d/bin/cc"
+      - "/home/sirus/scripts/cc"
+      - "/home/sirus/.local/bin/cc"
+    found: "/usr/lib/ccache/bin/cc"
+    search_context:
+      CMAKE_PREFIX_PATH:
+        - "/tmp/ztok_install_test"
+      ENV{PATH}:
+        - "/home/sirus/.bun/bin"
+        - "/home/sirus/.opencode/bin"
+        - "/opt/anaconda/condabin"
+        - "/home/sirus/.cargo/bin"
+        - "/home/sirus/.nix-profile/bin"
+        - "/home/sirus/.emacs.d/bin"
+        - "/home/sirus/scripts"
+        - "/home/sirus/.local/bin"
+        - "/usr/lib/ccache/bin/"
+        - "/home/sirus/.local/bin"
+        - "/home/sirus/.local/bin"
+        - "/home/sirus/.nix-profile/bin"
+        - "/nix/var/nix/profiles/default/bin"
+        - "/home/sirus/.local/bin"
+        - "/usr/local/bin"
+        - "/usr/bin"
+        - "/bin"
+        - "/home/sirus/.config/.foundry/bin"
+        - "/usr/local/sbin"
+        - "/opt/android-sdk/cmdline-tools/latest/bin"
+        - "/opt/android-sdk/platform-tools"
+        - "/opt/android-sdk/tools"
+        - "/opt/android-sdk/tools/bin"
+        - "/opt/cuda/bin"
+        - "/var/lib/flatpak/exports/bin"
+        - "/usr/lib/jvm/default/bin"
+        - "/usr/bin/site_perl"
+        - "/usr/bin/vendor_perl"
+        - "/usr/bin/core_perl"
+        - "/usr/lib/rustup/bin"
+        - "/home/sirus/.config/.foundry/bin"
+        - "/home/sirus/.lmstudio/bin"
+        - "/home/sirus/.claude/plugins/cache/claude-plugins-official/clangd-lsp/1.0.0/bin"
+        - "/home/sirus/.claude/plugins/cache/claude-plugins-official/rust-analyzer-lsp/1.0.0/bin"
+        - "/home/sirus/.claude/plugins/cache/claude-plugins-official/frontend-design/unknown/bin"
+  -
+    kind: "find-v1"
+    backtrace:
+      - "/usr/share/cmake/Modules/CMakeDetermineCompilerId.cmake:468 (find_file)"
+      - "/usr/share/cmake/Modules/CMakeDetermineCompilerId.cmake:506 (CMAKE_DETERMINE_COMPILER_ID_WRITE)"
+      - "/usr/share/cmake/Modules/CMakeDetermineCompilerId.cmake:8 (CMAKE_DETERMINE_COMPILER_ID_BUILD)"
+      - "/usr/share/cmake/Modules/CMakeDetermineCompilerId.cmake:64 (__determine_compiler_id_test)"
+      - "/usr/share/cmake/Modules/CMakeDetermineCCompiler.cmake:122 (CMAKE_DETERMINE_COMPILER_ID)"
+      - "CMakeLists.txt:2 (project)"
+    mode: "file"
+    variable: "src_in"
+    description: "Path to a file."
+    settings:
+      SearchFramework: "NEVER"
+      SearchAppBundle: "NEVER"
+      CMAKE_FIND_USE_CMAKE_PATH: true
+      CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
+      CMAKE_FIND_USE_INSTALL_PREFIX: true
+    names:
+      - "CMakeCCompilerId.c.in"
+    candidate_directories:
+      - "/usr/share/cmake/Modules/"
+    found: "/usr/share/cmake/Modules/CMakeCCompilerId.c.in"
+    search_context:
+      CMAKE_PREFIX_PATH:
+        - "/tmp/ztok_install_test"
+      ENV{PATH}:
+        - "/home/sirus/.bun/bin"
+        - "/home/sirus/.opencode/bin"
+        - "/opt/anaconda/condabin"
+        - "/home/sirus/.cargo/bin"
+        - "/home/sirus/.nix-profile/bin"
+        - "/home/sirus/.emacs.d/bin"
+        - "/home/sirus/scripts"
+        - "/home/sirus/.local/bin"
+        - "/usr/lib/ccache/bin/"
+        - "/home/sirus/.local/bin"
+        - "/home/sirus/.local/bin"
+        - "/home/sirus/.nix-profile/bin"
+        - "/nix/var/nix/profiles/default/bin"
+        - "/home/sirus/.local/bin"
+        - "/usr/local/bin"
+        - "/usr/bin"
+        - "/bin"
+        - "/home/sirus/.config/.foundry/bin"
+        - "/usr/local/sbin"
+        - "/opt/android-sdk/cmdline-tools/latest/bin"
+        - "/opt/android-sdk/platform-tools"
+        - "/opt/android-sdk/tools"
+        - "/opt/android-sdk/tools/bin"
+        - "/opt/cuda/bin"
+        - "/var/lib/flatpak/exports/bin"
+        - "/usr/lib/jvm/default/bin"
+        - "/usr/bin/site_perl"
+        - "/usr/bin/vendor_perl"
+        - "/usr/bin/core_perl"
+        - "/usr/lib/rustup/bin"
+        - "/home/sirus/.config/.foundry/bin"
+        - "/home/sirus/.lmstudio/bin"
+        - "/home/sirus/.claude/plugins/cache/claude-plugins-official/clangd-lsp/1.0.0/bin"
+        - "/home/sirus/.claude/plugins/cache/claude-plugins-official/rust-analyzer-lsp/1.0.0/bin"
+        - "/home/sirus/.claude/plugins/cache/claude-plugins-official/frontend-design/unknown/bin"
+  -
+    kind: "message-v1"
+    backtrace:
+      - "/usr/share/cmake/Modules/CMakeDetermineCompilerId.cmake:17 (message)"
+      - "/usr/share/cmake/Modules/CMakeDetermineCompilerId.cmake:64 (__determine_compiler_id_test)"
+      - "/usr/share/cmake/Modules/CMakeDetermineCCompiler.cmake:122 (CMAKE_DETERMINE_COMPILER_ID)"
+      - "CMakeLists.txt:2 (project)"
+    message: |
+      Compiling the C compiler identification source file "CMakeCCompilerId.c" succeeded.
+      Compiler: /usr/lib/ccache/bin/cc 
+      Build flags: -march=znver3
+      Id flags:  
+      
+      The output was:
+      0
+      
+      
+      Compilation of the C compiler identification source "CMakeCCompilerId.c" produced "a.out"
+      
+      The C compiler identification is GNU, found in:
+        /thearray/git/ztok/examples/c/build/CMakeFiles/4.3.2/CompilerIdC/a.out
+      
+  -
+    kind: "find-v1"
+    backtrace:
+      - "/usr/share/cmake/Modules/CMakeFindBinUtils.cmake:243 (find_program)"
+      - "/usr/share/cmake/Modules/CMakeDetermineCCompiler.cmake:200 (include)"
+      - "CMakeLists.txt:2 (project)"
+    mode: "program"
+    variable: "CMAKE_AR"
+    description: "Path to a program."
+    settings:
+      SearchFramework: "NEVER"
+      SearchAppBundle: "NEVER"
+      CMAKE_FIND_USE_CMAKE_PATH: false
+      CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: false
+      CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
+      CMAKE_FIND_USE_INSTALL_PREFIX: true
+    names:
+      - "ar"
+    candidate_directories:
+      - "/usr/lib/ccache/bin/"
+      - "/home/sirus/.bun/bin/"
+      - "/home/sirus/.opencode/bin/"
+      - "/opt/anaconda/condabin/"
+      - "/home/sirus/.cargo/bin/"
+      - "/home/sirus/.nix-profile/bin/"
+      - "/home/sirus/.emacs.d/bin/"
+      - "/home/sirus/scripts/"
+      - "/home/sirus/.local/bin/"
+      - "/nix/var/nix/profiles/default/bin/"
+      - "/usr/local/bin/"
+      - "/usr/bin/"
+      - "/bin/"
+      - "/home/sirus/.config/.foundry/bin/"
+      - "/usr/local/sbin/"
+      - "/opt/android-sdk/cmdline-tools/latest/bin/"
+      - "/opt/android-sdk/platform-tools/"
+      - "/opt/android-sdk/tools/"
+      - "/opt/android-sdk/tools/bin/"
+      - "/opt/cuda/bin/"
+      - "/var/lib/flatpak/exports/bin/"
+      - "/usr/lib/jvm/default/bin/"
+      - "/usr/bin/site_perl/"
+      - "/usr/bin/vendor_perl/"
+      - "/usr/bin/core_perl/"
+      - "/usr/lib/rustup/bin/"
+      - "/home/sirus/.lmstudio/bin/"
+      - "/home/sirus/.claude/plugins/cache/claude-plugins-official/clangd-lsp/1.0.0/bin/"
+      - "/home/sirus/.claude/plugins/cache/claude-plugins-official/rust-analyzer-lsp/1.0.0/bin/"
+      - "/home/sirus/.claude/plugins/cache/claude-plugins-official/frontend-design/unknown/bin/"
+    searched_directories:
+      - "/usr/lib/ccache/bin/ar"
+      - "/home/sirus/.bun/bin/ar"
+      - "/home/sirus/.opencode/bin/ar"
+      - "/opt/anaconda/condabin/ar"
+      - "/home/sirus/.cargo/bin/ar"
+      - "/home/sirus/.nix-profile/bin/ar"
+      - "/home/sirus/.emacs.d/bin/ar"
+      - "/home/sirus/scripts/ar"
+      - "/home/sirus/.local/bin/ar"
+      - "/nix/var/nix/profiles/default/bin/ar"
+      - "/usr/local/bin/ar"
+    found: "/usr/bin/ar"
+    search_context:
+      CMAKE_PREFIX_PATH:
+        - "/tmp/ztok_install_test"
+      ENV{PATH}:
+        - "/home/sirus/.bun/bin"
+        - "/home/sirus/.opencode/bin"
+        - "/opt/anaconda/condabin"
+        - "/home/sirus/.cargo/bin"
+        - "/home/sirus/.nix-profile/bin"
+        - "/home/sirus/.emacs.d/bin"
+        - "/home/sirus/scripts"
+        - "/home/sirus/.local/bin"
+        - "/usr/lib/ccache/bin/"
+        - "/home/sirus/.local/bin"
+        - "/home/sirus/.local/bin"
+        - "/home/sirus/.nix-profile/bin"
+        - "/nix/var/nix/profiles/default/bin"
+        - "/home/sirus/.local/bin"
+        - "/usr/local/bin"
+        - "/usr/bin"
+        - "/bin"
+        - "/home/sirus/.config/.foundry/bin"
+        - "/usr/local/sbin"
+        - "/opt/android-sdk/cmdline-tools/latest/bin"
+        - "/opt/android-sdk/platform-tools"
+        - "/opt/android-sdk/tools"
+        - "/opt/android-sdk/tools/bin"
+        - "/opt/cuda/bin"
+        - "/var/lib/flatpak/exports/bin"
+        - "/usr/lib/jvm/default/bin"
+        - "/usr/bin/site_perl"
+        - "/usr/bin/vendor_perl"
+        - "/usr/bin/core_perl"
+        - "/usr/lib/rustup/bin"
+        - "/home/sirus/.config/.foundry/bin"
+        - "/home/sirus/.lmstudio/bin"
+        - "/home/sirus/.claude/plugins/cache/claude-plugins-official/clangd-lsp/1.0.0/bin"
+        - "/home/sirus/.claude/plugins/cache/claude-plugins-official/rust-analyzer-lsp/1.0.0/bin"
+        - "/home/sirus/.claude/plugins/cache/claude-plugins-official/frontend-design/unknown/bin"
+  -
+    kind: "find-v1"
+    backtrace:
+      - "/usr/share/cmake/Modules/CMakeFindBinUtils.cmake:243 (find_program)"
+      - "/usr/share/cmake/Modules/CMakeDetermineCCompiler.cmake:200 (include)"
+      - "CMakeLists.txt:2 (project)"
+    mode: "program"
+    variable: "CMAKE_RANLIB"
+    description: "Path to a program."
+    settings:
+      SearchFramework: "NEVER"
+      SearchAppBundle: "NEVER"
+      CMAKE_FIND_USE_CMAKE_PATH: false
+      CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: false
+      CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
+      CMAKE_FIND_USE_INSTALL_PREFIX: true
+    names:
+      - "ranlib"
+    candidate_directories:
+      - "/usr/lib/ccache/bin/"
+      - "/home/sirus/.bun/bin/"
+      - "/home/sirus/.opencode/bin/"
+      - "/opt/anaconda/condabin/"
+      - "/home/sirus/.cargo/bin/"
+      - "/home/sirus/.nix-profile/bin/"
+      - "/home/sirus/.emacs.d/bin/"
+      - "/home/sirus/scripts/"
+      - "/home/sirus/.local/bin/"
+      - "/nix/var/nix/profiles/default/bin/"
+      - "/usr/local/bin/"
+      - "/usr/bin/"
+      - "/bin/"
+      - "/home/sirus/.config/.foundry/bin/"
+      - "/usr/local/sbin/"
+      - "/opt/android-sdk/cmdline-tools/latest/bin/"
+      - "/opt/android-sdk/platform-tools/"
+      - "/opt/android-sdk/tools/"
+      - "/opt/android-sdk/tools/bin/"
+      - "/opt/cuda/bin/"
+      - "/var/lib/flatpak/exports/bin/"
+      - "/usr/lib/jvm/default/bin/"
+      - "/usr/bin/site_perl/"
+      - "/usr/bin/vendor_perl/"
+      - "/usr/bin/core_perl/"
+      - "/usr/lib/rustup/bin/"
+      - "/home/sirus/.lmstudio/bin/"
+      - "/home/sirus/.claude/plugins/cache/claude-plugins-official/clangd-lsp/1.0.0/bin/"
+      - "/home/sirus/.claude/plugins/cache/claude-plugins-official/rust-analyzer-lsp/1.0.0/bin/"
+      - "/home/sirus/.claude/plugins/cache/claude-plugins-official/frontend-design/unknown/bin/"
+    searched_directories:
+      - "/usr/lib/ccache/bin/ranlib"
+      - "/home/sirus/.bun/bin/ranlib"
+      - "/home/sirus/.opencode/bin/ranlib"
+      - "/opt/anaconda/condabin/ranlib"
+      - "/home/sirus/.cargo/bin/ranlib"
+      - "/home/sirus/.nix-profile/bin/ranlib"
+      - "/home/sirus/.emacs.d/bin/ranlib"
+      - "/home/sirus/scripts/ranlib"
+      - "/home/sirus/.local/bin/ranlib"
+      - "/nix/var/nix/profiles/default/bin/ranlib"
+      - "/usr/local/bin/ranlib"
+    found: "/usr/bin/ranlib"
+    search_context:
+      CMAKE_PREFIX_PATH:
+        - "/tmp/ztok_install_test"
+      ENV{PATH}:
+        - "/home/sirus/.bun/bin"
+        - "/home/sirus/.opencode/bin"
+        - "/opt/anaconda/condabin"
+        - "/home/sirus/.cargo/bin"
+        - "/home/sirus/.nix-profile/bin"
+        - "/home/sirus/.emacs.d/bin"
+        - "/home/sirus/scripts"
+        - "/home/sirus/.local/bin"
+        - "/usr/lib/ccache/bin/"
+        - "/home/sirus/.local/bin"
+        - "/home/sirus/.local/bin"
+        - "/home/sirus/.nix-profile/bin"
+        - "/nix/var/nix/profiles/default/bin"
+        - "/home/sirus/.local/bin"
+        - "/usr/local/bin"
+        - "/usr/bin"
+        - "/bin"
+        - "/home/sirus/.config/.foundry/bin"
+        - "/usr/local/sbin"
+        - "/opt/android-sdk/cmdline-tools/latest/bin"
+        - "/opt/android-sdk/platform-tools"
+        - "/opt/android-sdk/tools"
+        - "/opt/android-sdk/tools/bin"
+        - "/opt/cuda/bin"
+        - "/var/lib/flatpak/exports/bin"
+        - "/usr/lib/jvm/default/bin"
+        - "/usr/bin/site_perl"
+        - "/usr/bin/vendor_perl"
+        - "/usr/bin/core_perl"
+        - "/usr/lib/rustup/bin"
+        - "/home/sirus/.config/.foundry/bin"
+        - "/home/sirus/.lmstudio/bin"
+        - "/home/sirus/.claude/plugins/cache/claude-plugins-official/clangd-lsp/1.0.0/bin"
+        - "/home/sirus/.claude/plugins/cache/claude-plugins-official/rust-analyzer-lsp/1.0.0/bin"
+        - "/home/sirus/.claude/plugins/cache/claude-plugins-official/frontend-design/unknown/bin"
+  -
+    kind: "find-v1"
+    backtrace:
+      - "/usr/share/cmake/Modules/CMakeFindBinUtils.cmake:243 (find_program)"
+      - "/usr/share/cmake/Modules/CMakeDetermineCCompiler.cmake:200 (include)"
+      - "CMakeLists.txt:2 (project)"
+    mode: "program"
+    variable: "CMAKE_STRIP"
+    description: "Path to a program."
+    settings:
+      SearchFramework: "NEVER"
+      SearchAppBundle: "NEVER"
+      CMAKE_FIND_USE_CMAKE_PATH: false
+      CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: false
+      CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
+      CMAKE_FIND_USE_INSTALL_PREFIX: true
+    names:
+      - "strip"
+    candidate_directories:
+      - "/usr/lib/ccache/bin/"
+      - "/home/sirus/.bun/bin/"
+      - "/home/sirus/.opencode/bin/"
+      - "/opt/anaconda/condabin/"
+      - "/home/sirus/.cargo/bin/"
+      - "/home/sirus/.nix-profile/bin/"
+      - "/home/sirus/.emacs.d/bin/"
+      - "/home/sirus/scripts/"
+      - "/home/sirus/.local/bin/"
+      - "/nix/var/nix/profiles/default/bin/"
+      - "/usr/local/bin/"
+      - "/usr/bin/"
+      - "/bin/"
+      - "/home/sirus/.config/.foundry/bin/"
+      - "/usr/local/sbin/"
+      - "/opt/android-sdk/cmdline-tools/latest/bin/"
+      - "/opt/android-sdk/platform-tools/"
+      - "/opt/android-sdk/tools/"
+      - "/opt/android-sdk/tools/bin/"
+      - "/opt/cuda/bin/"
+      - "/var/lib/flatpak/exports/bin/"
+      - "/usr/lib/jvm/default/bin/"
+      - "/usr/bin/site_perl/"
+      - "/usr/bin/vendor_perl/"
+      - "/usr/bin/core_perl/"
+      - "/usr/lib/rustup/bin/"
+      - "/home/sirus/.lmstudio/bin/"
+      - "/home/sirus/.claude/plugins/cache/claude-plugins-official/clangd-lsp/1.0.0/bin/"
+      - "/home/sirus/.claude/plugins/cache/claude-plugins-official/rust-analyzer-lsp/1.0.0/bin/"
+      - "/home/sirus/.claude/plugins/cache/claude-plugins-official/frontend-design/unknown/bin/"
+    searched_directories:
+      - "/usr/lib/ccache/bin/strip"
+      - "/home/sirus/.bun/bin/strip"
+      - "/home/sirus/.opencode/bin/strip"
+      - "/opt/anaconda/condabin/strip"
+      - "/home/sirus/.cargo/bin/strip"
+      - "/home/sirus/.nix-profile/bin/strip"
+      - "/home/sirus/.emacs.d/bin/strip"
+      - "/home/sirus/scripts/strip"
+      - "/home/sirus/.local/bin/strip"
+      - "/nix/var/nix/profiles/default/bin/strip"
+      - "/usr/local/bin/strip"
+    found: "/usr/bin/strip"
+    search_context:
+      CMAKE_PREFIX_PATH:
+        - "/tmp/ztok_install_test"
+      ENV{PATH}:
+        - "/home/sirus/.bun/bin"
+        - "/home/sirus/.opencode/bin"
+        - "/opt/anaconda/condabin"
+        - "/home/sirus/.cargo/bin"
+        - "/home/sirus/.nix-profile/bin"
+        - "/home/sirus/.emacs.d/bin"
+        - "/home/sirus/scripts"
+        - "/home/sirus/.local/bin"
+        - "/usr/lib/ccache/bin/"
+        - "/home/sirus/.local/bin"
+        - "/home/sirus/.local/bin"
+        - "/home/sirus/.nix-profile/bin"
+        - "/nix/var/nix/profiles/default/bin"
+        - "/home/sirus/.local/bin"
+        - "/usr/local/bin"
+        - "/usr/bin"
+        - "/bin"
+        - "/home/sirus/.config/.foundry/bin"
+        - "/usr/local/sbin"
+        - "/opt/android-sdk/cmdline-tools/latest/bin"
+        - "/opt/android-sdk/platform-tools"
+        - "/opt/android-sdk/tools"
+        - "/opt/android-sdk/tools/bin"
+        - "/opt/cuda/bin"
+        - "/var/lib/flatpak/exports/bin"
+        - "/usr/lib/jvm/default/bin"
+        - "/usr/bin/site_perl"
+        - "/usr/bin/vendor_perl"
+        - "/usr/bin/core_perl"
+        - "/usr/lib/rustup/bin"
+        - "/home/sirus/.config/.foundry/bin"
+        - "/home/sirus/.lmstudio/bin"
+        - "/home/sirus/.claude/plugins/cache/claude-plugins-official/clangd-lsp/1.0.0/bin"
+        - "/home/sirus/.claude/plugins/cache/claude-plugins-official/rust-analyzer-lsp/1.0.0/bin"
+        - "/home/sirus/.claude/plugins/cache/claude-plugins-official/frontend-design/unknown/bin"
+  -
+    kind: "find-v1"
+    backtrace:
+      - "/usr/share/cmake/Modules/CMakeFindBinUtils.cmake:243 (find_program)"
+      - "/usr/share/cmake/Modules/CMakeDetermineCCompiler.cmake:200 (include)"
+      - "CMakeLists.txt:2 (project)"
+    mode: "program"
+    variable: "CMAKE_LINKER"
+    description: "Path to a program."
+    settings:
+      SearchFramework: "NEVER"
+      SearchAppBundle: "NEVER"
+      CMAKE_FIND_USE_CMAKE_PATH: false
+      CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: false
+      CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
+      CMAKE_FIND_USE_INSTALL_PREFIX: true
+    names:
+      - "ld"
+    candidate_directories:
+      - "/usr/lib/ccache/bin/"
+      - "/home/sirus/.bun/bin/"
+      - "/home/sirus/.opencode/bin/"
+      - "/opt/anaconda/condabin/"
+      - "/home/sirus/.cargo/bin/"
+      - "/home/sirus/.nix-profile/bin/"
+      - "/home/sirus/.emacs.d/bin/"
+      - "/home/sirus/scripts/"
+      - "/home/sirus/.local/bin/"
+      - "/nix/var/nix/profiles/default/bin/"
+      - "/usr/local/bin/"
+      - "/usr/bin/"
+      - "/bin/"
+      - "/home/sirus/.config/.foundry/bin/"
+      - "/usr/local/sbin/"
+      - "/opt/android-sdk/cmdline-tools/latest/bin/"
+      - "/opt/android-sdk/platform-tools/"
+      - "/opt/android-sdk/tools/"
+      - "/opt/android-sdk/tools/bin/"
+      - "/opt/cuda/bin/"
+      - "/var/lib/flatpak/exports/bin/"
+      - "/usr/lib/jvm/default/bin/"
+      - "/usr/bin/site_perl/"
+      - "/usr/bin/vendor_perl/"
+      - "/usr/bin/core_perl/"
+      - "/usr/lib/rustup/bin/"
+      - "/home/sirus/.lmstudio/bin/"
+      - "/home/sirus/.claude/plugins/cache/claude-plugins-official/clangd-lsp/1.0.0/bin/"
+      - "/home/sirus/.claude/plugins/cache/claude-plugins-official/rust-analyzer-lsp/1.0.0/bin/"
+      - "/home/sirus/.claude/plugins/cache/claude-plugins-official/frontend-design/unknown/bin/"
+    searched_directories:
+      - "/usr/lib/ccache/bin/ld"
+      - "/home/sirus/.bun/bin/ld"
+      - "/home/sirus/.opencode/bin/ld"
+      - "/opt/anaconda/condabin/ld"
+      - "/home/sirus/.cargo/bin/ld"
+      - "/home/sirus/.nix-profile/bin/ld"
+      - "/home/sirus/.emacs.d/bin/ld"
+      - "/home/sirus/scripts/ld"
+      - "/home/sirus/.local/bin/ld"
+      - "/nix/var/nix/profiles/default/bin/ld"
+      - "/usr/local/bin/ld"
+    found: "/usr/bin/ld"
+    search_context:
+      CMAKE_PREFIX_PATH:
+        - "/tmp/ztok_install_test"
+      ENV{PATH}:
+        - "/home/sirus/.bun/bin"
+        - "/home/sirus/.opencode/bin"
+        - "/opt/anaconda/condabin"
+        - "/home/sirus/.cargo/bin"
+        - "/home/sirus/.nix-profile/bin"
+        - "/home/sirus/.emacs.d/bin"
+        - "/home/sirus/scripts"
+        - "/home/sirus/.local/bin"
+        - "/usr/lib/ccache/bin/"
+        - "/home/sirus/.local/bin"
+        - "/home/sirus/.local/bin"
+        - "/home/sirus/.nix-profile/bin"
+        - "/nix/var/nix/profiles/default/bin"
+        - "/home/sirus/.local/bin"
+        - "/usr/local/bin"
+        - "/usr/bin"
+        - "/bin"
+        - "/home/sirus/.config/.foundry/bin"
+        - "/usr/local/sbin"
+        - "/opt/android-sdk/cmdline-tools/latest/bin"
+        - "/opt/android-sdk/platform-tools"
+        - "/opt/android-sdk/tools"
+        - "/opt/android-sdk/tools/bin"
+        - "/opt/cuda/bin"
+        - "/var/lib/flatpak/exports/bin"
+        - "/usr/lib/jvm/default/bin"
+        - "/usr/bin/site_perl"
+        - "/usr/bin/vendor_perl"
+        - "/usr/bin/core_perl"
+        - "/usr/lib/rustup/bin"
+        - "/home/sirus/.config/.foundry/bin"
+        - "/home/sirus/.lmstudio/bin"
+        - "/home/sirus/.claude/plugins/cache/claude-plugins-official/clangd-lsp/1.0.0/bin"
+        - "/home/sirus/.claude/plugins/cache/claude-plugins-official/rust-analyzer-lsp/1.0.0/bin"
+        - "/home/sirus/.claude/plugins/cache/claude-plugins-official/frontend-design/unknown/bin"
+  -
+    kind: "find-v1"
+    backtrace:
+      - "/usr/share/cmake/Modules/CMakeFindBinUtils.cmake:243 (find_program)"
+      - "/usr/share/cmake/Modules/CMakeDetermineCCompiler.cmake:200 (include)"
+      - "CMakeLists.txt:2 (project)"
+    mode: "program"
+    variable: "CMAKE_NM"
+    description: "Path to a program."
+    settings:
+      SearchFramework: "NEVER"
+      SearchAppBundle: "NEVER"
+      CMAKE_FIND_USE_CMAKE_PATH: false
+      CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: false
+      CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
+      CMAKE_FIND_USE_INSTALL_PREFIX: true
+    names:
+      - "nm"
+    candidate_directories:
+      - "/usr/lib/ccache/bin/"
+      - "/home/sirus/.bun/bin/"
+      - "/home/sirus/.opencode/bin/"
+      - "/opt/anaconda/condabin/"
+      - "/home/sirus/.cargo/bin/"
+      - "/home/sirus/.nix-profile/bin/"
+      - "/home/sirus/.emacs.d/bin/"
+      - "/home/sirus/scripts/"
+      - "/home/sirus/.local/bin/"
+      - "/nix/var/nix/profiles/default/bin/"
+      - "/usr/local/bin/"
+      - "/usr/bin/"
+      - "/bin/"
+      - "/home/sirus/.config/.foundry/bin/"
+      - "/usr/local/sbin/"
+      - "/opt/android-sdk/cmdline-tools/latest/bin/"
+      - "/opt/android-sdk/platform-tools/"
+      - "/opt/android-sdk/tools/"
+      - "/opt/android-sdk/tools/bin/"
+      - "/opt/cuda/bin/"
+      - "/var/lib/flatpak/exports/bin/"
+      - "/usr/lib/jvm/default/bin/"
+      - "/usr/bin/site_perl/"
+      - "/usr/bin/vendor_perl/"
+      - "/usr/bin/core_perl/"
+      - "/usr/lib/rustup/bin/"
+      - "/home/sirus/.lmstudio/bin/"
+      - "/home/sirus/.claude/plugins/cache/claude-plugins-official/clangd-lsp/1.0.0/bin/"
+      - "/home/sirus/.claude/plugins/cache/claude-plugins-official/rust-analyzer-lsp/1.0.0/bin/"
+      - "/home/sirus/.claude/plugins/cache/claude-plugins-official/frontend-design/unknown/bin/"
+    searched_directories:
+      - "/usr/lib/ccache/bin/nm"
+      - "/home/sirus/.bun/bin/nm"
+      - "/home/sirus/.opencode/bin/nm"
+      - "/opt/anaconda/condabin/nm"
+      - "/home/sirus/.cargo/bin/nm"
+      - "/home/sirus/.nix-profile/bin/nm"
+      - "/home/sirus/.emacs.d/bin/nm"
+      - "/home/sirus/scripts/nm"
+      - "/home/sirus/.local/bin/nm"
+      - "/nix/var/nix/profiles/default/bin/nm"
+      - "/usr/local/bin/nm"
+    found: "/usr/bin/nm"
+    search_context:
+      CMAKE_PREFIX_PATH:
+        - "/tmp/ztok_install_test"
+      ENV{PATH}:
+        - "/home/sirus/.bun/bin"
+        - "/home/sirus/.opencode/bin"
+        - "/opt/anaconda/condabin"
+        - "/home/sirus/.cargo/bin"
+        - "/home/sirus/.nix-profile/bin"
+        - "/home/sirus/.emacs.d/bin"
+        - "/home/sirus/scripts"
+        - "/home/sirus/.local/bin"
+        - "/usr/lib/ccache/bin/"
+        - "/home/sirus/.local/bin"
+        - "/home/sirus/.local/bin"
+        - "/home/sirus/.nix-profile/bin"
+        - "/nix/var/nix/profiles/default/bin"
+        - "/home/sirus/.local/bin"
+        - "/usr/local/bin"
+        - "/usr/bin"
+        - "/bin"
+        - "/home/sirus/.config/.foundry/bin"
+        - "/usr/local/sbin"
+        - "/opt/android-sdk/cmdline-tools/latest/bin"
+        - "/opt/android-sdk/platform-tools"
+        - "/opt/android-sdk/tools"
+        - "/opt/android-sdk/tools/bin"
+        - "/opt/cuda/bin"
+        - "/var/lib/flatpak/exports/bin"
+        - "/usr/lib/jvm/default/bin"
+        - "/usr/bin/site_perl"
+        - "/usr/bin/vendor_perl"
+        - "/usr/bin/core_perl"
+        - "/usr/lib/rustup/bin"
+        - "/home/sirus/.config/.foundry/bin"
+        - "/home/sirus/.lmstudio/bin"
+        - "/home/sirus/.claude/plugins/cache/claude-plugins-official/clangd-lsp/1.0.0/bin"
+        - "/home/sirus/.claude/plugins/cache/claude-plugins-official/rust-analyzer-lsp/1.0.0/bin"
+        - "/home/sirus/.claude/plugins/cache/claude-plugins-official/frontend-design/unknown/bin"
+  -
+    kind: "find-v1"
+    backtrace:
+      - "/usr/share/cmake/Modules/CMakeFindBinUtils.cmake:243 (find_program)"
+      - "/usr/share/cmake/Modules/CMakeDetermineCCompiler.cmake:200 (include)"
+      - "CMakeLists.txt:2 (project)"
+    mode: "program"
+    variable: "CMAKE_OBJDUMP"
+    description: "Path to a program."
+    settings:
+      SearchFramework: "NEVER"
+      SearchAppBundle: "NEVER"
+      CMAKE_FIND_USE_CMAKE_PATH: false
+      CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: false
+      CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
+      CMAKE_FIND_USE_INSTALL_PREFIX: true
+    names:
+      - "objdump"
+    candidate_directories:
+      - "/usr/lib/ccache/bin/"
+      - "/home/sirus/.bun/bin/"
+      - "/home/sirus/.opencode/bin/"
+      - "/opt/anaconda/condabin/"
+      - "/home/sirus/.cargo/bin/"
+      - "/home/sirus/.nix-profile/bin/"
+      - "/home/sirus/.emacs.d/bin/"
+      - "/home/sirus/scripts/"
+      - "/home/sirus/.local/bin/"
+      - "/nix/var/nix/profiles/default/bin/"
+      - "/usr/local/bin/"
+      - "/usr/bin/"
+      - "/bin/"
+      - "/home/sirus/.config/.foundry/bin/"
+      - "/usr/local/sbin/"
+      - "/opt/android-sdk/cmdline-tools/latest/bin/"
+      - "/opt/android-sdk/platform-tools/"
+      - "/opt/android-sdk/tools/"
+      - "/opt/android-sdk/tools/bin/"
+      - "/opt/cuda/bin/"
+      - "/var/lib/flatpak/exports/bin/"
+      - "/usr/lib/jvm/default/bin/"
+      - "/usr/bin/site_perl/"
+      - "/usr/bin/vendor_perl/"
+      - "/usr/bin/core_perl/"
+      - "/usr/lib/rustup/bin/"
+      - "/home/sirus/.lmstudio/bin/"
+      - "/home/sirus/.claude/plugins/cache/claude-plugins-official/clangd-lsp/1.0.0/bin/"
+      - "/home/sirus/.claude/plugins/cache/claude-plugins-official/rust-analyzer-lsp/1.0.0/bin/"
+      - "/home/sirus/.claude/plugins/cache/claude-plugins-official/frontend-design/unknown/bin/"
+    searched_directories:
+      - "/usr/lib/ccache/bin/objdump"
+      - "/home/sirus/.bun/bin/objdump"
+      - "/home/sirus/.opencode/bin/objdump"
+      - "/opt/anaconda/condabin/objdump"
+      - "/home/sirus/.cargo/bin/objdump"
+      - "/home/sirus/.nix-profile/bin/objdump"
+      - "/home/sirus/.emacs.d/bin/objdump"
+      - "/home/sirus/scripts/objdump"
+      - "/home/sirus/.local/bin/objdump"
+      - "/nix/var/nix/profiles/default/bin/objdump"
+      - "/usr/local/bin/objdump"
+    found: "/usr/bin/objdump"
+    search_context:
+      CMAKE_PREFIX_PATH:
+        - "/tmp/ztok_install_test"
+      ENV{PATH}:
+        - "/home/sirus/.bun/bin"
+        - "/home/sirus/.opencode/bin"
+        - "/opt/anaconda/condabin"
+        - "/home/sirus/.cargo/bin"
+        - "/home/sirus/.nix-profile/bin"
+        - "/home/sirus/.emacs.d/bin"
+        - "/home/sirus/scripts"
+        - "/home/sirus/.local/bin"
+        - "/usr/lib/ccache/bin/"
+        - "/home/sirus/.local/bin"
+        - "/home/sirus/.local/bin"
+        - "/home/sirus/.nix-profile/bin"
+        - "/nix/var/nix/profiles/default/bin"
+        - "/home/sirus/.local/bin"
+        - "/usr/local/bin"
+        - "/usr/bin"
+        - "/bin"
+        - "/home/sirus/.config/.foundry/bin"
+        - "/usr/local/sbin"
+        - "/opt/android-sdk/cmdline-tools/latest/bin"
+        - "/opt/android-sdk/platform-tools"
+        - "/opt/android-sdk/tools"
+        - "/opt/android-sdk/tools/bin"
+        - "/opt/cuda/bin"
+        - "/var/lib/flatpak/exports/bin"
+        - "/usr/lib/jvm/default/bin"
+        - "/usr/bin/site_perl"
+        - "/usr/bin/vendor_perl"
+        - "/usr/bin/core_perl"
+        - "/usr/lib/rustup/bin"
+        - "/home/sirus/.config/.foundry/bin"
+        - "/home/sirus/.lmstudio/bin"
+        - "/home/sirus/.claude/plugins/cache/claude-plugins-official/clangd-lsp/1.0.0/bin"
+        - "/home/sirus/.claude/plugins/cache/claude-plugins-official/rust-analyzer-lsp/1.0.0/bin"
+        - "/home/sirus/.claude/plugins/cache/claude-plugins-official/frontend-design/unknown/bin"
+  -
+    kind: "find-v1"
+    backtrace:
+      - "/usr/share/cmake/Modules/CMakeFindBinUtils.cmake:243 (find_program)"
+      - "/usr/share/cmake/Modules/CMakeDetermineCCompiler.cmake:200 (include)"
+      - "CMakeLists.txt:2 (project)"
+    mode: "program"
+    variable: "CMAKE_OBJCOPY"
+    description: "Path to a program."
+    settings:
+      SearchFramework: "NEVER"
+      SearchAppBundle: "NEVER"
+      CMAKE_FIND_USE_CMAKE_PATH: false
+      CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: false
+      CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
+      CMAKE_FIND_USE_INSTALL_PREFIX: true
+    names:
+      - "objcopy"
+    candidate_directories:
+      - "/usr/lib/ccache/bin/"
+      - "/home/sirus/.bun/bin/"
+      - "/home/sirus/.opencode/bin/"
+      - "/opt/anaconda/condabin/"
+      - "/home/sirus/.cargo/bin/"
+      - "/home/sirus/.nix-profile/bin/"
+      - "/home/sirus/.emacs.d/bin/"
+      - "/home/sirus/scripts/"
+      - "/home/sirus/.local/bin/"
+      - "/nix/var/nix/profiles/default/bin/"
+      - "/usr/local/bin/"
+      - "/usr/bin/"
+      - "/bin/"
+      - "/home/sirus/.config/.foundry/bin/"
+      - "/usr/local/sbin/"
+      - "/opt/android-sdk/cmdline-tools/latest/bin/"
+      - "/opt/android-sdk/platform-tools/"
+      - "/opt/android-sdk/tools/"
+      - "/opt/android-sdk/tools/bin/"
+      - "/opt/cuda/bin/"
+      - "/var/lib/flatpak/exports/bin/"
+      - "/usr/lib/jvm/default/bin/"
+      - "/usr/bin/site_perl/"
+      - "/usr/bin/vendor_perl/"
+      - "/usr/bin/core_perl/"
+      - "/usr/lib/rustup/bin/"
+      - "/home/sirus/.lmstudio/bin/"
+      - "/home/sirus/.claude/plugins/cache/claude-plugins-official/clangd-lsp/1.0.0/bin/"
+      - "/home/sirus/.claude/plugins/cache/claude-plugins-official/rust-analyzer-lsp/1.0.0/bin/"
+      - "/home/sirus/.claude/plugins/cache/claude-plugins-official/frontend-design/unknown/bin/"
+    searched_directories:
+      - "/usr/lib/ccache/bin/objcopy"
+      - "/home/sirus/.bun/bin/objcopy"
+      - "/home/sirus/.opencode/bin/objcopy"
+      - "/opt/anaconda/condabin/objcopy"
+      - "/home/sirus/.cargo/bin/objcopy"
+      - "/home/sirus/.nix-profile/bin/objcopy"
+      - "/home/sirus/.emacs.d/bin/objcopy"
+      - "/home/sirus/scripts/objcopy"
+      - "/home/sirus/.local/bin/objcopy"
+      - "/nix/var/nix/profiles/default/bin/objcopy"
+      - "/usr/local/bin/objcopy"
+    found: "/usr/bin/objcopy"
+    search_context:
+      CMAKE_PREFIX_PATH:
+        - "/tmp/ztok_install_test"
+      ENV{PATH}:
+        - "/home/sirus/.bun/bin"
+        - "/home/sirus/.opencode/bin"
+        - "/opt/anaconda/condabin"
+        - "/home/sirus/.cargo/bin"
+        - "/home/sirus/.nix-profile/bin"
+        - "/home/sirus/.emacs.d/bin"
+        - "/home/sirus/scripts"
+        - "/home/sirus/.local/bin"
+        - "/usr/lib/ccache/bin/"
+        - "/home/sirus/.local/bin"
+        - "/home/sirus/.local/bin"
+        - "/home/sirus/.nix-profile/bin"
+        - "/nix/var/nix/profiles/default/bin"
+        - "/home/sirus/.local/bin"
+        - "/usr/local/bin"
+        - "/usr/bin"
+        - "/bin"
+        - "/home/sirus/.config/.foundry/bin"
+        - "/usr/local/sbin"
+        - "/opt/android-sdk/cmdline-tools/latest/bin"
+        - "/opt/android-sdk/platform-tools"
+        - "/opt/android-sdk/tools"
+        - "/opt/android-sdk/tools/bin"
+        - "/opt/cuda/bin"
+        - "/var/lib/flatpak/exports/bin"
+        - "/usr/lib/jvm/default/bin"
+        - "/usr/bin/site_perl"
+        - "/usr/bin/vendor_perl"
+        - "/usr/bin/core_perl"
+        - "/usr/lib/rustup/bin"
+        - "/home/sirus/.config/.foundry/bin"
+        - "/home/sirus/.lmstudio/bin"
+        - "/home/sirus/.claude/plugins/cache/claude-plugins-official/clangd-lsp/1.0.0/bin"
+        - "/home/sirus/.claude/plugins/cache/claude-plugins-official/rust-analyzer-lsp/1.0.0/bin"
+        - "/home/sirus/.claude/plugins/cache/claude-plugins-official/frontend-design/unknown/bin"
+  -
+    kind: "find-v1"
+    backtrace:
+      - "/usr/share/cmake/Modules/CMakeFindBinUtils.cmake:243 (find_program)"
+      - "/usr/share/cmake/Modules/CMakeDetermineCCompiler.cmake:200 (include)"
+      - "CMakeLists.txt:2 (project)"
+    mode: "program"
+    variable: "CMAKE_READELF"
+    description: "Path to a program."
+    settings:
+      SearchFramework: "NEVER"
+      SearchAppBundle: "NEVER"
+      CMAKE_FIND_USE_CMAKE_PATH: false
+      CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: false
+      CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
+      CMAKE_FIND_USE_INSTALL_PREFIX: true
+    names:
+      - "readelf"
+    candidate_directories:
+      - "/usr/lib/ccache/bin/"
+      - "/home/sirus/.bun/bin/"
+      - "/home/sirus/.opencode/bin/"
+      - "/opt/anaconda/condabin/"
+      - "/home/sirus/.cargo/bin/"
+      - "/home/sirus/.nix-profile/bin/"
+      - "/home/sirus/.emacs.d/bin/"
+      - "/home/sirus/scripts/"
+      - "/home/sirus/.local/bin/"
+      - "/nix/var/nix/profiles/default/bin/"
+      - "/usr/local/bin/"
+      - "/usr/bin/"
+      - "/bin/"
+      - "/home/sirus/.config/.foundry/bin/"
+      - "/usr/local/sbin/"
+      - "/opt/android-sdk/cmdline-tools/latest/bin/"
+      - "/opt/android-sdk/platform-tools/"
+      - "/opt/android-sdk/tools/"
+      - "/opt/android-sdk/tools/bin/"
+      - "/opt/cuda/bin/"
+      - "/var/lib/flatpak/exports/bin/"
+      - "/usr/lib/jvm/default/bin/"
+      - "/usr/bin/site_perl/"
+      - "/usr/bin/vendor_perl/"
+      - "/usr/bin/core_perl/"
+      - "/usr/lib/rustup/bin/"
+      - "/home/sirus/.lmstudio/bin/"
+      - "/home/sirus/.claude/plugins/cache/claude-plugins-official/clangd-lsp/1.0.0/bin/"
+      - "/home/sirus/.claude/plugins/cache/claude-plugins-official/rust-analyzer-lsp/1.0.0/bin/"
+      - "/home/sirus/.claude/plugins/cache/claude-plugins-official/frontend-design/unknown/bin/"
+    searched_directories:
+      - "/usr/lib/ccache/bin/readelf"
+      - "/home/sirus/.bun/bin/readelf"
+      - "/home/sirus/.opencode/bin/readelf"
+      - "/opt/anaconda/condabin/readelf"
+      - "/home/sirus/.cargo/bin/readelf"
+      - "/home/sirus/.nix-profile/bin/readelf"
+      - "/home/sirus/.emacs.d/bin/readelf"
+      - "/home/sirus/scripts/readelf"
+      - "/home/sirus/.local/bin/readelf"
+      - "/nix/var/nix/profiles/default/bin/readelf"
+      - "/usr/local/bin/readelf"
+    found: "/usr/bin/readelf"
+    search_context:
+      CMAKE_PREFIX_PATH:
+        - "/tmp/ztok_install_test"
+      ENV{PATH}:
+        - "/home/sirus/.bun/bin"
+        - "/home/sirus/.opencode/bin"
+        - "/opt/anaconda/condabin"
+        - "/home/sirus/.cargo/bin"
+        - "/home/sirus/.nix-profile/bin"
+        - "/home/sirus/.emacs.d/bin"
+        - "/home/sirus/scripts"
+        - "/home/sirus/.local/bin"
+        - "/usr/lib/ccache/bin/"
+        - "/home/sirus/.local/bin"
+        - "/home/sirus/.local/bin"
+        - "/home/sirus/.nix-profile/bin"
+        - "/nix/var/nix/profiles/default/bin"
+        - "/home/sirus/.local/bin"
+        - "/usr/local/bin"
+        - "/usr/bin"
+        - "/bin"
+        - "/home/sirus/.config/.foundry/bin"
+        - "/usr/local/sbin"
+        - "/opt/android-sdk/cmdline-tools/latest/bin"
+        - "/opt/android-sdk/platform-tools"
+        - "/opt/android-sdk/tools"
+        - "/opt/android-sdk/tools/bin"
+        - "/opt/cuda/bin"
+        - "/var/lib/flatpak/exports/bin"
+        - "/usr/lib/jvm/default/bin"
+        - "/usr/bin/site_perl"
+        - "/usr/bin/vendor_perl"
+        - "/usr/bin/core_perl"
+        - "/usr/lib/rustup/bin"
+        - "/home/sirus/.config/.foundry/bin"
+        - "/home/sirus/.lmstudio/bin"
+        - "/home/sirus/.claude/plugins/cache/claude-plugins-official/clangd-lsp/1.0.0/bin"
+        - "/home/sirus/.claude/plugins/cache/claude-plugins-official/rust-analyzer-lsp/1.0.0/bin"
+        - "/home/sirus/.claude/plugins/cache/claude-plugins-official/frontend-design/unknown/bin"
+  -
+    kind: "find-v1"
+    backtrace:
+      - "/usr/share/cmake/Modules/CMakeFindBinUtils.cmake:243 (find_program)"
+      - "/usr/share/cmake/Modules/CMakeDetermineCCompiler.cmake:200 (include)"
+      - "CMakeLists.txt:2 (project)"
+    mode: "program"
+    variable: "CMAKE_DLLTOOL"
+    description: "Path to a program."
+    settings:
+      SearchFramework: "NEVER"
+      SearchAppBundle: "NEVER"
+      CMAKE_FIND_USE_CMAKE_PATH: false
+      CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: false
+      CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
+      CMAKE_FIND_USE_INSTALL_PREFIX: true
+    names:
+      - "dlltool"
+    candidate_directories:
+      - "/usr/lib/ccache/bin/"
+      - "/home/sirus/.bun/bin/"
+      - "/home/sirus/.opencode/bin/"
+      - "/opt/anaconda/condabin/"
+      - "/home/sirus/.cargo/bin/"
+      - "/home/sirus/.nix-profile/bin/"
+      - "/home/sirus/.emacs.d/bin/"
+      - "/home/sirus/scripts/"
+      - "/home/sirus/.local/bin/"
+      - "/nix/var/nix/profiles/default/bin/"
+      - "/usr/local/bin/"
+      - "/usr/bin/"
+      - "/bin/"
+      - "/home/sirus/.config/.foundry/bin/"
+      - "/usr/local/sbin/"
+      - "/opt/android-sdk/cmdline-tools/latest/bin/"
+      - "/opt/android-sdk/platform-tools/"
+      - "/opt/android-sdk/tools/"
+      - "/opt/android-sdk/tools/bin/"
+      - "/opt/cuda/bin/"
+      - "/var/lib/flatpak/exports/bin/"
+      - "/usr/lib/jvm/default/bin/"
+      - "/usr/bin/site_perl/"
+      - "/usr/bin/vendor_perl/"
+      - "/usr/bin/core_perl/"
+      - "/usr/lib/rustup/bin/"
+      - "/home/sirus/.lmstudio/bin/"
+      - "/home/sirus/.claude/plugins/cache/claude-plugins-official/clangd-lsp/1.0.0/bin/"
+      - "/home/sirus/.claude/plugins/cache/claude-plugins-official/rust-analyzer-lsp/1.0.0/bin/"
+      - "/home/sirus/.claude/plugins/cache/claude-plugins-official/frontend-design/unknown/bin/"
+    searched_directories:
+      - "/usr/lib/ccache/bin/dlltool"
+      - "/home/sirus/.bun/bin/dlltool"
+      - "/home/sirus/.opencode/bin/dlltool"
+      - "/opt/anaconda/condabin/dlltool"
+      - "/home/sirus/.cargo/bin/dlltool"
+      - "/home/sirus/.nix-profile/bin/dlltool"
+      - "/home/sirus/.emacs.d/bin/dlltool"
+      - "/home/sirus/scripts/dlltool"
+      - "/home/sirus/.local/bin/dlltool"
+      - "/nix/var/nix/profiles/default/bin/dlltool"
+      - "/usr/local/bin/dlltool"
+      - "/usr/bin/dlltool"
+      - "/bin/dlltool"
+      - "/home/sirus/.config/.foundry/bin/dlltool"
+      - "/usr/local/sbin/dlltool"
+      - "/opt/android-sdk/cmdline-tools/latest/bin/dlltool"
+      - "/opt/android-sdk/platform-tools/dlltool"
+      - "/opt/android-sdk/tools/dlltool"
+      - "/opt/android-sdk/tools/bin/dlltool"
+      - "/opt/cuda/bin/dlltool"
+      - "/var/lib/flatpak/exports/bin/dlltool"
+      - "/usr/lib/jvm/default/bin/dlltool"
+      - "/usr/bin/site_perl/dlltool"
+      - "/usr/bin/vendor_perl/dlltool"
+      - "/usr/bin/core_perl/dlltool"
+      - "/usr/lib/rustup/bin/dlltool"
+      - "/home/sirus/.lmstudio/bin/dlltool"
+      - "/home/sirus/.claude/plugins/cache/claude-plugins-official/clangd-lsp/1.0.0/bin/dlltool"
+      - "/home/sirus/.claude/plugins/cache/claude-plugins-official/rust-analyzer-lsp/1.0.0/bin/dlltool"
+      - "/home/sirus/.claude/plugins/cache/claude-plugins-official/frontend-design/unknown/bin/dlltool"
+    found: false
+    search_context:
+      CMAKE_PREFIX_PATH:
+        - "/tmp/ztok_install_test"
+      ENV{PATH}:
+        - "/home/sirus/.bun/bin"
+        - "/home/sirus/.opencode/bin"
+        - "/opt/anaconda/condabin"
+        - "/home/sirus/.cargo/bin"
+        - "/home/sirus/.nix-profile/bin"
+        - "/home/sirus/.emacs.d/bin"
+        - "/home/sirus/scripts"
+        - "/home/sirus/.local/bin"
+        - "/usr/lib/ccache/bin/"
+        - "/home/sirus/.local/bin"
+        - "/home/sirus/.local/bin"
+        - "/home/sirus/.nix-profile/bin"
+        - "/nix/var/nix/profiles/default/bin"
+        - "/home/sirus/.local/bin"
+        - "/usr/local/bin"
+        - "/usr/bin"
+        - "/bin"
+        - "/home/sirus/.config/.foundry/bin"
+        - "/usr/local/sbin"
+        - "/opt/android-sdk/cmdline-tools/latest/bin"
+        - "/opt/android-sdk/platform-tools"
+        - "/opt/android-sdk/tools"
+        - "/opt/android-sdk/tools/bin"
+        - "/opt/cuda/bin"
+        - "/var/lib/flatpak/exports/bin"
+        - "/usr/lib/jvm/default/bin"
+        - "/usr/bin/site_perl"
+        - "/usr/bin/vendor_perl"
+        - "/usr/bin/core_perl"
+        - "/usr/lib/rustup/bin"
+        - "/home/sirus/.config/.foundry/bin"
+        - "/home/sirus/.lmstudio/bin"
+        - "/home/sirus/.claude/plugins/cache/claude-plugins-official/clangd-lsp/1.0.0/bin"
+        - "/home/sirus/.claude/plugins/cache/claude-plugins-official/rust-analyzer-lsp/1.0.0/bin"
+        - "/home/sirus/.claude/plugins/cache/claude-plugins-official/frontend-design/unknown/bin"
+  -
+    kind: "find-v1"
+    backtrace:
+      - "/usr/share/cmake/Modules/CMakeFindBinUtils.cmake:243 (find_program)"
+      - "/usr/share/cmake/Modules/CMakeDetermineCCompiler.cmake:200 (include)"
+      - "CMakeLists.txt:2 (project)"
+    mode: "program"
+    variable: "CMAKE_ADDR2LINE"
+    description: "Path to a program."
+    settings:
+      SearchFramework: "NEVER"
+      SearchAppBundle: "NEVER"
+      CMAKE_FIND_USE_CMAKE_PATH: false
+      CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: false
+      CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
+      CMAKE_FIND_USE_INSTALL_PREFIX: true
+    names:
+      - "addr2line"
+    candidate_directories:
+      - "/usr/lib/ccache/bin/"
+      - "/home/sirus/.bun/bin/"
+      - "/home/sirus/.opencode/bin/"
+      - "/opt/anaconda/condabin/"
+      - "/home/sirus/.cargo/bin/"
+      - "/home/sirus/.nix-profile/bin/"
+      - "/home/sirus/.emacs.d/bin/"
+      - "/home/sirus/scripts/"
+      - "/home/sirus/.local/bin/"
+      - "/nix/var/nix/profiles/default/bin/"
+      - "/usr/local/bin/"
+      - "/usr/bin/"
+      - "/bin/"
+      - "/home/sirus/.config/.foundry/bin/"
+      - "/usr/local/sbin/"
+      - "/opt/android-sdk/cmdline-tools/latest/bin/"
+      - "/opt/android-sdk/platform-tools/"
+      - "/opt/android-sdk/tools/"
+      - "/opt/android-sdk/tools/bin/"
+      - "/opt/cuda/bin/"
+      - "/var/lib/flatpak/exports/bin/"
+      - "/usr/lib/jvm/default/bin/"
+      - "/usr/bin/site_perl/"
+      - "/usr/bin/vendor_perl/"
+      - "/usr/bin/core_perl/"
+      - "/usr/lib/rustup/bin/"
+      - "/home/sirus/.lmstudio/bin/"
+      - "/home/sirus/.claude/plugins/cache/claude-plugins-official/clangd-lsp/1.0.0/bin/"
+      - "/home/sirus/.claude/plugins/cache/claude-plugins-official/rust-analyzer-lsp/1.0.0/bin/"
+      - "/home/sirus/.claude/plugins/cache/claude-plugins-official/frontend-design/unknown/bin/"
+    searched_directories:
+      - "/usr/lib/ccache/bin/addr2line"
+      - "/home/sirus/.bun/bin/addr2line"
+      - "/home/sirus/.opencode/bin/addr2line"
+      - "/opt/anaconda/condabin/addr2line"
+      - "/home/sirus/.cargo/bin/addr2line"
+      - "/home/sirus/.nix-profile/bin/addr2line"
+      - "/home/sirus/.emacs.d/bin/addr2line"
+      - "/home/sirus/scripts/addr2line"
+      - "/home/sirus/.local/bin/addr2line"
+      - "/nix/var/nix/profiles/default/bin/addr2line"
+      - "/usr/local/bin/addr2line"
+    found: "/usr/bin/addr2line"
+    search_context:
+      CMAKE_PREFIX_PATH:
+        - "/tmp/ztok_install_test"
+      ENV{PATH}:
+        - "/home/sirus/.bun/bin"
+        - "/home/sirus/.opencode/bin"
+        - "/opt/anaconda/condabin"
+        - "/home/sirus/.cargo/bin"
+        - "/home/sirus/.nix-profile/bin"
+        - "/home/sirus/.emacs.d/bin"
+        - "/home/sirus/scripts"
+        - "/home/sirus/.local/bin"
+        - "/usr/lib/ccache/bin/"
+        - "/home/sirus/.local/bin"
+        - "/home/sirus/.local/bin"
+        - "/home/sirus/.nix-profile/bin"
+        - "/nix/var/nix/profiles/default/bin"
+        - "/home/sirus/.local/bin"
+        - "/usr/local/bin"
+        - "/usr/bin"
+        - "/bin"
+        - "/home/sirus/.config/.foundry/bin"
+        - "/usr/local/sbin"
+        - "/opt/android-sdk/cmdline-tools/latest/bin"
+        - "/opt/android-sdk/platform-tools"
+        - "/opt/android-sdk/tools"
+        - "/opt/android-sdk/tools/bin"
+        - "/opt/cuda/bin"
+        - "/var/lib/flatpak/exports/bin"
+        - "/usr/lib/jvm/default/bin"
+        - "/usr/bin/site_perl"
+        - "/usr/bin/vendor_perl"
+        - "/usr/bin/core_perl"
+        - "/usr/lib/rustup/bin"
+        - "/home/sirus/.config/.foundry/bin"
+        - "/home/sirus/.lmstudio/bin"
+        - "/home/sirus/.claude/plugins/cache/claude-plugins-official/clangd-lsp/1.0.0/bin"
+        - "/home/sirus/.claude/plugins/cache/claude-plugins-official/rust-analyzer-lsp/1.0.0/bin"
+        - "/home/sirus/.claude/plugins/cache/claude-plugins-official/frontend-design/unknown/bin"
+  -
+    kind: "find-v1"
+    backtrace:
+      - "/usr/share/cmake/Modules/CMakeFindBinUtils.cmake:243 (find_program)"
+      - "/usr/share/cmake/Modules/CMakeDetermineCCompiler.cmake:200 (include)"
+      - "CMakeLists.txt:2 (project)"
+    mode: "program"
+    variable: "CMAKE_TAPI"
+    description: "Path to a program."
+    settings:
+      SearchFramework: "NEVER"
+      SearchAppBundle: "NEVER"
+      CMAKE_FIND_USE_CMAKE_PATH: false
+      CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: false
+      CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
+      CMAKE_FIND_USE_INSTALL_PREFIX: true
+    names:
+      - "tapi"
+    candidate_directories:
+      - "/usr/lib/ccache/bin/"
+      - "/home/sirus/.bun/bin/"
+      - "/home/sirus/.opencode/bin/"
+      - "/opt/anaconda/condabin/"
+      - "/home/sirus/.cargo/bin/"
+      - "/home/sirus/.nix-profile/bin/"
+      - "/home/sirus/.emacs.d/bin/"
+      - "/home/sirus/scripts/"
+      - "/home/sirus/.local/bin/"
+      - "/nix/var/nix/profiles/default/bin/"
+      - "/usr/local/bin/"
+      - "/usr/bin/"
+      - "/bin/"
+      - "/home/sirus/.config/.foundry/bin/"
+      - "/usr/local/sbin/"
+      - "/opt/android-sdk/cmdline-tools/latest/bin/"
+      - "/opt/android-sdk/platform-tools/"
+      - "/opt/android-sdk/tools/"
+      - "/opt/android-sdk/tools/bin/"
+      - "/opt/cuda/bin/"
+      - "/var/lib/flatpak/exports/bin/"
+      - "/usr/lib/jvm/default/bin/"
+      - "/usr/bin/site_perl/"
+      - "/usr/bin/vendor_perl/"
+      - "/usr/bin/core_perl/"
+      - "/usr/lib/rustup/bin/"
+      - "/home/sirus/.lmstudio/bin/"
+      - "/home/sirus/.claude/plugins/cache/claude-plugins-official/clangd-lsp/1.0.0/bin/"
+      - "/home/sirus/.claude/plugins/cache/claude-plugins-official/rust-analyzer-lsp/1.0.0/bin/"
+      - "/home/sirus/.claude/plugins/cache/claude-plugins-official/frontend-design/unknown/bin/"
+    searched_directories:
+      - "/usr/lib/ccache/bin/tapi"
+      - "/home/sirus/.bun/bin/tapi"
+      - "/home/sirus/.opencode/bin/tapi"
+      - "/opt/anaconda/condabin/tapi"
+      - "/home/sirus/.cargo/bin/tapi"
+      - "/home/sirus/.nix-profile/bin/tapi"
+      - "/home/sirus/.emacs.d/bin/tapi"
+      - "/home/sirus/scripts/tapi"
+      - "/home/sirus/.local/bin/tapi"
+      - "/nix/var/nix/profiles/default/bin/tapi"
+      - "/usr/local/bin/tapi"
+      - "/usr/bin/tapi"
+      - "/bin/tapi"
+      - "/home/sirus/.config/.foundry/bin/tapi"
+      - "/usr/local/sbin/tapi"
+      - "/opt/android-sdk/cmdline-tools/latest/bin/tapi"
+      - "/opt/android-sdk/platform-tools/tapi"
+      - "/opt/android-sdk/tools/tapi"
+      - "/opt/android-sdk/tools/bin/tapi"
+      - "/opt/cuda/bin/tapi"
+      - "/var/lib/flatpak/exports/bin/tapi"
+      - "/usr/lib/jvm/default/bin/tapi"
+      - "/usr/bin/site_perl/tapi"
+      - "/usr/bin/vendor_perl/tapi"
+      - "/usr/bin/core_perl/tapi"
+      - "/usr/lib/rustup/bin/tapi"
+      - "/home/sirus/.lmstudio/bin/tapi"
+      - "/home/sirus/.claude/plugins/cache/claude-plugins-official/clangd-lsp/1.0.0/bin/tapi"
+      - "/home/sirus/.claude/plugins/cache/claude-plugins-official/rust-analyzer-lsp/1.0.0/bin/tapi"
+      - "/home/sirus/.claude/plugins/cache/claude-plugins-official/frontend-design/unknown/bin/tapi"
+    found: false
+    search_context:
+      CMAKE_PREFIX_PATH:
+        - "/tmp/ztok_install_test"
+      ENV{PATH}:
+        - "/home/sirus/.bun/bin"
+        - "/home/sirus/.opencode/bin"
+        - "/opt/anaconda/condabin"
+        - "/home/sirus/.cargo/bin"
+        - "/home/sirus/.nix-profile/bin"
+        - "/home/sirus/.emacs.d/bin"
+        - "/home/sirus/scripts"
+        - "/home/sirus/.local/bin"
+        - "/usr/lib/ccache/bin/"
+        - "/home/sirus/.local/bin"
+        - "/home/sirus/.local/bin"
+        - "/home/sirus/.nix-profile/bin"
+        - "/nix/var/nix/profiles/default/bin"
+        - "/home/sirus/.local/bin"
+        - "/usr/local/bin"
+        - "/usr/bin"
+        - "/bin"
+        - "/home/sirus/.config/.foundry/bin"
+        - "/usr/local/sbin"
+        - "/opt/android-sdk/cmdline-tools/latest/bin"
+        - "/opt/android-sdk/platform-tools"
+        - "/opt/android-sdk/tools"
+        - "/opt/android-sdk/tools/bin"
+        - "/opt/cuda/bin"
+        - "/var/lib/flatpak/exports/bin"
+        - "/usr/lib/jvm/default/bin"
+        - "/usr/bin/site_perl"
+        - "/usr/bin/vendor_perl"
+        - "/usr/bin/core_perl"
+        - "/usr/lib/rustup/bin"
+        - "/home/sirus/.config/.foundry/bin"
+        - "/home/sirus/.lmstudio/bin"
+        - "/home/sirus/.claude/plugins/cache/claude-plugins-official/clangd-lsp/1.0.0/bin"
+        - "/home/sirus/.claude/plugins/cache/claude-plugins-official/rust-analyzer-lsp/1.0.0/bin"
+        - "/home/sirus/.claude/plugins/cache/claude-plugins-official/frontend-design/unknown/bin"
+  -
+    kind: "find-v1"
+    backtrace:
+      - "/usr/share/cmake/Modules/Compiler/GNU-FindBinUtils.cmake:18 (find_program)"
+      - "/usr/share/cmake/Modules/CMakeDetermineCCompiler.cmake:201 (include)"
+      - "CMakeLists.txt:2 (project)"
+    mode: "program"
+    variable: "CMAKE_C_COMPILER_AR"
+    description: "A wrapper around 'ar' adding the appropriate '--plugin' option for the GCC compiler"
+    settings:
+      SearchFramework: "NEVER"
+      SearchAppBundle: "NEVER"
+      CMAKE_FIND_USE_CMAKE_PATH: false
+      CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: false
+      CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
+      CMAKE_FIND_USE_INSTALL_PREFIX: true
+    names:
+      - "gcc-ar-16.1"
+      - "gcc-ar-16"
+      - "gcc-ar16"
+      - "gcc-ar"
+    candidate_directories:
+      - "/usr/lib/ccache/bin/"
+      - "/home/sirus/.bun/bin/"
+      - "/home/sirus/.opencode/bin/"
+      - "/opt/anaconda/condabin/"
+      - "/home/sirus/.cargo/bin/"
+      - "/home/sirus/.nix-profile/bin/"
+      - "/home/sirus/.emacs.d/bin/"
+      - "/home/sirus/scripts/"
+      - "/home/sirus/.local/bin/"
+      - "/nix/var/nix/profiles/default/bin/"
+      - "/usr/local/bin/"
+      - "/usr/bin/"
+      - "/bin/"
+      - "/home/sirus/.config/.foundry/bin/"
+      - "/usr/local/sbin/"
+      - "/opt/android-sdk/cmdline-tools/latest/bin/"
+      - "/opt/android-sdk/platform-tools/"
+      - "/opt/android-sdk/tools/"
+      - "/opt/android-sdk/tools/bin/"
+      - "/opt/cuda/bin/"
+      - "/var/lib/flatpak/exports/bin/"
+      - "/usr/lib/jvm/default/bin/"
+      - "/usr/bin/site_perl/"
+      - "/usr/bin/vendor_perl/"
+      - "/usr/bin/core_perl/"
+      - "/usr/lib/rustup/bin/"
+      - "/home/sirus/.lmstudio/bin/"
+      - "/home/sirus/.claude/plugins/cache/claude-plugins-official/clangd-lsp/1.0.0/bin/"
+      - "/home/sirus/.claude/plugins/cache/claude-plugins-official/rust-analyzer-lsp/1.0.0/bin/"
+      - "/home/sirus/.claude/plugins/cache/claude-plugins-official/frontend-design/unknown/bin/"
+    searched_directories:
+      - "/usr/lib/ccache/bin/gcc-ar-16.1"
+      - "/home/sirus/.bun/bin/gcc-ar-16.1"
+      - "/home/sirus/.opencode/bin/gcc-ar-16.1"
+      - "/opt/anaconda/condabin/gcc-ar-16.1"
+      - "/home/sirus/.cargo/bin/gcc-ar-16.1"
+      - "/home/sirus/.nix-profile/bin/gcc-ar-16.1"
+      - "/home/sirus/.emacs.d/bin/gcc-ar-16.1"
+      - "/home/sirus/scripts/gcc-ar-16.1"
+      - "/home/sirus/.local/bin/gcc-ar-16.1"
+      - "/nix/var/nix/profiles/default/bin/gcc-ar-16.1"
+      - "/usr/local/bin/gcc-ar-16.1"
+      - "/usr/bin/gcc-ar-16.1"
+      - "/bin/gcc-ar-16.1"
+      - "/home/sirus/.config/.foundry/bin/gcc-ar-16.1"
+      - "/usr/local/sbin/gcc-ar-16.1"
+      - "/opt/android-sdk/cmdline-tools/latest/bin/gcc-ar-16.1"
+      - "/opt/android-sdk/platform-tools/gcc-ar-16.1"
+      - "/opt/android-sdk/tools/gcc-ar-16.1"
+      - "/opt/android-sdk/tools/bin/gcc-ar-16.1"
+      - "/opt/cuda/bin/gcc-ar-16.1"
+      - "/var/lib/flatpak/exports/bin/gcc-ar-16.1"
+      - "/usr/lib/jvm/default/bin/gcc-ar-16.1"
+      - "/usr/bin/site_perl/gcc-ar-16.1"
+      - "/usr/bin/vendor_perl/gcc-ar-16.1"
+      - "/usr/bin/core_perl/gcc-ar-16.1"
+      - "/usr/lib/rustup/bin/gcc-ar-16.1"
+      - "/home/sirus/.lmstudio/bin/gcc-ar-16.1"
+      - "/home/sirus/.claude/plugins/cache/claude-plugins-official/clangd-lsp/1.0.0/bin/gcc-ar-16.1"
+      - "/home/sirus/.claude/plugins/cache/claude-plugins-official/rust-analyzer-lsp/1.0.0/bin/gcc-ar-16.1"
+      - "/home/sirus/.claude/plugins/cache/claude-plugins-official/frontend-design/unknown/bin/gcc-ar-16.1"
+      - "/usr/lib/ccache/bin/gcc-ar-16"
+      - "/home/sirus/.bun/bin/gcc-ar-16"
+      - "/home/sirus/.opencode/bin/gcc-ar-16"
+      - "/opt/anaconda/condabin/gcc-ar-16"
+      - "/home/sirus/.cargo/bin/gcc-ar-16"
+      - "/home/sirus/.nix-profile/bin/gcc-ar-16"
+      - "/home/sirus/.emacs.d/bin/gcc-ar-16"
+      - "/home/sirus/scripts/gcc-ar-16"
+      - "/home/sirus/.local/bin/gcc-ar-16"
+      - "/nix/var/nix/profiles/default/bin/gcc-ar-16"
+      - "/usr/local/bin/gcc-ar-16"
+      - "/usr/bin/gcc-ar-16"
+      - "/bin/gcc-ar-16"
+      - "/home/sirus/.config/.foundry/bin/gcc-ar-16"
+      - "/usr/local/sbin/gcc-ar-16"
+      - "/opt/android-sdk/cmdline-tools/latest/bin/gcc-ar-16"
+      - "/opt/android-sdk/platform-tools/gcc-ar-16"
+      - "/opt/android-sdk/tools/gcc-ar-16"
+      - "/opt/android-sdk/tools/bin/gcc-ar-16"
+      - "/opt/cuda/bin/gcc-ar-16"
+      - "/var/lib/flatpak/exports/bin/gcc-ar-16"
+      - "/usr/lib/jvm/default/bin/gcc-ar-16"
+      - "/usr/bin/site_perl/gcc-ar-16"
+      - "/usr/bin/vendor_perl/gcc-ar-16"
+      - "/usr/bin/core_perl/gcc-ar-16"
+      - "/usr/lib/rustup/bin/gcc-ar-16"
+      - "/home/sirus/.lmstudio/bin/gcc-ar-16"
+      - "/home/sirus/.claude/plugins/cache/claude-plugins-official/clangd-lsp/1.0.0/bin/gcc-ar-16"
+      - "/home/sirus/.claude/plugins/cache/claude-plugins-official/rust-analyzer-lsp/1.0.0/bin/gcc-ar-16"
+      - "/home/sirus/.claude/plugins/cache/claude-plugins-official/frontend-design/unknown/bin/gcc-ar-16"
+      - "/usr/lib/ccache/bin/gcc-ar16"
+      - "/home/sirus/.bun/bin/gcc-ar16"
+      - "/home/sirus/.opencode/bin/gcc-ar16"
+      - "/opt/anaconda/condabin/gcc-ar16"
+      - "/home/sirus/.cargo/bin/gcc-ar16"
+      - "/home/sirus/.nix-profile/bin/gcc-ar16"
+      - "/home/sirus/.emacs.d/bin/gcc-ar16"
+      - "/home/sirus/scripts/gcc-ar16"
+      - "/home/sirus/.local/bin/gcc-ar16"
+      - "/nix/var/nix/profiles/default/bin/gcc-ar16"
+      - "/usr/local/bin/gcc-ar16"
+      - "/usr/bin/gcc-ar16"
+      - "/bin/gcc-ar16"
+      - "/home/sirus/.config/.foundry/bin/gcc-ar16"
+      - "/usr/local/sbin/gcc-ar16"
+      - "/opt/android-sdk/cmdline-tools/latest/bin/gcc-ar16"
+      - "/opt/android-sdk/platform-tools/gcc-ar16"
+      - "/opt/android-sdk/tools/gcc-ar16"
+      - "/opt/android-sdk/tools/bin/gcc-ar16"
+      - "/opt/cuda/bin/gcc-ar16"
+      - "/var/lib/flatpak/exports/bin/gcc-ar16"
+      - "/usr/lib/jvm/default/bin/gcc-ar16"
+      - "/usr/bin/site_perl/gcc-ar16"
+      - "/usr/bin/vendor_perl/gcc-ar16"
+      - "/usr/bin/core_perl/gcc-ar16"
+      - "/usr/lib/rustup/bin/gcc-ar16"
+      - "/home/sirus/.lmstudio/bin/gcc-ar16"
+      - "/home/sirus/.claude/plugins/cache/claude-plugins-official/clangd-lsp/1.0.0/bin/gcc-ar16"
+      - "/home/sirus/.claude/plugins/cache/claude-plugins-official/rust-analyzer-lsp/1.0.0/bin/gcc-ar16"
+      - "/home/sirus/.claude/plugins/cache/claude-plugins-official/frontend-design/unknown/bin/gcc-ar16"
+      - "/usr/lib/ccache/bin/gcc-ar"
+      - "/home/sirus/.bun/bin/gcc-ar"
+      - "/home/sirus/.opencode/bin/gcc-ar"
+      - "/opt/anaconda/condabin/gcc-ar"
+      - "/home/sirus/.cargo/bin/gcc-ar"
+      - "/home/sirus/.nix-profile/bin/gcc-ar"
+      - "/home/sirus/.emacs.d/bin/gcc-ar"
+      - "/home/sirus/scripts/gcc-ar"
+      - "/home/sirus/.local/bin/gcc-ar"
+      - "/nix/var/nix/profiles/default/bin/gcc-ar"
+      - "/usr/local/bin/gcc-ar"
+    found: "/usr/bin/gcc-ar"
+    search_context:
+      CMAKE_PREFIX_PATH:
+        - "/tmp/ztok_install_test"
+      ENV{PATH}:
+        - "/home/sirus/.bun/bin"
+        - "/home/sirus/.opencode/bin"
+        - "/opt/anaconda/condabin"
+        - "/home/sirus/.cargo/bin"
+        - "/home/sirus/.nix-profile/bin"
+        - "/home/sirus/.emacs.d/bin"
+        - "/home/sirus/scripts"
+        - "/home/sirus/.local/bin"
+        - "/usr/lib/ccache/bin/"
+        - "/home/sirus/.local/bin"
+        - "/home/sirus/.local/bin"
+        - "/home/sirus/.nix-profile/bin"
+        - "/nix/var/nix/profiles/default/bin"
+        - "/home/sirus/.local/bin"
+        - "/usr/local/bin"
+        - "/usr/bin"
+        - "/bin"
+        - "/home/sirus/.config/.foundry/bin"
+        - "/usr/local/sbin"
+        - "/opt/android-sdk/cmdline-tools/latest/bin"
+        - "/opt/android-sdk/platform-tools"
+        - "/opt/android-sdk/tools"
+        - "/opt/android-sdk/tools/bin"
+        - "/opt/cuda/bin"
+        - "/var/lib/flatpak/exports/bin"
+        - "/usr/lib/jvm/default/bin"
+        - "/usr/bin/site_perl"
+        - "/usr/bin/vendor_perl"
+        - "/usr/bin/core_perl"
+        - "/usr/lib/rustup/bin"
+        - "/home/sirus/.config/.foundry/bin"
+        - "/home/sirus/.lmstudio/bin"
+        - "/home/sirus/.claude/plugins/cache/claude-plugins-official/clangd-lsp/1.0.0/bin"
+        - "/home/sirus/.claude/plugins/cache/claude-plugins-official/rust-analyzer-lsp/1.0.0/bin"
+        - "/home/sirus/.claude/plugins/cache/claude-plugins-official/frontend-design/unknown/bin"
+  -
+    kind: "find-v1"
+    backtrace:
+      - "/usr/share/cmake/Modules/Compiler/GNU-FindBinUtils.cmake:30 (find_program)"
+      - "/usr/share/cmake/Modules/CMakeDetermineCCompiler.cmake:201 (include)"
+      - "CMakeLists.txt:2 (project)"
+    mode: "program"
+    variable: "CMAKE_C_COMPILER_RANLIB"
+    description: "A wrapper around 'ranlib' adding the appropriate '--plugin' option for the GCC compiler"
+    settings:
+      SearchFramework: "NEVER"
+      SearchAppBundle: "NEVER"
+      CMAKE_FIND_USE_CMAKE_PATH: false
+      CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: false
+      CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
+      CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
+      CMAKE_FIND_USE_INSTALL_PREFIX: true
+    names:
+      - "gcc-ranlib-16.1"
+      - "gcc-ranlib-16"
+      - "gcc-ranlib16"
+      - "gcc-ranlib"
+    candidate_directories:
+      - "/usr/lib/ccache/bin/"
+      - "/home/sirus/.bun/bin/"
+      - "/home/sirus/.opencode/bin/"
+      - "/opt/anaconda/condabin/"
+      - "/home/sirus/.cargo/bin/"
+      - "/home/sirus/.nix-profile/bin/"
+      - "/home/sirus/.emacs.d/bin/"
+      - "/home/sirus/scripts/"
+      - "/home/sirus/.local/bin/"
+      - "/nix/var/nix/profiles/default/bin/"
+      - "/usr/local/bin/"
+      - "/usr/bin/"
+      - "/bin/"
+      - "/home/sirus/.config/.foundry/bin/"
+      - "/usr/local/sbin/"
+      - "/opt/android-sdk/cmdline-tools/latest/bin/"
+      - "/opt/android-sdk/platform-tools/"
+      - "/opt/android-sdk/tools/"
+      - "/opt/android-sdk/tools/bin/"
+      - "/opt/cuda/bin/"
+      - "/var/lib/flatpak/exports/bin/"
+      - "/usr/lib/jvm/default/bin/"
+      - "/usr/bin/site_perl/"
+      - "/usr/bin/vendor_perl/"
+      - "/usr/bin/core_perl/"
+      - "/usr/lib/rustup/bin/"
+      - "/home/sirus/.lmstudio/bin/"
+      - "/home/sirus/.claude/plugins/cache/claude-plugins-official/clangd-lsp/1.0.0/bin/"
+      - "/home/sirus/.claude/plugins/cache/claude-plugins-official/rust-analyzer-lsp/1.0.0/bin/"
+      - "/home/sirus/.claude/plugins/cache/claude-plugins-official/frontend-design/unknown/bin/"
+    searched_directories:
+      - "/usr/lib/ccache/bin/gcc-ranlib-16.1"
+      - "/home/sirus/.bun/bin/gcc-ranlib-16.1"
+      - "/home/sirus/.opencode/bin/gcc-ranlib-16.1"
+      - "/opt/anaconda/condabin/gcc-ranlib-16.1"
+      - "/home/sirus/.cargo/bin/gcc-ranlib-16.1"
+      - "/home/sirus/.nix-profile/bin/gcc-ranlib-16.1"
+      - "/home/sirus/.emacs.d/bin/gcc-ranlib-16.1"
+      - "/home/sirus/scripts/gcc-ranlib-16.1"
+      - "/home/sirus/.local/bin/gcc-ranlib-16.1"
+      - "/nix/var/nix/profiles/default/bin/gcc-ranlib-16.1"
+      - "/usr/local/bin/gcc-ranlib-16.1"
+      - "/usr/bin/gcc-ranlib-16.1"
+      - "/bin/gcc-ranlib-16.1"
+      - "/home/sirus/.config/.foundry/bin/gcc-ranlib-16.1"
+      - "/usr/local/sbin/gcc-ranlib-16.1"
+      - "/opt/android-sdk/cmdline-tools/latest/bin/gcc-ranlib-16.1"
+      - "/opt/android-sdk/platform-tools/gcc-ranlib-16.1"
+      - "/opt/android-sdk/tools/gcc-ranlib-16.1"
+      - "/opt/android-sdk/tools/bin/gcc-ranlib-16.1"
+      - "/opt/cuda/bin/gcc-ranlib-16.1"
+      - "/var/lib/flatpak/exports/bin/gcc-ranlib-16.1"
+      - "/usr/lib/jvm/default/bin/gcc-ranlib-16.1"
+      - "/usr/bin/site_perl/gcc-ranlib-16.1"
+      - "/usr/bin/vendor_perl/gcc-ranlib-16.1"
+      - "/usr/bin/core_perl/gcc-ranlib-16.1"
+      - "/usr/lib/rustup/bin/gcc-ranlib-16.1"
+      - "/home/sirus/.lmstudio/bin/gcc-ranlib-16.1"
+      - "/home/sirus/.claude/plugins/cache/claude-plugins-official/clangd-lsp/1.0.0/bin/gcc-ranlib-16.1"
+      - "/home/sirus/.claude/plugins/cache/claude-plugins-official/rust-analyzer-lsp/1.0.0/bin/gcc-ranlib-16.1"
+      - "/home/sirus/.claude/plugins/cache/claude-plugins-official/frontend-design/unknown/bin/gcc-ranlib-16.1"
+      - "/usr/lib/ccache/bin/gcc-ranlib-16"
+      - "/home/sirus/.bun/bin/gcc-ranlib-16"
+      - "/home/sirus/.opencode/bin/gcc-ranlib-16"
+      - "/opt/anaconda/condabin/gcc-ranlib-16"
+      - "/home/sirus/.cargo/bin/gcc-ranlib-16"
+      - "/home/sirus/.nix-profile/bin/gcc-ranlib-16"
+      - "/home/sirus/.emacs.d/bin/gcc-ranlib-16"
+      - "/home/sirus/scripts/gcc-ranlib-16"
+      - "/home/sirus/.local/bin/gcc-ranlib-16"
+      - "/nix/var/nix/profiles/default/bin/gcc-ranlib-16"
+      - "/usr/local/bin/gcc-ranlib-16"
+      - "/usr/bin/gcc-ranlib-16"
+      - "/bin/gcc-ranlib-16"
+      - "/home/sirus/.config/.foundry/bin/gcc-ranlib-16"
+      - "/usr/local/sbin/gcc-ranlib-16"
+      - "/opt/android-sdk/cmdline-tools/latest/bin/gcc-ranlib-16"
+      - "/opt/android-sdk/platform-tools/gcc-ranlib-16"
+      - "/opt/android-sdk/tools/gcc-ranlib-16"
+      - "/opt/android-sdk/tools/bin/gcc-ranlib-16"
+      - "/opt/cuda/bin/gcc-ranlib-16"
+      - "/var/lib/flatpak/exports/bin/gcc-ranlib-16"
+      - "/usr/lib/jvm/default/bin/gcc-ranlib-16"
+      - "/usr/bin/site_perl/gcc-ranlib-16"
+      - "/usr/bin/vendor_perl/gcc-ranlib-16"
+      - "/usr/bin/core_perl/gcc-ranlib-16"
+      - "/usr/lib/rustup/bin/gcc-ranlib-16"
+      - "/home/sirus/.lmstudio/bin/gcc-ranlib-16"
+      - "/home/sirus/.claude/plugins/cache/claude-plugins-official/clangd-lsp/1.0.0/bin/gcc-ranlib-16"
+      - "/home/sirus/.claude/plugins/cache/claude-plugins-official/rust-analyzer-lsp/1.0.0/bin/gcc-ranlib-16"
+      - "/home/sirus/.claude/plugins/cache/claude-plugins-official/frontend-design/unknown/bin/gcc-ranlib-16"
+      - "/usr/lib/ccache/bin/gcc-ranlib16"
+      - "/home/sirus/.bun/bin/gcc-ranlib16"
+      - "/home/sirus/.opencode/bin/gcc-ranlib16"
+      - "/opt/anaconda/condabin/gcc-ranlib16"
+      - "/home/sirus/.cargo/bin/gcc-ranlib16"
+      - "/home/sirus/.nix-profile/bin/gcc-ranlib16"
+      - "/home/sirus/.emacs.d/bin/gcc-ranlib16"
+      - "/home/sirus/scripts/gcc-ranlib16"
+      - "/home/sirus/.local/bin/gcc-ranlib16"
+      - "/nix/var/nix/profiles/default/bin/gcc-ranlib16"
+      - "/usr/local/bin/gcc-ranlib16"
+      - "/usr/bin/gcc-ranlib16"
+      - "/bin/gcc-ranlib16"
+      - "/home/sirus/.config/.foundry/bin/gcc-ranlib16"
+      - "/usr/local/sbin/gcc-ranlib16"
+      - "/opt/android-sdk/cmdline-tools/latest/bin/gcc-ranlib16"
+      - "/opt/android-sdk/platform-tools/gcc-ranlib16"
+      - "/opt/android-sdk/tools/gcc-ranlib16"
+      - "/opt/android-sdk/tools/bin/gcc-ranlib16"
+      - "/opt/cuda/bin/gcc-ranlib16"
+      - "/var/lib/flatpak/exports/bin/gcc-ranlib16"
+      - "/usr/lib/jvm/default/bin/gcc-ranlib16"
+      - "/usr/bin/site_perl/gcc-ranlib16"
+      - "/usr/bin/vendor_perl/gcc-ranlib16"
+      - "/usr/bin/core_perl/gcc-ranlib16"
+      - "/usr/lib/rustup/bin/gcc-ranlib16"
+      - "/home/sirus/.lmstudio/bin/gcc-ranlib16"
+      - "/home/sirus/.claude/plugins/cache/claude-plugins-official/clangd-lsp/1.0.0/bin/gcc-ranlib16"
+      - "/home/sirus/.claude/plugins/cache/claude-plugins-official/rust-analyzer-lsp/1.0.0/bin/gcc-ranlib16"
+      - "/home/sirus/.claude/plugins/cache/claude-plugins-official/frontend-design/unknown/bin/gcc-ranlib16"
+      - "/usr/lib/ccache/bin/gcc-ranlib"
+      - "/home/sirus/.bun/bin/gcc-ranlib"
+      - "/home/sirus/.opencode/bin/gcc-ranlib"
+      - "/opt/anaconda/condabin/gcc-ranlib"
+      - "/home/sirus/.cargo/bin/gcc-ranlib"
+      - "/home/sirus/.nix-profile/bin/gcc-ranlib"
+      - "/home/sirus/.emacs.d/bin/gcc-ranlib"
+      - "/home/sirus/scripts/gcc-ranlib"
+      - "/home/sirus/.local/bin/gcc-ranlib"
+      - "/nix/var/nix/profiles/default/bin/gcc-ranlib"
+      - "/usr/local/bin/gcc-ranlib"
+    found: "/usr/bin/gcc-ranlib"
+    search_context:
+      CMAKE_PREFIX_PATH:
+        - "/tmp/ztok_install_test"
+      ENV{PATH}:
+        - "/home/sirus/.bun/bin"
+        - "/home/sirus/.opencode/bin"
+        - "/opt/anaconda/condabin"
+        - "/home/sirus/.cargo/bin"
+        - "/home/sirus/.nix-profile/bin"
+        - "/home/sirus/.emacs.d/bin"
+        - "/home/sirus/scripts"
+        - "/home/sirus/.local/bin"
+        - "/usr/lib/ccache/bin/"
+        - "/home/sirus/.local/bin"
+        - "/home/sirus/.local/bin"
+        - "/home/sirus/.nix-profile/bin"
+        - "/nix/var/nix/profiles/default/bin"
+        - "/home/sirus/.local/bin"
+        - "/usr/local/bin"
+        - "/usr/bin"
+        - "/bin"
+        - "/home/sirus/.config/.foundry/bin"
+        - "/usr/local/sbin"
+        - "/opt/android-sdk/cmdline-tools/latest/bin"
+        - "/opt/android-sdk/platform-tools"
+        - "/opt/android-sdk/tools"
+        - "/opt/android-sdk/tools/bin"
+        - "/opt/cuda/bin"
+        - "/var/lib/flatpak/exports/bin"
+        - "/usr/lib/jvm/default/bin"
+        - "/usr/bin/site_perl"
+        - "/usr/bin/vendor_perl"
+        - "/usr/bin/core_perl"
+        - "/usr/lib/rustup/bin"
+        - "/home/sirus/.config/.foundry/bin"
+        - "/home/sirus/.lmstudio/bin"
+        - "/home/sirus/.claude/plugins/cache/claude-plugins-official/clangd-lsp/1.0.0/bin"
+        - "/home/sirus/.claude/plugins/cache/claude-plugins-official/rust-analyzer-lsp/1.0.0/bin"
+        - "/home/sirus/.claude/plugins/cache/claude-plugins-official/frontend-design/unknown/bin"
+  -
+    kind: "try_compile-v1"
+    backtrace:
+      - "/usr/share/cmake/Modules/CMakeDetermineCompilerABI.cmake:83 (try_compile)"
+      - "/usr/share/cmake/Modules/CMakeTestCCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
+      - "CMakeLists.txt:2 (project)"
+    checks:
+      - "Detecting C compiler ABI info"
+    directories:
+      source: "/thearray/git/ztok/examples/c/build/CMakeFiles/CMakeScratch/TryCompile-cCv8gJ"
+      binary: "/thearray/git/ztok/examples/c/build/CMakeFiles/CMakeScratch/TryCompile-cCv8gJ"
+    cmakeVariables:
+      CMAKE_C_FLAGS: "-march=znver3"
+      CMAKE_C_FLAGS_DEBUG: "-g"
+      CMAKE_EXE_LINKER_FLAGS: ""
+    buildResult:
+      variable: "CMAKE_C_ABI_COMPILED"
+      cached: true
+      stdout: |
+        Change Dir: '/thearray/git/ztok/examples/c/build/CMakeFiles/CMakeScratch/TryCompile-cCv8gJ'
+        
+        Run Build Command(s): /usr/bin/cmake -E env VERBOSE=1 /usr/bin/make -f Makefile cmTC_13171/fast
+        /usr/bin/make  -f CMakeFiles/cmTC_13171.dir/build.make CMakeFiles/cmTC_13171.dir/build
+        make[1]: Entering directory '/thearray/git/ztok/examples/c/build/CMakeFiles/CMakeScratch/TryCompile-cCv8gJ'
+        Building C object CMakeFiles/cmTC_13171.dir/CMakeCCompilerABI.c.o
+        /usr/lib/ccache/bin/cc   -march=znver3    -v -o CMakeFiles/cmTC_13171.dir/CMakeCCompilerABI.c.o -c /usr/share/cmake/Modules/CMakeCCompilerABI.c
+        Using built-in specs.
+        COLLECT_GCC=/usr/bin/cc
+        Target: x86_64-pc-linux-gnu
+        Configured with: /build/gcc/src/gcc/configure --enable-languages=ada,c,c++,d,fortran,go,lto,m2,objc,obj-c++,rust,cobol --enable-bootstrap --prefix=/usr --libdir=/usr/lib --libexecdir=/usr/lib --mandir=/usr/share/man --infodir=/usr/share/info --with-bugurl=https://gitlab.archlinux.org/archlinux/packaging/packages/gcc/-/issues --with-build-config=bootstrap-lto --with-linker-hash-style=gnu --with-system-zlib --enable-cet=auto --enable-checking=release --enable-clocale=gnu --enable-default-pie --enable-default-ssp --enable-gnu-indirect-function --enable-gnu-unique-object --enable-libstdcxx-backtrace --enable-link-serialization=1 --enable-linker-build-id --enable-lto --enable-multilib --enable-plugin --enable-shared --enable-threads=posix --disable-libssp --disable-libstdcxx-pch --disable-werror --disable-fixincludes
+        Thread model: posix
+        Supported LTO compression algorithms: zlib zstd
+        gcc version 16.1.1 20260430 (GCC) 
+        COLLECT_GCC_OPTIONS='-fdiagnostics-color=always' '-march=znver3' '-v' '-c' '-o' 'CMakeFiles/cmTC_e7699.dir/CMakeCCompilerABI.c.o' '-dumpdir' 'CMakeFiles/cmTC_e7699.dir/'
+         /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/cc1 -quiet -v /usr/share/cmake/Modules/CMakeCCompilerABI.c -quiet -dumpdir CMakeFiles/cmTC_e7699.dir/ -dumpbase CMakeCCompilerABI.c.c -dumpbase-ext .c -march=znver3 -version -fdiagnostics-color=always -o /tmp/ccA7qXPH.s
+        GNU C23 (GCC) version 16.1.1 20260430 (x86_64-pc-linux-gnu)
+        	compiled by GNU C version 16.1.1 20260430, GMP version 6.3.0, MPFR version 4.2.2, MPC version 1.4.1, isl version isl-0.27-GMP
+        
+        GGC heuristics: --param ggc-min-expand=100 --param ggc-min-heapsize=131072
+        ignoring nonexistent directory "/usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include-fixed"
+        ignoring nonexistent directory "/usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/../../../../x86_64-pc-linux-gnu/include"
+        #include "..." search starts here:
+        #include <...> search starts here:
+         /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include
+         /usr/local/include
+         /usr/include
+        End of search list.
+        Compiler executable checksum: d640c2d0cc84ebd71ee43ed7e2df63fb
+        COLLECT_GCC_OPTIONS='-fdiagnostics-color=always' '-march=znver3' '-v' '-c' '-o' 'CMakeFiles/cmTC_e7699.dir/CMakeCCompilerABI.c.o' '-dumpdir' 'CMakeFiles/cmTC_e7699.dir/'
+         as -v --64 -o CMakeFiles/cmTC_e7699.dir/CMakeCCompilerABI.c.o /tmp/ccA7qXPH.s
+        GNU assembler version 2.46.0 (x86_64-pc-linux-gnu) using BFD version (GNU Binutils) 2.46.0
+        COMPILER_PATH=/usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/:/usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/:/usr/lib/gcc/x86_64-pc-linux-gnu/:/usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/:/usr/lib/gcc/x86_64-pc-linux-gnu/
+        LIBRARY_PATH=/usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/:/usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/../../../../lib/:/lib/../lib/:/usr/lib/../lib/:/usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/../../../:/lib/:/usr/lib/
+        COLLECT_GCC_OPTIONS='-fdiagnostics-color=always' '-march=znver3' '-v' '-c' '-o' 'CMakeFiles/cmTC_e7699.dir/CMakeCCompilerABI.c.o' '-dumpdir' 'CMakeFiles/cmTC_e7699.dir/CMakeCCompilerABI.c.'
+        Linking C executable cmTC_13171
+        /usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_13171.dir/link.txt --verbose=1
+        Using built-in specs.
+        COLLECT_GCC=/usr/bin/cc
+        COLLECT_LTO_WRAPPER=/usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/lto-wrapper
+        Target: x86_64-pc-linux-gnu
+        Configured with: /build/gcc/src/gcc/configure --enable-languages=ada,c,c++,d,fortran,go,lto,m2,objc,obj-c++,rust,cobol --enable-bootstrap --prefix=/usr --libdir=/usr/lib --libexecdir=/usr/lib --mandir=/usr/share/man --infodir=/usr/share/info --with-bugurl=https://gitlab.archlinux.org/archlinux/packaging/packages/gcc/-/issues --with-build-config=bootstrap-lto --with-linker-hash-style=gnu --with-system-zlib --enable-cet=auto --enable-checking=release --enable-clocale=gnu --enable-default-pie --enable-default-ssp --enable-gnu-indirect-function --enable-gnu-unique-object --enable-libstdcxx-backtrace --enable-link-serialization=1 --enable-linker-build-id --enable-lto --enable-multilib --enable-plugin --enable-shared --enable-threads=posix --disable-libssp --disable-libstdcxx-pch --disable-werror --disable-fixincludes
+        Thread model: posix
+        Supported LTO compression algorithms: zlib zstd
+        gcc version 16.1.1 20260430 (GCC) 
+        COMPILER_PATH=/usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/:/usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/:/usr/lib/gcc/x86_64-pc-linux-gnu/:/usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/:/usr/lib/gcc/x86_64-pc-linux-gnu/
+        LIBRARY_PATH=/usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/:/usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/../../../../lib/:/lib/../lib/:/usr/lib/../lib/:/usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/../../../:/lib/:/usr/lib/
+        COLLECT_GCC_OPTIONS='-march=znver3' '-v' '-o' 'cmTC_13171' '-dumpdir' 'cmTC_13171.'
+         /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/collect2 -plugin /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/liblto_plugin.so -plugin-opt=/usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/lto-wrapper -plugin-opt=-fresolution=/tmp/ccm4Dsc4.res -plugin-opt=-pass-through=-lgcc -plugin-opt=-pass-through=-lgcc_s_asneeded -plugin-opt=-pass-through=-latomic_asneeded -plugin-opt=-pass-through=-lc -plugin-opt=-pass-through=-lgcc -plugin-opt=-pass-through=-lgcc_s_asneeded --build-id --eh-frame-hdr --hash-style=gnu -m elf_x86_64 -dynamic-linker /lib64/ld-linux-x86-64.so.2 -pie -o cmTC_13171 /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/../../../../lib/Scrt1.o /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/../../../../lib/crti.o /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/crtbeginS.o -L/usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1 -L/usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/../../../../lib -L/lib/../lib -L/usr/lib/../lib -L/usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/../../.. -L/lib -L/usr/lib -v CMakeFiles/cmTC_13171.dir/CMakeCCompilerABI.c.o -lgcc -lgcc_s_asneeded -latomic_asneeded -lc -lgcc -lgcc_s_asneeded /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/crtendS.o /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/../../../../lib/crtn.o
+        collect2 version 16.1.1 20260430
+        /usr/bin/ld -plugin /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/liblto_plugin.so -plugin-opt=/usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/lto-wrapper -plugin-opt=-fresolution=/tmp/ccm4Dsc4.res -plugin-opt=-pass-through=-lgcc -plugin-opt=-pass-through=-lgcc_s_asneeded -plugin-opt=-pass-through=-latomic_asneeded -plugin-opt=-pass-through=-lc -plugin-opt=-pass-through=-lgcc -plugin-opt=-pass-through=-lgcc_s_asneeded --build-id --eh-frame-hdr --hash-style=gnu -m elf_x86_64 -dynamic-linker /lib64/ld-linux-x86-64.so.2 -pie -o cmTC_13171 /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/../../../../lib/Scrt1.o /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/../../../../lib/crti.o /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/crtbeginS.o -L/usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1 -L/usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/../../../../lib -L/lib/../lib -L/usr/lib/../lib -L/usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/../../.. -L/lib -L/usr/lib -v CMakeFiles/cmTC_13171.dir/CMakeCCompilerABI.c.o -lgcc -lgcc_s_asneeded -latomic_asneeded -lc -lgcc -lgcc_s_asneeded /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/crtendS.o /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/../../../../lib/crtn.o
+        GNU ld (GNU Binutils) 2.46.0
+        COLLECT_GCC_OPTIONS='-march=znver3' '-v' '-o' 'cmTC_13171' '-dumpdir' 'cmTC_13171.'
+        /usr/lib/ccache/bin/cc -march=znver3   -v -Wl,-v CMakeFiles/cmTC_13171.dir/CMakeCCompilerABI.c.o -o cmTC_13171
+        make[1]: Leaving directory '/thearray/git/ztok/examples/c/build/CMakeFiles/CMakeScratch/TryCompile-cCv8gJ'
+        
+      exitCode: 0
+  -
+    kind: "message-v1"
+    backtrace:
+      - "/usr/share/cmake/Modules/CMakeDetermineCompilerABI.cmake:217 (message)"
+      - "/usr/share/cmake/Modules/CMakeTestCCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
+      - "CMakeLists.txt:2 (project)"
+    message: |
+      Parsed C implicit include dir info: rv=done
+        found start of include info
+        found start of implicit include info
+          add: [/usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include]
+          add: [/usr/local/include]
+          add: [/usr/include]
+        end of search list found
+        collapse include dir [/usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include] ==> [/usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include]
+        collapse include dir [/usr/local/include] ==> [/usr/local/include]
+        collapse include dir [/usr/include] ==> [/usr/include]
+        implicit include dirs: [/usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include;/usr/local/include;/usr/include]
+      
+      
+  -
+    kind: "message-v1"
+    backtrace:
+      - "/usr/share/cmake/Modules/CMakeDetermineCompilerABI.cmake:253 (message)"
+      - "/usr/share/cmake/Modules/CMakeTestCCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
+      - "CMakeLists.txt:2 (project)"
+    message: |
+      Parsed C implicit link information:
+        link line regex: [^( *|.*[/\\])(ld[0-9]*(|\\.[a-rt-z][a-z]*|\\.s[a-np-z][a-z]*|\\.so[a-z]+)|CMAKE_LINK_STARTFILE-NOTFOUND|([^/\\]+-)?ld|collect2)[^/\\]*( |$)]
+        linker tool regex: [^[ 	]*(->|"|[0-9]+>[ 	-]*Build:[ 	0-9]+ ms[ 	]*)?[ 	]*(([^"]*[/\\])?(ld[0-9]*(|\\.[a-rt-z][a-z]*|\\.s[a-np-z][a-z]*|\\.so[a-z]+)))("|,| |$)]
+        ignore line: [Change Dir: '/thearray/git/ztok/examples/c/build/CMakeFiles/CMakeScratch/TryCompile-cCv8gJ']
+        ignore line: []
+        ignore line: [Run Build Command(s): /usr/bin/cmake -E env VERBOSE=1 /usr/bin/make -f Makefile cmTC_13171/fast]
+        ignore line: [/usr/bin/make  -f CMakeFiles/cmTC_13171.dir/build.make CMakeFiles/cmTC_13171.dir/build]
+        ignore line: [make[1]: Entering directory '/thearray/git/ztok/examples/c/build/CMakeFiles/CMakeScratch/TryCompile-cCv8gJ']
+        ignore line: [Building C object CMakeFiles/cmTC_13171.dir/CMakeCCompilerABI.c.o]
+        ignore line: [/usr/lib/ccache/bin/cc   -march=znver3    -v -o CMakeFiles/cmTC_13171.dir/CMakeCCompilerABI.c.o -c /usr/share/cmake/Modules/CMakeCCompilerABI.c]
+        ignore line: [Using built-in specs.]
+        ignore line: [COLLECT_GCC=/usr/bin/cc]
+        ignore line: [Target: x86_64-pc-linux-gnu]
+        ignore line: [Configured with: /build/gcc/src/gcc/configure --enable-languages=ada c c++ d fortran go lto m2 objc obj-c++ rust cobol --enable-bootstrap --prefix=/usr --libdir=/usr/lib --libexecdir=/usr/lib --mandir=/usr/share/man --infodir=/usr/share/info --with-bugurl=https://gitlab.archlinux.org/archlinux/packaging/packages/gcc/-/issues --with-build-config=bootstrap-lto --with-linker-hash-style=gnu --with-system-zlib --enable-cet=auto --enable-checking=release --enable-clocale=gnu --enable-default-pie --enable-default-ssp --enable-gnu-indirect-function --enable-gnu-unique-object --enable-libstdcxx-backtrace --enable-link-serialization=1 --enable-linker-build-id --enable-lto --enable-multilib --enable-plugin --enable-shared --enable-threads=posix --disable-libssp --disable-libstdcxx-pch --disable-werror --disable-fixincludes]
+        ignore line: [Thread model: posix]
+        ignore line: [Supported LTO compression algorithms: zlib zstd]
+        ignore line: [gcc version 16.1.1 20260430 (GCC) ]
+        ignore line: [COLLECT_GCC_OPTIONS='-fdiagnostics-color=always' '-march=znver3' '-v' '-c' '-o' 'CMakeFiles/cmTC_e7699.dir/CMakeCCompilerABI.c.o' '-dumpdir' 'CMakeFiles/cmTC_e7699.dir/']
+        ignore line: [ /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/cc1 -quiet -v /usr/share/cmake/Modules/CMakeCCompilerABI.c -quiet -dumpdir CMakeFiles/cmTC_e7699.dir/ -dumpbase CMakeCCompilerABI.c.c -dumpbase-ext .c -march=znver3 -version -fdiagnostics-color=always -o /tmp/ccA7qXPH.s]
+        ignore line: [GNU C23 (GCC) version 16.1.1 20260430 (x86_64-pc-linux-gnu)]
+        ignore line: [	compiled by GNU C version 16.1.1 20260430  GMP version 6.3.0  MPFR version 4.2.2  MPC version 1.4.1  isl version isl-0.27-GMP]
+        ignore line: []
+        ignore line: [GGC heuristics: --param ggc-min-expand=100 --param ggc-min-heapsize=131072]
+        ignore line: [ignoring nonexistent directory "/usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include-fixed"]
+        ignore line: [ignoring nonexistent directory "/usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/../../../../x86_64-pc-linux-gnu/include"]
+        ignore line: [#include "..." search starts here:]
+        ignore line: [#include <...> search starts here:]
+        ignore line: [ /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/include]
+        ignore line: [ /usr/local/include]
+        ignore line: [ /usr/include]
+        ignore line: [End of search list.]
+        ignore line: [Compiler executable checksum: d640c2d0cc84ebd71ee43ed7e2df63fb]
+        ignore line: [COLLECT_GCC_OPTIONS='-fdiagnostics-color=always' '-march=znver3' '-v' '-c' '-o' 'CMakeFiles/cmTC_e7699.dir/CMakeCCompilerABI.c.o' '-dumpdir' 'CMakeFiles/cmTC_e7699.dir/']
+        ignore line: [ as -v --64 -o CMakeFiles/cmTC_e7699.dir/CMakeCCompilerABI.c.o /tmp/ccA7qXPH.s]
+        ignore line: [GNU assembler version 2.46.0 (x86_64-pc-linux-gnu) using BFD version (GNU Binutils) 2.46.0]
+        ignore line: [COMPILER_PATH=/usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/:/usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/:/usr/lib/gcc/x86_64-pc-linux-gnu/:/usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/:/usr/lib/gcc/x86_64-pc-linux-gnu/]
+        ignore line: [LIBRARY_PATH=/usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/:/usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/../../../../lib/:/lib/../lib/:/usr/lib/../lib/:/usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/../../../:/lib/:/usr/lib/]
+        ignore line: [COLLECT_GCC_OPTIONS='-fdiagnostics-color=always' '-march=znver3' '-v' '-c' '-o' 'CMakeFiles/cmTC_e7699.dir/CMakeCCompilerABI.c.o' '-dumpdir' 'CMakeFiles/cmTC_e7699.dir/CMakeCCompilerABI.c.']
+        ignore line: [Linking C executable cmTC_13171]
+        ignore line: [/usr/bin/cmake -E cmake_link_script CMakeFiles/cmTC_13171.dir/link.txt --verbose=1]
+        ignore line: [Using built-in specs.]
+        ignore line: [COLLECT_GCC=/usr/bin/cc]
+        ignore line: [COLLECT_LTO_WRAPPER=/usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/lto-wrapper]
+        ignore line: [Target: x86_64-pc-linux-gnu]
+        ignore line: [Configured with: /build/gcc/src/gcc/configure --enable-languages=ada c c++ d fortran go lto m2 objc obj-c++ rust cobol --enable-bootstrap --prefix=/usr --libdir=/usr/lib --libexecdir=/usr/lib --mandir=/usr/share/man --infodir=/usr/share/info --with-bugurl=https://gitlab.archlinux.org/archlinux/packaging/packages/gcc/-/issues --with-build-config=bootstrap-lto --with-linker-hash-style=gnu --with-system-zlib --enable-cet=auto --enable-checking=release --enable-clocale=gnu --enable-default-pie --enable-default-ssp --enable-gnu-indirect-function --enable-gnu-unique-object --enable-libstdcxx-backtrace --enable-link-serialization=1 --enable-linker-build-id --enable-lto --enable-multilib --enable-plugin --enable-shared --enable-threads=posix --disable-libssp --disable-libstdcxx-pch --disable-werror --disable-fixincludes]
+        ignore line: [Thread model: posix]
+        ignore line: [Supported LTO compression algorithms: zlib zstd]
+        ignore line: [gcc version 16.1.1 20260430 (GCC) ]
+        ignore line: [COMPILER_PATH=/usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/:/usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/:/usr/lib/gcc/x86_64-pc-linux-gnu/:/usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/:/usr/lib/gcc/x86_64-pc-linux-gnu/]
+        ignore line: [LIBRARY_PATH=/usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/:/usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/../../../../lib/:/lib/../lib/:/usr/lib/../lib/:/usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/../../../:/lib/:/usr/lib/]
+        ignore line: [COLLECT_GCC_OPTIONS='-march=znver3' '-v' '-o' 'cmTC_13171' '-dumpdir' 'cmTC_13171.']
+        link line: [ /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/collect2 -plugin /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/liblto_plugin.so -plugin-opt=/usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/lto-wrapper -plugin-opt=-fresolution=/tmp/ccm4Dsc4.res -plugin-opt=-pass-through=-lgcc -plugin-opt=-pass-through=-lgcc_s_asneeded -plugin-opt=-pass-through=-latomic_asneeded -plugin-opt=-pass-through=-lc -plugin-opt=-pass-through=-lgcc -plugin-opt=-pass-through=-lgcc_s_asneeded --build-id --eh-frame-hdr --hash-style=gnu -m elf_x86_64 -dynamic-linker /lib64/ld-linux-x86-64.so.2 -pie -o cmTC_13171 /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/../../../../lib/Scrt1.o /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/../../../../lib/crti.o /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/crtbeginS.o -L/usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1 -L/usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/../../../../lib -L/lib/../lib -L/usr/lib/../lib -L/usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/../../.. -L/lib -L/usr/lib -v CMakeFiles/cmTC_13171.dir/CMakeCCompilerABI.c.o -lgcc -lgcc_s_asneeded -latomic_asneeded -lc -lgcc -lgcc_s_asneeded /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/crtendS.o /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/../../../../lib/crtn.o]
+          arg [/usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/collect2] ==> ignore
+          arg [-plugin] ==> ignore
+          arg [/usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/liblto_plugin.so] ==> ignore
+          arg [-plugin-opt=/usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/lto-wrapper] ==> ignore
+          arg [-plugin-opt=-fresolution=/tmp/ccm4Dsc4.res] ==> ignore
+          arg [-plugin-opt=-pass-through=-lgcc] ==> ignore
+          arg [-plugin-opt=-pass-through=-lgcc_s_asneeded] ==> ignore
+          arg [-plugin-opt=-pass-through=-latomic_asneeded] ==> ignore
+          arg [-plugin-opt=-pass-through=-lc] ==> ignore
+          arg [-plugin-opt=-pass-through=-lgcc] ==> ignore
+          arg [-plugin-opt=-pass-through=-lgcc_s_asneeded] ==> ignore
+          arg [--build-id] ==> ignore
+          arg [--eh-frame-hdr] ==> ignore
+          arg [--hash-style=gnu] ==> ignore
+          arg [-m] ==> ignore
+          arg [elf_x86_64] ==> ignore
+          arg [-dynamic-linker] ==> ignore
+          arg [/lib64/ld-linux-x86-64.so.2] ==> ignore
+          arg [-pie] ==> ignore
+          arg [-o] ==> ignore
+          arg [cmTC_13171] ==> ignore
+          arg [/usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/../../../../lib/Scrt1.o] ==> obj [/usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/../../../../lib/Scrt1.o]
+          arg [/usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/../../../../lib/crti.o] ==> obj [/usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/../../../../lib/crti.o]
+          arg [/usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/crtbeginS.o] ==> obj [/usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/crtbeginS.o]
+          arg [-L/usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1] ==> dir [/usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1]
+          arg [-L/usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/../../../../lib] ==> dir [/usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/../../../../lib]
+          arg [-L/lib/../lib] ==> dir [/lib/../lib]
+          arg [-L/usr/lib/../lib] ==> dir [/usr/lib/../lib]
+          arg [-L/usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/../../..] ==> dir [/usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/../../..]
+          arg [-L/lib] ==> dir [/lib]
+          arg [-L/usr/lib] ==> dir [/usr/lib]
+          arg [-v] ==> ignore
+          arg [CMakeFiles/cmTC_13171.dir/CMakeCCompilerABI.c.o] ==> ignore
+          arg [-lgcc] ==> lib [gcc]
+          arg [-lgcc_s_asneeded] ==> lib [gcc_s_asneeded]
+          arg [-latomic_asneeded] ==> lib [atomic_asneeded]
+          arg [-lc] ==> lib [c]
+          arg [-lgcc] ==> lib [gcc]
+          arg [-lgcc_s_asneeded] ==> lib [gcc_s_asneeded]
+          arg [/usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/crtendS.o] ==> obj [/usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/crtendS.o]
+          arg [/usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/../../../../lib/crtn.o] ==> obj [/usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/../../../../lib/crtn.o]
+        ignore line: [collect2 version 16.1.1 20260430]
+        ignore line: [/usr/bin/ld -plugin /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/liblto_plugin.so -plugin-opt=/usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/lto-wrapper -plugin-opt=-fresolution=/tmp/ccm4Dsc4.res -plugin-opt=-pass-through=-lgcc -plugin-opt=-pass-through=-lgcc_s_asneeded -plugin-opt=-pass-through=-latomic_asneeded -plugin-opt=-pass-through=-lc -plugin-opt=-pass-through=-lgcc -plugin-opt=-pass-through=-lgcc_s_asneeded --build-id --eh-frame-hdr --hash-style=gnu -m elf_x86_64 -dynamic-linker /lib64/ld-linux-x86-64.so.2 -pie -o cmTC_13171 /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/../../../../lib/Scrt1.o /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/../../../../lib/crti.o /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/crtbeginS.o -L/usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1 -L/usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/../../../../lib -L/lib/../lib -L/usr/lib/../lib -L/usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/../../.. -L/lib -L/usr/lib -v CMakeFiles/cmTC_13171.dir/CMakeCCompilerABI.c.o -lgcc -lgcc_s_asneeded -latomic_asneeded -lc -lgcc -lgcc_s_asneeded /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/crtendS.o /usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/../../../../lib/crtn.o]
+        linker tool for 'C': /usr/bin/ld
+        collapse obj [/usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/../../../../lib/Scrt1.o] ==> [/usr/lib/Scrt1.o]
+        collapse obj [/usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/../../../../lib/crti.o] ==> [/usr/lib/crti.o]
+        collapse obj [/usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/../../../../lib/crtn.o] ==> [/usr/lib/crtn.o]
+        collapse library dir [/usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1] ==> [/usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1]
+        collapse library dir [/usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/../../../../lib] ==> [/usr/lib]
+        collapse library dir [/lib/../lib] ==> [/lib]
+        collapse library dir [/usr/lib/../lib] ==> [/usr/lib]
+        collapse library dir [/usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/../../..] ==> [/usr/lib]
+        collapse library dir [/lib] ==> [/lib]
+        collapse library dir [/usr/lib] ==> [/usr/lib]
+        implicit libs: [gcc;gcc_s_asneeded;atomic_asneeded;c;gcc;gcc_s_asneeded]
+        implicit objs: [/usr/lib/Scrt1.o;/usr/lib/crti.o;/usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/crtbeginS.o;/usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1/crtendS.o;/usr/lib/crtn.o]
+        implicit dirs: [/usr/lib/gcc/x86_64-pc-linux-gnu/16.1.1;/usr/lib;/lib]
+        implicit fwks: []
+      
+      
+  -
+    kind: "message-v1"
+    backtrace:
+      - "/usr/share/cmake/Modules/Internal/CMakeDetermineLinkerId.cmake:38 (message)"
+      - "/usr/share/cmake/Modules/CMakeDetermineCompilerABI.cmake:299 (cmake_determine_linker_id)"
+      - "/usr/share/cmake/Modules/CMakeTestCCompiler.cmake:26 (CMAKE_DETERMINE_COMPILER_ABI)"
+      - "CMakeLists.txt:2 (project)"
+    message: |
+      Running the C compiler's linker: "/usr/bin/ld" "-v"
+      GNU ld (GNU Binutils) 2.46.0
+  -
+    kind: "find_package-v1"
+    backtrace:
+      - "CMakeLists.txt:6 (find_package)"
+    name: "ztok"
+    configs:
+      -
+        filename: "ztok.cps"
+        kind: "cps"
+      -
+        filename: "ztokConfig.cmake"
+        kind: "cmake"
+      -
+        filename: "ztok-config.cmake"
+        kind: "cmake"
+    version_request:
+      exact: false
+    settings:
+      required: "required_explicit"
+      quiet: false
+      global: false
+      policy_scope: true
+      bypass_provider: false
+      names:
+        - "ztok"
+      path_suffixes:
+        - ""
+      paths:
+        CMAKE_FIND_USE_CMAKE_PATH: true
+        CMAKE_FIND_USE_CMAKE_ENVIRONMENT_PATH: true
+        CMAKE_FIND_USE_SYSTEM_ENVIRONMENT_PATH: true
+        CMAKE_FIND_USE_CMAKE_SYSTEM_PATH: true
+        CMAKE_FIND_USE_INSTALL_PREFIX: true
+        CMAKE_FIND_USE_PACKAGE_ROOT_PATH: true
+        CMAKE_FIND_USE_CMAKE_PACKAGE_REGISTRY: true
+        CMAKE_FIND_USE_SYSTEM_PACKAGE_REGISTRY: true
+        CMAKE_FIND_ROOT_PATH_MODE: "BOTH"
+    candidates:
+      -
+        path: "/thearray/git/ztok/examples/c/build/CMakeFiles/pkgRedirects/ztokConfig.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/thearray/git/ztok/examples/c/build/CMakeFiles/pkgRedirects/ztok-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/thearray/git/ztok/examples/c/build/CMakeFiles/pkgRedirects/lib/cps/ztok.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/thearray/git/ztok/examples/c/build/CMakeFiles/pkgRedirects/share/cps/ztok.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/tmp/ztok_install_test/ztokConfig.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/tmp/ztok_install_test/ztok-config.cmake"
+        mode: "config"
+        reason: "no_exist"
+      -
+        path: "/tmp/ztok_install_test/lib/cps/ztok.cps"
+        mode: "cps"
+        reason: "no_exist"
+      -
+        path: "/tmp/ztok_install_test/share/cps/ztok.cps"
+        mode: "cps"
+        reason: "no_exist"
+    found:
+      path: "/tmp/ztok_install_test/lib/cmake/ztok/ztokConfig.cmake"
+      mode: "config"
+      version: "1.16.0"
+    search_context:
+      CMAKE_PREFIX_PATH:
+        - "/tmp/ztok_install_test"
+      ENV{PATH}:
+        - "/home/sirus/.bun/bin"
+        - "/home/sirus/.opencode/bin"
+        - "/opt/anaconda/condabin"
+        - "/home/sirus/.cargo/bin"
+        - "/home/sirus/.nix-profile/bin"
+        - "/home/sirus/.emacs.d/bin"
+        - "/home/sirus/scripts"
+        - "/home/sirus/.local/bin"
+        - "/usr/lib/ccache/bin/"
+        - "/home/sirus/.local/bin"
+        - "/home/sirus/.local/bin"
+        - "/home/sirus/.nix-profile/bin"
+        - "/nix/var/nix/profiles/default/bin"
+        - "/home/sirus/.local/bin"
+        - "/usr/local/bin"
+        - "/usr/bin"
+        - "/bin"
+        - "/home/sirus/.config/.foundry/bin"
+        - "/usr/local/sbin"
+        - "/opt/android-sdk/cmdline-tools/latest/bin"
+        - "/opt/android-sdk/platform-tools"
+        - "/opt/android-sdk/tools"
+        - "/opt/android-sdk/tools/bin"
+        - "/opt/cuda/bin"
+        - "/var/lib/flatpak/exports/bin"
+        - "/usr/lib/jvm/default/bin"
+        - "/usr/bin/site_perl"
+        - "/usr/bin/vendor_perl"
+        - "/usr/bin/core_perl"
+        - "/usr/lib/rustup/bin"
+        - "/home/sirus/.config/.foundry/bin"
+        - "/home/sirus/.lmstudio/bin"
+        - "/home/sirus/.claude/plugins/cache/claude-plugins-official/clangd-lsp/1.0.0/bin"
+        - "/home/sirus/.claude/plugins/cache/claude-plugins-official/rust-analyzer-lsp/1.0.0/bin"
+        - "/home/sirus/.claude/plugins/cache/claude-plugins-official/frontend-design/unknown/bin"
+      CMAKE_INSTALL_PREFIX: "/usr/local"
+      CMAKE_SYSTEM_PREFIX_PATH:
+        - "/usr/local"
+        - "/usr"
+        - "/"
+        - "/usr"
+        - "/usr/local"
+        - "/usr/X11R6"
+        - "/usr/pkg"
+        - "/opt"
+...

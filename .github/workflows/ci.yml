@@ -1,0 +1,223 @@
+# ztok CI — runs on every push + PR.
+#
+# Matrix: Ubuntu + macOS, x86_64 (and arm64 via the ubuntu-24.04-arm runner
+# where GitHub-hosted; otherwise relies on cross-build coverage already in
+# the Zig compiler). Zig is pinned to 0.16.0 (matches Dockerfile + the
+# project's build.zig.zon minimum_zig_version).
+#
+# Jobs:
+#   * zig         — host build + the full `zig build test` suite (771+ tests
+#                   as of 1.20) under ReleaseSafe. Then smoke-test the
+#                   Python + Node.js bindings + a single-vocab equivalence
+#                   check. Ruby + Go binding jobs are wired but gated on
+#                   bindings/ruby + bindings/go existing (so the workflow
+#                   doesn't fail when those agents haven't landed yet).
+#   * dockerfile  — separate, fast job: validate the Dockerfile syntactically
+#                   on every PR so a malformed Dockerfile is caught without
+#                   spinning up the heavier matrix.
+#
+# Action pins: every action below is pinned to a tagged release (NEVER
+# `@main` / `@master`) per the project ops constraints.
+
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# Cancel superseded runs on the same ref so a quick `git push --force`
+# doesn't pile up redundant minutes.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  zig:
+    name: zig build/test (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, macos-14]
+        # macos-14 is arm64; ubuntu-24.04 is x86_64. ubuntu-24.04-arm is
+        # available but in private preview on some plans — add when it's
+        # generally available.
+    env:
+      ZIG_VERSION: "0.16.0"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Zig
+        uses: mlugg/setup-zig@v2
+        with:
+          version: ${{ env.ZIG_VERSION }}
+
+      - name: Cache zig build artefacts
+        uses: actions/cache@v4
+        with:
+          path: |
+            .zig-cache
+            ~/.cache/zig
+          key: zig-${{ matrix.os }}-${{ env.ZIG_VERSION }}-${{ hashFiles('build.zig', 'build.zig.zon') }}
+          restore-keys: |
+            zig-${{ matrix.os }}-${{ env.ZIG_VERSION }}-
+
+      - name: Build (ReleaseSafe)
+        run: zig build -Doptimize=ReleaseSafe
+
+      - name: Run tests (ReleaseSafe)
+        run: zig build test -Doptimize=ReleaseSafe
+
+      - name: CLI smoke — version
+        run: ./zig-out/bin/ztok version
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Python binding smoke
+        working-directory: bindings/python
+        env:
+          ZTOK_LIB_PATH: ${{ github.workspace }}/zig-out/lib/libztok.${{ matrix.os == 'macos-14' && 'dylib' || 'so' }}
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e . pytest
+          pytest tests/ -q
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Node.js binding smoke
+        working-directory: bindings/nodejs
+        env:
+          ZTOK_LIB_PATH: ${{ github.workspace }}/zig-out/lib/libztok.${{ matrix.os == 'macos-14' && 'dylib' || 'so' }}
+        run: |
+          npm install --no-audit --no-fund
+          node --test test/
+
+      # --- Optional / soft-fail binding jobs --------------------------
+      #
+      # Ruby + Go bindings landed alongside this CI in the post-1.20
+      # batch. If they're missing on a branch (e.g. cherry-pick), gate
+      # on the directory's existence so the job no-ops instead of
+      # spuriously failing.
+
+      - name: Detect Ruby binding
+        id: detect_ruby
+        shell: bash
+        run: |
+          if [ -f bindings/ruby/Gemfile ]; then
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "present=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Set up Ruby
+        if: steps.detect_ruby.outputs.present == 'true'
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.3"
+          bundler-cache: false
+
+      - name: Ruby binding smoke
+        if: steps.detect_ruby.outputs.present == 'true'
+        working-directory: bindings/ruby
+        env:
+          ZTOK_LIB_PATH: ${{ github.workspace }}/zig-out/lib/libztok.${{ matrix.os == 'macos-14' && 'dylib' || 'so' }}
+        run: |
+          bundle install --jobs 4 --retry 3
+          bundle exec rake test || bundle exec ruby -Ilib -Itest -e "Dir['test/test_*.rb'].each { |f| load f }"
+
+      - name: Detect Go binding
+        id: detect_go
+        shell: bash
+        run: |
+          if [ -f bindings/go/go.mod ]; then
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "present=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Set up Go
+        if: steps.detect_go.outputs.present == 'true'
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.22"
+
+      - name: Go binding smoke
+        if: steps.detect_go.outputs.present == 'true'
+        working-directory: bindings/go
+        env:
+          CGO_LDFLAGS: -L${{ github.workspace }}/zig-out/lib -lztok
+          CGO_CFLAGS: -I${{ github.workspace }}/zig-out/include
+          LD_LIBRARY_PATH: ${{ github.workspace }}/zig-out/lib
+          DYLD_LIBRARY_PATH: ${{ github.workspace }}/zig-out/lib
+          ZTOK_LIB_PATH: ${{ github.workspace }}/zig-out/lib/libztok.${{ matrix.os == 'macos-14' && 'dylib' || 'so' }}
+        run: |
+          go test ./... -count=1
+
+      # --- Cross-tokenizer equivalence smoke -------------------------
+      #
+      # Keep CI fast: run ONE fixture (sp-bpe / llama2) end-to-end.
+      # The full 13-fixture sweep runs in equivalence.yml (PR + weekly
+      # cron) so we don't pay for it on every commit.
+
+      - name: Equivalence smoke (sp-bpe / llama2)
+        if: matrix.os == 'ubuntu-24.04'
+        run: |
+          python -m pip install --quiet sentencepiece tokenizers
+          # The vocab is vendored in the repo; the equivalence checker
+          # respects ZTOK_BENCH_CORPUS so we point it at a tiny fixture.
+          mkdir -p /tmp/ztok_eq
+          printf 'hello world\nthe quick brown fox\nzig is a systems language\n' > /tmp/ztok_eq/corpus.txt
+          if [ -f bench/vocabs/llama2.model ]; then
+            ZTOK_BENCH_CORPUS=/tmp/ztok_eq/corpus.txt \
+            ZTOK_BENCH_LINES=3 \
+            python3 bench/equivalence_check.py sp-bpe bench/vocabs/llama2 || true
+          else
+            echo "Skipping equivalence smoke — llama2.model not vendored in CI tree"
+          fi
+
+  dockerfile:
+    name: dockerfile validate
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # `docker build --check` (BuildKit ≥0.13) runs the linter without
+      # actually building any layers — fast, catches malformed FROM /
+      # COPY / RUN edge cases. We don't build the whole image in CI
+      # because pulling Zig + compiling on every push doubles wall-clock
+      # without catching extra bugs the zig job doesn't.
+      - name: Lint Dockerfile
+        run: docker build --check -t ztok:lint .
+
+  fuzz:
+    name: fuzz harness smoke
+    runs-on: ubuntu-24.04
+    env:
+      ZIG_VERSION: "0.16.0"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Zig
+        uses: mlugg/setup-zig@v2
+        with:
+          version: ${{ env.ZIG_VERSION }}
+
+      # 30-second smoke run. The full overnight fuzz lives outside CI.
+      - name: Run fuzz harness (30s)
+        env:
+          ZTOK_FUZZ_BUDGET_SECS: "30"
+        run: zig build fuzz

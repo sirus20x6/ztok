@@ -1,0 +1,1000 @@
+𝐌ath 𝐁𝐎𝐋𝐃 𝐀𝐁𝐂 at i=38
+word1 word2 word3 (ws=0x202f)
+astral: 📚🤔 + basẽ + 📚🤔
+emoji+combining: 😀⃣ (keycap-ish) and 🇺🇸 flag mix
+diacritic word: ú̆ő canonical
+diacritic word: i̇̆i̧̋̌õ canonical
+astral: 💻💩🎁💩📈 + base̊ + 💻💩🎁💩📈
+presentation: ☃️ ⚠️ ☕️ ☃️ ☃️
+Welcome to the project — مدرسة & ספר — end.
+normalization: Ⓐ vs A
+normalization: ℋ vs H
+astral: 💻📚💻🤔 + basē + 💻📚💻🤔
+presentation: ☕️ ▶️ ☃︎ ▶️
+normalization: Ⓐ vs A
+emoji 44: 👩‍👩‍👦‍👦 after 👩‍👩‍👦‍👦👩‍👩‍👦‍👦
+𝐌ath 𝐁𝐎𝐋𝐃 𝐀𝐁𝐂 at i=32
+emoji 119: 👩‍💻 after 👩‍💻👩‍💻
+jamo: 각한낸 vs 각한낸감사합니다안녕하세요
+presentation: ❤️ ❤️ ▶️ ❤️ ☃️
+astral: 📚📈 + basě + 📚📈
+Welcome to the project — جامعة & ספר — end.
+normalization: ﬁ vs fi
+Welcome to the project ⁨جامعة⁩ then ⁨עולם⁩ end.
+presentation: ☃️ ☃️ ☃︎ ☕️ ☃️ ⚠️
+diacritic word: u̧ canonical
+word1 word2 word3 (ws=0x2007)
+diacritic word: û̆ĉ̨ę̊ canonical
+astral: 📚😀💻🎁 + basĕ + 📚😀💻🎁
+presentation: ☃︎ ❤️ ☕️
+astral: 📚💩🤔🎁 + basẽ + 📚💩🤔🎁
+diacritic word: ó canonical
+zalgo: h̘̭͍̍̾͝è̇l̠̎l̸̉͒̈͞ó͖̰̊͢
+emoji+combining: 😀⃣ (keycap-ish) and 🇺🇸 flag mix
+astral: 📈🎁💩 + basē + 📈🎁💩
+normalization: Ⅻ vs XII
+word1 word2 word3 (ws=0x202f)
+jamo: 각한낸 vs 각한낸감사합니다안녕하세요
+word1​word2​word3 (ws=0x200b)
+presentation: ☃︎ ▶️ ☕️ ☃️ ☃︎
+word1 word2 word3 (ws=0x2028)
+diacritic word: c̨̋̈n̄̈́ů̀n̈̃i̇̂̆ canonical
+emoji 103: 👩🏾‍🤝‍👨🏻 after 👩🏾‍🤝‍👨🏻👩🏾‍🤝‍👨🏻
+diacritic word: ǒ canonical
+diacritic word: ñ̈̄öäčn̋̊ canonical
+zalgo: h̫̫͋́͘͞ė̺̠̀ͬl̬͗l̨̦̜̭̑͜͠ö̲͏͍
+word1 word2 word3 (ws=0x202f)
+jamo: 각한낸 vs 각한낸감사합니다안녕하세요
+astral: 😀🤔 + base̊ + 😀🤔
+word1 word2 word3 (ws=0x2028)
+astral: 🤔💩🎁😀🤔 + basȩ + 🤔💩🎁😀🤔
+Welcome to the project ⁨العالم⁩ then ⁨עולם⁩ end.
+emoji 59: 👨🏿‍🌾 after 👨🏿‍🌾👨🏿‍🌾
+word1 word2 word3 (ws=0x1680)
+𝐌ath 𝐁𝐎𝐋𝐃 𝐀𝐁𝐂 at i=22
+normalization: Ⓐ vs A
+jamo: 각한낸 vs 각한낸감사합니다안녕하세요
+diacritic word: ő́ó̌ĉ canonical
+presentation: ❤️ ⚠️ ☕️ ▶️
+Welcome to the project ⁨السلام⁩ then ⁨שלום⁩ end.
+Hello123 vs Ｈｅｌｌｏ１２３ mixed
+astral: 💩🤔💩💻 + basé + 💩🤔💩💻
+Welcome to the project — مدرسة & ספר — end.
+astral: 🎁🎁📈 + basę + 🎁🎁📈
+emoji 81: 👩‍👩‍👦‍👦 after 👩‍👩‍👦‍👦👩‍👩‍👦‍👦
+Welcome to the project ⁨جامعة⁩ then ⁨עולם⁩ end.
+jamo: 각한낸 vs 각한낸감사합니다안녕하세요
+astral: 🚀💩💻💩😀 + basě + 🚀💩💻💩😀
+emoji 94: 🏴󠁧󠁢󠁳󠁣󠁴󠁿 after 🏴󠁧󠁢󠁳󠁣󠁴󠁿🏴󠁧󠁢󠁳󠁣󠁴󠁿
+diacritic word: i̊̆ canonical
+normalization: Ⅻ vs XII
+emoji 99: 👩🏽‍⚕️ after 👩🏽‍⚕️👩🏽‍⚕️
+Welcome to the project ⁨كتاب⁩ then ⁨עולם⁩ end.
+presentation: ☃️ ❤️ ☕️
+diacritic word: à̌̂ canonical
+diacritic word: ã̌̂ċc̃ċ̨ canonical
+diacritic word: o̧̨ę̧̃a̋̊̃ĕ̊ê canonical
+diacritic word: ȩ́̃ë canonical
+astral: 🤔💩💻 + basĕ + 🤔💩💻
+jamo: 각한낸 vs 각한낸감사합니다안녕하세요
+emoji 79: 🏳️‍🌈 after 🏳️‍🌈🏳️‍🌈
+jamo: 각한낸 vs 각한낸감사합니다안녕하세요
+Welcome to the project ⁨العالم⁩ then ⁨שלום⁩ end.
+jamo: 각한낸 vs 각한낸감사합니다안녕하세요
+zalgo: h̟̫ͅ͏̛̀ͭę̹͔̑̓͗̈̍ļ̳͉̳͗l̲̺͕̗̳̑ͭǫ̎͋̾
+Hello123 vs Ｈｅｌｌｏ１２３ mixed
+jamo: 각한낸 vs 각한낸감사합니다안녕하세요
+Welcome to the project — كتاب & שלום — end.
+Welcome to the project — جامعة & ספר — end.
+astral: 💩💻📚😀💻 + basé + 💩💻📚😀💻
+diacritic word: ḯ̄c̆ṅ̆̋ canonical
+astral: 🚀🤔💩 + basé + 🚀🤔💩
+normalization: ㎏ vs kg
+diacritic word: ņ̀ canonical
+diacritic word: c̋ù̇̆č̂ canonical
+emoji+combining: 😀⃣ (keycap-ish) and 🇺🇸 flag mix
+Welcome to the project — مدرسة & בית — end.
+astral: 🎁📚 + basę + 🎁📚
+astral: 💩🎁💩 + basė + 💩🎁💩
+jamo: 각한낸 vs 각한낸감사합니다안녕하세요
+astral: 🚀🤔 + basẽ + 🚀🤔
+emoji+combining: 😀⃣ (keycap-ish) and 🇺🇸 flag mix
+diacritic word: u̧̇̀ĉ̈̊ canonical
+Welcome to the project — العالم & עולם — end.
+Welcome to the project ⁨مدرسة⁩ then ⁨עולם⁩ end.
+astral: 📈📈📚 + basê + 📈📈📚
+word1 word2 word3 (ws=0x2007)
+Welcome to the project ⁨السلام⁩ then ⁨שלום⁩ end.
+Welcome to the project — العالم & בית — end.
+Welcome to the project ⁨مدرسة⁩ then ⁨שלום⁩ end.
+Welcome to the project ⁨السلام⁩ then ⁨עולם⁩ end.
+emoji 37: 🏴󠁧󠁢󠁳󠁣󠁴󠁿 after 🏴󠁧󠁢󠁳󠁣󠁴󠁿🏴󠁧󠁢󠁳󠁣󠁴󠁿
+zalgo: h̤̱͚e̢̮̠̬ͭ͜͝l̯ͦļ͈̍ͣȍ̵̟ͧ̌̿͞
+normalization: ℋ vs H
+混合 mixed text 测试 with English 中间 and 数字 12345 boundaries
+Hello123 vs Ｈｅｌｌｏ１２３ mixed
+astral: 📈💻😀🎁 + base̊ + 📈💻😀🎁
+diacritic word: ȯ̂̊ canonical
+diacritic word: ǒ̂n̂́ą̇ä canonical
+混合 mixed text 测试 with English 中间 and 数字 12345 boundaries
+presentation: ☃︎ ❤️ ☃️ ❤️
+normalization: Ⅻ vs XII
+混合 mixed text 测试 with English 中间 and 数字 12345 boundaries
+emoji 68: 👩🏽‍⚕️ after 👩🏽‍⚕️👩🏽‍⚕️
+emoji 69: 👩‍💻 after 👩‍💻👩‍💻
+Welcome to the project ⁨كتاب⁩ then ⁨עולם⁩ end.
+diacritic word: ã̈̆ą̋ canonical
+Welcome to the project ⁨مدرسة⁩ then ⁨שלום⁩ end.
+emoji 43: 👩🏾‍🤝‍👨🏻 after 👩🏾‍🤝‍👨🏻👩🏾‍🤝‍👨🏻
+jamo: 각한낸 vs 각한낸감사합니다안녕하세요
+Welcome to the project — مرحبا & ספר — end.
+zalgo: h͔̼̆ͭ̿͞e͔ͪ̀l̳̖̙l̦̱͙̑̂͑ŏ̶͗
+diacritic word: i̊è̇́à̊̋č̂ canonical
+𝐌ath 𝐁𝐎𝐋𝐃 𝐀𝐁𝐂 at i=29
+normalization: Ⅻ vs XII
+混合 mixed text 测试 with English 中间 and 数字 12345 boundaries
+emoji 8: 🏳️‍🌈 after 🏳️‍🌈🏳️‍🌈
+混合 mixed text 测试 with English 中间 and 数字 12345 boundaries
+normalization: ｶﾀｶﾅ vs カタカナ
+word1 word2 word3 (ws=0x2029)
+astral: 💩📈 + basĕ + 💩📈
+𝐌ath 𝐁𝐎𝐋𝐃 𝐀𝐁𝐂 at i=6
+diacritic word: ĭ̄̌ĩ̈ canonical
+Welcome to the project — جامعة & עולם — end.
+Welcome to the project ⁨العالم⁩ then ⁨בית⁩ end.
+Welcome to the project ⁨العالم⁩ then ⁨שלום⁩ end.
+diacritic word: å̂å̀̆ canonical
+normalization: Ⓐ vs A
+emoji 57: 👨🏿‍🌾 after 👨🏿‍🌾👨🏿‍🌾
+Welcome to the project — مدرسة & שלום — end.
+presentation: ☃︎ ▶️ ⚠️
+word1 word2 word3 (ws=0x2007)
+emoji 108: 🏴󠁧󠁢󠁳󠁣󠁴󠁿 after 🏴󠁧󠁢󠁳󠁣󠁴󠁿🏴󠁧󠁢󠁳󠁣󠁴󠁿
+diacritic word: ų̋̂ň̄̆ű̧ãû̈ canonical
+Welcome to the project — العالم & ספר — end.
+astral: 🎁🚀🎁 + basē + 🎁🚀🎁
+zalgo: ȟ͓̘̩̯͆͞ě̩̥̙̀́͘͞ĺ̸l̩̇ǒ̵̯͜͢͡
+Welcome to the project — مدرسة & עולם — end.
+Welcome to the project — السلام & בית — end.
+normalization: ℋ vs H
+astral: 😀🤔💻📈 + basě + 😀🤔💻📈
+astral: 💻🎁📈💻📈 + basě + 💻🎁📈💻📈
+emoji 110: 🏴󠁧󠁢󠁳󠁣󠁴󠁿 after 🏴󠁧󠁢󠁳󠁣󠁴󠁿🏴󠁧󠁢󠁳󠁣󠁴󠁿
+Welcome to the project ⁨كتاب⁩ then ⁨שלום⁩ end.
+Welcome to the project — جامعة & עולם — end.
+jamo: 각한낸 vs 각한낸감사합니다안녕하세요
+Welcome to the project ⁨مرحبا⁩ then ⁨שלום⁩ end.
+astral: 🚀🚀😀😀 + basë + 🚀🚀😀😀
+word1 word2 word3 (ws=0x2007)
+𝐌ath 𝐁𝐎𝐋𝐃 𝐀𝐁𝐂 at i=24
+diacritic word: ú̈ē̃̊ canonical
+Welcome to the project ⁨جامعة⁩ then ⁨בית⁩ end.
+Welcome to the project ⁨مرحبا⁩ then ⁨עולם⁩ end.
+混合 mixed text 测试 with English 中间 and 数字 12345 boundaries
+Welcome to the project ⁨العالم⁩ then ⁨שלום⁩ end.
+𝐌ath 𝐁𝐎𝐋𝐃 𝐀𝐁𝐂 at i=4
+diacritic word: ï̧̨û canonical
+diacritic word: õn̆̇̂ïė̂̈ canonical
+presentation: ☃︎ ⚠️ ⚠️ ☃︎
+normalization: ｶﾀｶﾅ vs カタカナ
+word1 word2 word3 (ws=0x202f)
+diacritic word: ĭ̧́o̊̀̇c̀́ĩ̊̌ų̂̇ canonical
+Hello123 vs Ｈｅｌｌｏ１２３ mixed
+Hello123 vs Ｈｅｌｌｏ１２３ mixed
+word1 word2 word3 (ws=0x2029)
+zalgo: h̛̻̒̓͛̽͋ḙ̟̆l͟͏̡͕̐l̶̮͙̻͍̒̎ͧo̞̬̲ͤ͛͛̔͟
+astral: 📚💩🤔🤔🤔 + basé + 📚💩🤔🤔🤔
+diacritic word: i̋̈̃ã̄é̃ć̊̇ canonical
+Welcome to the project — العالم & שלום — end.
+diacritic word: į̌àę̀̃ȯ̃ canonical
+normalization: ㎏ vs kg
+presentation: ▶️ ⚠️
+emoji 27: 👩🏽‍⚕️ after 👩🏽‍⚕️👩🏽‍⚕️
+emoji 102: 👩‍👩‍👦‍👦 after 👩‍👩‍👦‍👦👩‍👩‍👦‍👦
+Welcome to the project ⁨كتاب⁩ then ⁨ספר⁩ end.
+diacritic word: ćǐ̀̆ canonical
+diacritic word: ǎą̇ã́ē̌ȩ̌̆ canonical
+Hello123 vs Ｈｅｌｌｏ１２３ mixed
+Welcome to the project — كتاب & שלום — end.
+zalgo: h͕̬̟̱̗̭̒̇e̳̙̹̜ͩͩ̊͝l̗̲͕̦ͦ̔͗l̸̘̬̟͠͠o̧̒
+混合 mixed text 测试 with English 中间 and 数字 12345 boundaries
+Welcome to the project ⁨مدرسة⁩ then ⁨ספר⁩ end.
+diacritic word: n̆̃̂ȩ̈̆a̋̈̆ç̀ñ canonical
+zalgo: h̄͡e̤̣̹͒͝l̳͈̮ͬ͜͢l̶̰̟̆̈́ͬ̿͡o͚̟͙ͩ͆ͨ̽
+Welcome to the project ⁨كتاب⁩ then ⁨ספר⁩ end.
+Welcome to the project — مدرسة & עולם — end.
+emoji 113: 🏴󠁧󠁢󠁳󠁣󠁴󠁿 after 🏴󠁧󠁢󠁳󠁣󠁴󠁿🏴󠁧󠁢󠁳󠁣󠁴󠁿
+zalgo: h͍̮͜e͈̠̓͗̑͌͝ļ̳̬͙͖ͮ̂l̬̐̇͆õ̪̳
+Welcome to the project ⁨مرحبا⁩ then ⁨ספר⁩ end.
+Welcome to the project ⁨مدرسة⁩ then ⁨עולם⁩ end.
+jamo: 각한낸 vs 각한낸감사합니다안녕하세요
+emoji 60: 🏴󠁧󠁢󠁳󠁣󠁴󠁿 after 🏴󠁧󠁢󠁳󠁣󠁴󠁿🏴󠁧󠁢󠁳󠁣󠁴󠁿
+Hello123 vs Ｈｅｌｌｏ１２３ mixed
+混合 mixed text 测试 with English 中间 and 数字 12345 boundaries
+Welcome to the project — مدرسة & בית — end.
+emoji 6: 👩🏽‍⚕️ after 👩🏽‍⚕️👩🏽‍⚕️
+Welcome to the project — السلام & שלום — end.
+Welcome to the project — مدرسة & בית — end.
+word1 word2 word3 (ws=0x2028)
+jamo: 각한낸 vs 각한낸감사합니다안녕하세요
+Welcome to the project ⁨مدرسة⁩ then ⁨בית⁩ end.
+astral: 📚📈🤔🎁 + basé + 📚📈🤔🎁
+混合 mixed text 测试 with English 中间 and 数字 12345 boundaries
+presentation: ☃️ ☃️
+presentation: ❤️ ⚠️ ▶️ ❤️ ▶️
+astral: 📈💻 + basè + 📈💻
+𝐌ath 𝐁𝐎𝐋𝐃 𝐀𝐁𝐂 at i=25
+Welcome to the project ⁨كتاب⁩ then ⁨עולם⁩ end.
+Welcome to the project — جامعة & עולם — end.
+emoji 51: 🏳️‍🌈 after 🏳️‍🌈🏳️‍🌈
+Hello123 vs Ｈｅｌｌｏ１２３ mixed
+Hello123 vs Ｈｅｌｌｏ１２３ mixed
+astral: 🚀🤔😀😀 + basè + 🚀🤔😀😀
+emoji 45: 👩‍💻 after 👩‍💻👩‍💻
+jamo: 각한낸 vs 각한낸감사합니다안녕하세요
+emoji+combining: 😀⃣ (keycap-ish) and 🇺🇸 flag mix
+astral: 🚀💻🎁🎁 + basę + 🚀💻🎁🎁
+emoji 82: 👨‍👩‍👧‍👦 after 👨‍👩‍👧‍👦👨‍👩‍👧‍👦
+diacritic word: ũ̄̈n̄̂īǹõ̌ canonical
+diacritic word: ą̀̄n̋̊̈ canonical
+diacritic word: ą̀̊ōc̈̃ç canonical
+Welcome to the project ⁨العالم⁩ then ⁨ספר⁩ end.
+presentation: ▶️ ▶️ ☃︎ ▶️
+Welcome to the project — مدرسة & עולם — end.
+astral: 💻📚💩📚📈 + basȩ + 💻📚💩📚📈
+Welcome to the project ⁨مدرسة⁩ then ⁨עולם⁩ end.
+word1 word2 word3 (ws=0x2007)
+emoji 112: 👨🏿‍🌾 after 👨🏿‍🌾👨🏿‍🌾
+diacritic word: n̆ū̂ŭă̇̂ canonical
+presentation: ☕️ ☃️ ☕️ ☃️ ⚠️
+emoji 106: 👨🏿‍🌾 after 👨🏿‍🌾👨🏿‍🌾
+word1 word2 word3 (ws=0x2029)
+diacritic word: a̋̌ canonical
+word1 word2 word3 (ws=0xa0)
+astral: 📈🚀📈 + basé + 📈🚀📈
+jamo: 각한낸 vs 각한낸감사합니다안녕하세요
+word1 word2 word3 (ws=0xa0)
+jamo: 각한낸 vs 각한낸감사합니다안녕하세요
+diacritic word: ō̋̀i̧̇́u̇̋̃n̊ canonical
+diacritic word: c̈̀ė canonical
+Welcome to the project ⁨مدرسة⁩ then ⁨בית⁩ end.
+Welcome to the project ⁨العالم⁩ then ⁨ספר⁩ end.
+emoji 4: 👨‍👩‍👧‍👦 after 👨‍👩‍👧‍👦👨‍👩‍👧‍👦
+Welcome to the project — السلام & שלום — end.
+emoji 16: 👨‍👩‍👧‍👦 after 👨‍👩‍👧‍👦👨‍👩‍👧‍👦
+word1 word2 word3 (ws=0x2029)
+emoji 52: 👩‍💻 after 👩‍💻👩‍💻
+astral: 💩🤔 + basè + 💩🤔
+astral: 🚀📈📚💻🤔 + basě + 🚀📈📚💻🤔
+astral: 📚📈 + basē + 📚📈
+diacritic word: n̂ĕ̀û̀̋ń̋ canonical
+Welcome to the project — مدرسة & שלום — end.
+astral: 🚀🚀 + basȩ + 🚀🚀
+emoji 87: 👩🏾‍🤝‍👨🏻 after 👩🏾‍🤝‍👨🏻👩🏾‍🤝‍👨🏻
+astral: 💻🤔😀📈 + base̊ + 💻🤔😀📈
+astral: 📈🚀🤔 + basé + 📈🚀🤔
+Welcome to the project — جامعة & בית — end.
+word1 word2 word3 (ws=0x1680)
+Welcome to the project — السلام & בית — end.
+normalization: ㎏ vs kg
+emoji 66: 👨‍👩‍👧‍👦 after 👨‍👩‍👧‍👦👨‍👩‍👧‍👦
+emoji 26: 🏳️‍🌈 after 🏳️‍🌈🏳️‍🌈
+word1 word2 word3 (ws=0x202f)
+Welcome to the project ⁨السلام⁩ then ⁨עולם⁩ end.
+diacritic word: ėȩ̂̊a̧̋̂ñ̨ canonical
+Welcome to the project — العالم & ספר — end.
+emoji 41: 👩‍💻 after 👩‍💻👩‍💻
+astral: 🎁💻🎁 + basę + 🎁💻🎁
+astral: 💩🎁💩🎁 + basë + 💩🎁💩🎁
+jamo: 각한낸 vs 각한낸감사합니다안녕하세요
+emoji+combining: 😀⃣ (keycap-ish) and 🇺🇸 flag mix
+normalization: ㎏ vs kg
+emoji+combining: 😀⃣ (keycap-ish) and 🇺🇸 flag mix
+astral: 💻📈😀 + basè + 💻📈😀
+emoji+combining: 😀⃣ (keycap-ish) and 🇺🇸 flag mix
+Hello123 vs Ｈｅｌｌｏ１２３ mixed
+𝐌ath 𝐁𝐎𝐋𝐃 𝐀𝐁𝐂 at i=1
+混合 mixed text 测试 with English 中间 and 数字 12345 boundaries
+presentation: ❤️ ☃️ ❤️ ☃︎ ☃️
+Welcome to the project — السلام & בית — end.
+Hello123 vs Ｈｅｌｌｏ１２３ mixed
+Hello123 vs Ｈｅｌｌｏ１２３ mixed
+jamo: 각한낸 vs 각한낸감사합니다안녕하세요
+diacritic word: é̂ȩ̌ canonical
+emoji 1: 👩🏽‍⚕️ after 👩🏽‍⚕️👩🏽‍⚕️
+presentation: ☃️ ❤️ ☕️ ❤️ ⚠️
+Welcome to the project ⁨مدرسة⁩ then ⁨בית⁩ end.
+astral: 💻📚🎁🤔📈 + basē + 💻📚🎁🤔📈
+presentation: ⚠️ ❤️ ☃️
+astral: 💩💩📈😀💩 + base̋ + 💩💩📈😀💩
+jamo: 각한낸 vs 각한낸감사합니다안녕하세요
+normalization: Ⅻ vs XII
+Welcome to the project ⁨مدرسة⁩ then ⁨בית⁩ end.
+astral: 🤔🤔 + basē + 🤔🤔
+Welcome to the project — العالم & בית — end.
+Welcome to the project — العالم & שלום — end.
+Hello123 vs Ｈｅｌｌｏ１２３ mixed
+Welcome to the project — العالم & שלום — end.
+presentation: ☃️ ▶️ ❤️ ▶️ ❤️ ▶️
+𝐌ath 𝐁𝐎𝐋𝐃 𝐀𝐁𝐂 at i=20
+emoji 20: 👨🏿‍🌾 after 👨🏿‍🌾👨🏿‍🌾
+emoji 49: 🏴󠁧󠁢󠁳󠁣󠁴󠁿 after 🏴󠁧󠁢󠁳󠁣󠁴󠁿🏴󠁧󠁢󠁳󠁣󠁴󠁿
+𝐌ath 𝐁𝐎𝐋𝐃 𝐀𝐁𝐂 at i=34
+jamo: 각한낸 vs 각한낸감사합니다안녕하세요
+astral: 💻📚💩 + basĕ + 💻📚💩
+zalgo: h̶̙͋̈̉̕͟é͕̓ͪͨͅl̗̔ͮͣ̑l͚̀͞oͨ̓
+astral: 📚🤔📚 + basê + 📚🤔📚
+Welcome to the project ⁨مدرسة⁩ then ⁨ספר⁩ end.
+emoji 118: 👩🏽‍⚕️ after 👩🏽‍⚕️👩🏽‍⚕️
+emoji 48: 👩🏽‍⚕️ after 👩🏽‍⚕️👩🏽‍⚕️
+emoji 100: 👩‍💻 after 👩‍💻👩‍💻
+jamo: 각한낸 vs 각한낸감사합니다안녕하세요
+jamo: 각한낸 vs 각한낸감사합니다안녕하세요
+Welcome to the project ⁨العالم⁩ then ⁨ספר⁩ end.
+presentation: ☕️ ⚠️
+astral: 🚀🤔💻🚀 + basĕ + 🚀🤔💻🚀
+diacritic word: ĕ̀̄åc̊ņ̇i̇̌ canonical
+Welcome to the project ⁨العالم⁩ then ⁨שלום⁩ end.
+混合 mixed text 测试 with English 中间 and 数字 12345 boundaries
+word1 word2 word3 (ws=0x2028)
+jamo: 각한낸 vs 각한낸감사합니다안녕하세요
+presentation: ☃️ ⚠️ ⚠️ ▶️ ☃︎ ❤️
+presentation: ▶️ ❤️
+emoji 53: 👩🏾‍🤝‍👨🏻 after 👩🏾‍🤝‍👨🏻👩🏾‍🤝‍👨🏻
+Hello123 vs Ｈｅｌｌｏ１２３ mixed
+𝐌ath 𝐁𝐎𝐋𝐃 𝐀𝐁𝐂 at i=27
+word1 word2 word3 (ws=0x2028)
+presentation: ☕️ ☃️ ⚠️ ⚠️
+zalgo: h͓̝̎̑̍̊͋ͣe̵͉̯̅̉l̫ͧ̇l͕̯ͧo̤͎ͦ̇͝
+𝐌ath 𝐁𝐎𝐋𝐃 𝐀𝐁𝐂 at i=39
+Hello123 vs Ｈｅｌｌｏ１２３ mixed
+emoji 78: 👩‍👩‍👦‍👦 after 👩‍👩‍👦‍👦👩‍👩‍👦‍👦
+Welcome to the project — كتاب & ספר — end.
+emoji 9: 👩‍👩‍👦‍👦 after 👩‍👩‍👦‍👦👩‍👩‍👦‍👦
+Welcome to the project ⁨كتاب⁩ then ⁨בית⁩ end.
+𝐌ath 𝐁𝐎𝐋𝐃 𝐀𝐁𝐂 at i=10
+word1 word2 word3 (ws=0xa0)
+Welcome to the project ⁨جامعة⁩ then ⁨ספר⁩ end.
+astral: 💻😀 + basẽ + 💻😀
+diacritic word: åi̧ẽ̈ć̨̊ canonical
+混合 mixed text 测试 with English 中间 and 数字 12345 boundaries
+astral: 🎁🚀📈 + basě + 🎁🚀📈
+emoji 40: 👩🏽‍⚕️ after 👩🏽‍⚕️👩🏽‍⚕️
+astral: 🤔🎁😀📈😀 + base̊ + 🤔🎁😀📈😀
+𝐌ath 𝐁𝐎𝐋𝐃 𝐀𝐁𝐂 at i=0
+emoji+combining: 😀⃣ (keycap-ish) and 🇺🇸 flag mix
+𝐌ath 𝐁𝐎𝐋𝐃 𝐀𝐁𝐂 at i=30
+𝐌ath 𝐁𝐎𝐋𝐃 𝐀𝐁𝐂 at i=8
+emoji+combining: 😀⃣ (keycap-ish) and 🇺🇸 flag mix
+presentation: ▶️ ▶️ ⚠️ ☃︎
+astral: 🎁🤔📚🎁 + basĕ + 🎁🤔📚🎁
+emoji 72: 👨🏿‍🌾 after 👨🏿‍🌾👨🏿‍🌾
+diacritic word: ų̂̈ę̇c̆̋̈í canonical
+astral: 🚀📈💩🚀 + basė + 🚀📈💩🚀
+emoji+combining: 😀⃣ (keycap-ish) and 🇺🇸 flag mix
+zalgo: h͂͏ë̯͂l̵̰̬̣ͮ͘͜͟l͈̥̖͂͋ͤo̬͐̉
+jamo: 각한낸 vs 각한낸감사합니다안녕하세요
+Welcome to the project — جامعة & בית — end.
+emoji+combining: 😀⃣ (keycap-ish) and 🇺🇸 flag mix
+astral: 💻📚📈 + basę + 💻📚📈
+Hello123 vs Ｈｅｌｌｏ１２３ mixed
+normalization: ℋ vs H
+presentation: ☃︎ ❤️ ❤️
+Hello123 vs Ｈｅｌｌｏ１２３ mixed
+Welcome to the project — العالم & עולם — end.
+emoji+combining: 😀⃣ (keycap-ish) and 🇺🇸 flag mix
+presentation: ❤️ ❤️ ☃︎ ❤️ ⚠️ ☕️
+diacritic word: ṅn̊âã́̊ canonical
+Hello123 vs Ｈｅｌｌｏ１２３ mixed
+presentation: ☃︎ ⚠️ ⚠️ ☃️ ⚠️ ☕️
+jamo: 각한낸 vs 각한낸감사합니다안녕하세요
+jamo: 각한낸 vs 각한낸감사합니다안녕하세요
+jamo: 각한낸 vs 각한낸감사합니다안녕하세요
+Welcome to the project ⁨السلام⁩ then ⁨שלום⁩ end.
+presentation: ❤️ ⚠️
+Welcome to the project — مرحبا & שלום — end.
+emoji+combining: 😀⃣ (keycap-ish) and 🇺🇸 flag mix
+𝐌ath 𝐁𝐎𝐋𝐃 𝐀𝐁𝐂 at i=17
+normalization: ｶﾀｶﾅ vs カタカナ
+jamo: 각한낸 vs 각한낸감사합니다안녕하세요
+presentation: ☃︎ ☃︎ ⚠️ ❤️ ☃︎
+word1 word2 word3 (ws=0x2028)
+astral: 📚🎁 + basẽ + 📚🎁
+混合 mixed text 测试 with English 中间 and 数字 12345 boundaries
+Welcome to the project ⁨العالم⁩ then ⁨שלום⁩ end.
+Hello123 vs Ｈｅｌｌｏ１２３ mixed
+diacritic word: ŏn̨̂ canonical
+diacritic word: ć̨̋ũa̋į̆̋ canonical
+presentation: ⚠️ ❤️ ▶️ ☃︎ ▶️
+emoji+combining: 😀⃣ (keycap-ish) and 🇺🇸 flag mix
+jamo: 각한낸 vs 각한낸감사합니다안녕하세요
+word1　word2　word3 (ws=0x3000)
+diacritic word: ǫi̧̋̄ canonical
+diacritic word: ȯ canonical
+astral: 😀🚀🚀 + basė + 😀🚀🚀
+zalgo: h͔̤̀̌̏̾͡ȩ̵͇ͥ͏ḽ̲̑̀͗̈ͭ͘l̰̘̱̋̀̌ǒ̗̻͆ͦ
+Hello123 vs Ｈｅｌｌｏ１２３ mixed
+emoji 90: 👩🏾‍🤝‍👨🏻 after 👩🏾‍🤝‍👨🏻👩🏾‍🤝‍👨🏻
+astral: 📚🎁📚💻📚 + basĕ + 📚🎁📚💻📚
+混合 mixed text 测试 with English 中间 and 数字 12345 boundaries
+astral: 📈😀💻💩📚 + basé + 📈😀💻💩📚
+Welcome to the project — مدرسة & שלום — end.
+emoji+combining: 😀⃣ (keycap-ish) and 🇺🇸 flag mix
+emoji 70: 🏴󠁧󠁢󠁳󠁣󠁴󠁿 after 🏴󠁧󠁢󠁳󠁣󠁴󠁿🏴󠁧󠁢󠁳󠁣󠁴󠁿
+astral: 🤔🤔🎁📈💻 + basê + 🤔🤔🎁📈💻
+jamo: 각한낸 vs 각한낸감사합니다안녕하세요
+diacritic word: c̀̃̋çǎä̂̌ canonical
+diacritic word: i̇̂ű̈e̊̀ā̊c̨̋ canonical
+normalization: ℋ vs H
+diacritic word: ċ̂̋ canonical
+diacritic word: ćä̌̋ǔ̋õ canonical
+emoji 88: 👩🏾‍🤝‍👨🏻 after 👩🏾‍🤝‍👨🏻👩🏾‍🤝‍👨🏻
+Welcome to the project — العالم & עולם — end.
+diacritic word: ņ̈į̊̆ê̄õą canonical
+Welcome to the project — مدرسة & בית — end.
+emoji 83: 👨‍👩‍👧‍👦 after 👨‍👩‍👧‍👦👨‍👩‍👧‍👦
+diacritic word: ę̂̀á̆ canonical
+diacritic word: ī canonical
+Welcome to the project ⁨كتاب⁩ then ⁨ספר⁩ end.
+emoji 62: 🏴󠁧󠁢󠁳󠁣󠁴󠁿 after 🏴󠁧󠁢󠁳󠁣󠁴󠁿🏴󠁧󠁢󠁳󠁣󠁴󠁿
+混合 mixed text 测试 with English 中间 and 数字 12345 boundaries
+astral: 🤔💻🚀 + basȩ + 🤔💻🚀
+混合 mixed text 测试 with English 中间 and 数字 12345 boundaries
+astral: 💩📈 + basë + 💩📈
+astral: 🚀😀💩📚💻 + basȩ + 🚀😀💩📚💻
+混合 mixed text 测试 with English 中间 and 数字 12345 boundaries
+Welcome to the project — مرحبا & ספר — end.
+Hello123 vs Ｈｅｌｌｏ１２３ mixed
+emoji 105: 🏴󠁧󠁢󠁳󠁣󠁴󠁿 after 🏴󠁧󠁢󠁳󠁣󠁴󠁿🏴󠁧󠁢󠁳󠁣󠁴󠁿
+astral: 🤔🚀😀📚📈 + basȩ + 🤔🚀😀📚📈
+Welcome to the project ⁨السلام⁩ then ⁨ספר⁩ end.
+𝐌ath 𝐁𝐎𝐋𝐃 𝐀𝐁𝐂 at i=18
+diacritic word: û̆n̊ǫ̊̋ canonical
+normalization: Ⓐ vs A
+emoji+combining: 😀⃣ (keycap-ish) and 🇺🇸 flag mix
+diacritic word: īǫŏn̨ǐ̀̇ canonical
+astral: 🚀🤔🎁 + base̋ + 🚀🤔🎁
+emoji+combining: 😀⃣ (keycap-ish) and 🇺🇸 flag mix
+astral: 🚀🚀 + basē + 🚀🚀
+emoji 116: 👩🏽‍⚕️ after 👩🏽‍⚕️👩🏽‍⚕️
+Welcome to the project ⁨السلام⁩ then ⁨עולם⁩ end.
+word1　word2　word3 (ws=0x3000)
+jamo: 각한낸 vs 각한낸감사합니다안녕하세요
+emoji 32: 👨‍👩‍👧‍👦 after 👨‍👩‍👧‍👦👨‍👩‍👧‍👦
+Welcome to the project — جامعة & שלום — end.
+diacritic word: â̋ŭǐ́̇ũ̀ canonical
+Welcome to the project ⁨مرحبا⁩ then ⁨ספר⁩ end.
+Welcome to the project — مرحبا & ספר — end.
+Welcome to the project — كتاب & ספר — end.
+presentation: ☃︎ ☃︎
+word1​word2​word3 (ws=0x200b)
+astral: 😀💩💻 + basẽ + 😀💩💻
+astral: 🤔🎁🤔 + basë + 🤔🎁🤔
+presentation: ⚠️ ⚠️ ☕️ ❤️
+emoji 38: 👩🏾‍🤝‍👨🏻 after 👩🏾‍🤝‍👨🏻👩🏾‍🤝‍👨🏻
+混合 mixed text 测试 with English 中间 and 数字 12345 boundaries
+astral: 😀💩💩🤔 + basē + 😀💩💩🤔
+word1 word2 word3 (ws=0x2029)
+astral: 🤔💩 + base̊ + 🤔💩
+Welcome to the project — السلام & שלום — end.
+混合 mixed text 测试 with English 中间 and 数字 12345 boundaries
+presentation: ⚠️ ☃️ ☃️
+presentation: ☃️ ☃️
+emoji 71: 👩🏽‍⚕️ after 👩🏽‍⚕️👩🏽‍⚕️
+混合 mixed text 测试 with English 中间 and 数字 12345 boundaries
+astral: 💩📈🚀 + basę + 💩📈🚀
+jamo: 각한낸 vs 각한낸감사합니다안녕하세요
+emoji 97: 👩‍💻 after 👩‍💻👩‍💻
+emoji 2: 🏳️‍🌈 after 🏳️‍🌈🏳️‍🌈
+astral: 😀😀🚀🚀💻 + basě + 😀😀🚀🚀💻
+diacritic word: i̧ǎäã̄ų̈̌ canonical
+emoji+combining: 😀⃣ (keycap-ish) and 🇺🇸 flag mix
+jamo: 각한낸 vs 각한낸감사합니다안녕하세요
+𝐌ath 𝐁𝐎𝐋𝐃 𝐀𝐁𝐂 at i=7
+diacritic word: ǫ̋̄ī̌̊n̋̄e̋̄̊ canonical
+Welcome to the project — مدرسة & עולם — end.
+diacritic word: ĭẽ̊ŭ̀̄a̧̋̊e̊́̋ canonical
+混合 mixed text 测试 with English 中间 and 数字 12345 boundaries
+word1 word2 word3 (ws=0xa0)
+jamo: 각한낸 vs 각한낸감사합니다안녕하세요
+emoji 25: 👩🏾‍🤝‍👨🏻 after 👩🏾‍🤝‍👨🏻👩🏾‍🤝‍👨🏻
+jamo: 각한낸 vs 각한낸감사합니다안녕하세요
+Welcome to the project ⁨مدرسة⁩ then ⁨עולם⁩ end.
+emoji 67: 👩🏽‍⚕️ after 👩🏽‍⚕️👩🏽‍⚕️
+Hello123 vs Ｈｅｌｌｏ１２３ mixed
+normalization: ㎏ vs kg
+emoji 55: 👨🏿‍🌾 after 👨🏿‍🌾👨🏿‍🌾
+Welcome to the project — السلام & ספר — end.
+astral: 🚀📚📚😀😀 + basẽ + 🚀📚📚😀😀
+zalgo: h̦̠͗́e̯̘̭͏̹̯ḽ̐̀l̴̳̯ͤ̉́ͤ̕ọ̵͕̯̱ͧͮͫ
+diacritic word: ā̆ć̨ò canonical
+混合 mixed text 测试 with English 中间 and 数字 12345 boundaries
+emoji 19: 👩🏾‍🤝‍👨🏻 after 👩🏾‍🤝‍👨🏻👩🏾‍🤝‍👨🏻
+emoji+combining: 😀⃣ (keycap-ish) and 🇺🇸 flag mix
+Welcome to the project — العالم & שלום — end.
+𝐌ath 𝐁𝐎𝐋𝐃 𝐀𝐁𝐂 at i=14
+emoji 23: 👩🏽‍⚕️ after 👩🏽‍⚕️👩🏽‍⚕️
+混合 mixed text 测试 with English 中间 and 数字 12345 boundaries
+word1　word2　word3 (ws=0x3000)
+emoji 96: 👩‍👩‍👦‍👦 after 👩‍👩‍👦‍👦👩‍👩‍👦‍👦
+jamo: 각한낸 vs 각한낸감사합니다안녕하세요
+𝐌ath 𝐁𝐎𝐋𝐃 𝐀𝐁𝐂 at i=16
+混合 mixed text 测试 with English 中间 and 数字 12345 boundaries
+astral: 💻📚 + basê + 💻📚
+混合 mixed text 测试 with English 中间 and 数字 12345 boundaries
+emoji+combining: 😀⃣ (keycap-ish) and 🇺🇸 flag mix
+diacritic word: ōè̂ṅ̈̊ canonical
+presentation: ❤️ ☕️
+emoji 115: 👩🏽‍⚕️ after 👩🏽‍⚕️👩🏽‍⚕️
+astral: 📈💩 + basē + 📈💩
+zalgo: h̅̐̅̎e̺͕ͮl̴̷̮̬̓ͫ̚ͅl̶̵̖̅̌ǫ̤̭͕ͭ͌
+zalgo: h͉͙͎̾e̵͇l̖͋l̥͚͋ͮ̈́̈́́ͣo͌͑͒
+Welcome to the project — كتاب & עולם — end.
+emoji 13: 👩🏾‍🤝‍👨🏻 after 👩🏾‍🤝‍👨🏻👩🏾‍🤝‍👨🏻
+astral: 🚀🎁🎁 + basé + 🚀🎁🎁
+word1 word2 word3 (ws=0x2007)
+presentation: ☃️ ❤️ ❤️ ❤️ ❤️
+emoji 64: 👩‍👩‍👦‍👦 after 👩‍👩‍👦‍👦👩‍👩‍👦‍👦
+astral: 🎁💩 + basě + 🎁💩
+Hello123 vs Ｈｅｌｌｏ１２３ mixed
+presentation: ☃︎ ☃️
+diacritic word: c̨̋̂ũ̆ canonical
+混合 mixed text 测试 with English 中间 and 数字 12345 boundaries
+zalgo: ẖ̴̵͉̣̹̿e̸͇lͦ͢l̶̵̍̕̚͟o̦͍̤ͣ̀ͮ͟
+jamo: 각한낸 vs 각한낸감사합니다안녕하세요
+Welcome to the project ⁨العالم⁩ then ⁨בית⁩ end.
+presentation: ☕️ ☕️ ❤️ ☕️ ⚠️ ▶️
+zalgo: h̡̳̥̝̱̜ͨ̎ė̦̼̯l̙͈̈ͭ̏͠l̻͚̤̲̯̂̔ͨo̦̰̤͉̤͘͠
+Welcome to the project ⁨مدرسة⁩ then ⁨בית⁩ end.
+jamo: 각한낸 vs 각한낸감사합니다안녕하세요
+Welcome to the project — مدرسة & בית — end.
+presentation: ☃︎ ☕️ ☃️ ☃︎ ⚠️ ☕️
+zalgo: h̡̟̺̙̒ͧͅe͊͌͝l͕̘̒ͤ͂ͬ́l͈͉̅o̷̵͖͔͚ͪ̇͒
+diacritic word: ü̂́n̆̊̋ő̄̊į̃̈ẽ canonical
+emoji 101: 👩🏾‍🤝‍👨🏻 after 👩🏾‍🤝‍👨🏻👩🏾‍🤝‍👨🏻
+混合 mixed text 测试 with English 中间 and 数字 12345 boundaries
+jamo: 각한낸 vs 각한낸감사합니다안녕하세요
+diacritic word: ó̆ų̊ canonical
+混合 mixed text 测试 with English 中间 and 数字 12345 boundaries
+word1 word2 word3 (ws=0x202f)
+diacritic word: c̄̌ò̇ canonical
+zalgo: h͕̥ͣͮ͌̄̓̚ẽ̆̉͢l̙ͬl̸̠͍͂ͫo̘͍̫
+混合 mixed text 测试 with English 中间 and 数字 12345 boundaries
+word1 word2 word3 (ws=0x2007)
+diacritic word: ǎ̊̀ā̧̨i̊̌ő̌̃ canonical
+zalgo: h̺̼ͧ͆͘͢͟eͤͨ̑l̤̹ͤ̏͐l̮̲̄̀ͬo̻̚͝
+zalgo: hͮͨe̵͎̲̹̅̀͘l͋̉l̖̃̿ͤo̐̓͆͂
+astral: 🤔📚🚀 + basĕ + 🤔📚🚀
+emoji+combining: 😀⃣ (keycap-ish) and 🇺🇸 flag mix
+presentation: ▶️ ⚠️ ☃︎ ☕️ ☃️ ☃︎
+word1 word2 word3 (ws=0x202f)
+Welcome to the project — كتاب & בית — end.
+emoji 36: 🏳️‍🌈 after 🏳️‍🌈🏳️‍🌈
+Welcome to the project — كتاب & בית — end.
+emoji 95: 👩🏾‍🤝‍👨🏻 after 👩🏾‍🤝‍👨🏻👩🏾‍🤝‍👨🏻
+zalgo: ḩ̛̒̐ͮ̂̔e͎̳͛͒l̪̹̞̀̿l̰̳͂̆͊o̻̒
+Welcome to the project ⁨العالم⁩ then ⁨ספר⁩ end.
+Welcome to the project ⁨كتاب⁩ then ⁨שלום⁩ end.
+diacritic word: ĩ̀́ųn̂̊̆ě canonical
+𝐌ath 𝐁𝐎𝐋𝐃 𝐀𝐁𝐂 at i=3
+diacritic word: n̆̀ǎ̂à canonical
+emoji 104: 👨🏿‍🌾 after 👨🏿‍🌾👨🏿‍🌾
+Welcome to the project — العالم & ספר — end.
+𝐌ath 𝐁𝐎𝐋𝐃 𝐀𝐁𝐂 at i=9
+emoji 63: 👨🏿‍🌾 after 👨🏿‍🌾👨🏿‍🌾
+𝐌ath 𝐁𝐎𝐋𝐃 𝐀𝐁𝐂 at i=26
+emoji 33: 👩‍👩‍👦‍👦 after 👩‍👩‍👦‍👦👩‍👩‍👦‍👦
+diacritic word: o̊̃̂âçċ canonical
+astral: 💩📈🤔😀🎁 + base̋ + 💩📈🤔😀🎁
+jamo: 각한낸 vs 각한낸감사합니다안녕하세요
+astral: 📈🚀 + basë + 📈🚀
+diacritic word: c̆̄ canonical
+emoji 89: 👩‍💻 after 👩‍💻👩‍💻
+zalgo: h͚̥̜͓͘e̿̿̚͟l̴ͩͥ̇͘̕l͋͋͢o̠̯͋̄̀͜
+diacritic word: ï̀́į̋̂ǒ̋i̋̀̇ canonical
+astral: 🚀🚀💩 + basê + 🚀🚀💩
+Welcome to the project — العالم & ספר — end.
+Hello123 vs Ｈｅｌｌｏ１２３ mixed
+jamo: 각한낸 vs 각한낸감사합니다안녕하세요
+Welcome to the project ⁨العالم⁩ then ⁨ספר⁩ end.
+Hello123 vs Ｈｅｌｌｏ１２３ mixed
+astral: 🎁🤔📚 + basė + 🎁🤔📚
+Welcome to the project ⁨العالم⁩ then ⁨שלום⁩ end.
+normalization: Ⓐ vs A
+𝐌ath 𝐁𝐎𝐋𝐃 𝐀𝐁𝐂 at i=35
+jamo: 각한낸 vs 각한낸감사합니다안녕하세요
+presentation: ⚠️ ❤️ ▶️
+jamo: 각한낸 vs 각한낸감사합니다안녕하세요
+diacritic word: č̀̊ě́ň̄́íű̇ canonical
+presentation: ▶️ ☕️ ❤️ ❤️
+presentation: ☃️ ❤️ ⚠️ ▶️
+diacritic word: ů̄äǎ̊e̊̋ canonical
+diacritic word: ǫ canonical
+emoji 10: 👨‍👩‍👧‍👦 after 👨‍👩‍👧‍👦👨‍👩‍👧‍👦
+zalgo: ḫ͂͊ͅe̘͚̐̄l̗̺͕̟̀lͨͭ̏̎o̴͇̩̝͟
+jamo: 각한낸 vs 각한낸감사합니다안녕하세요
+astral: 📚🤔💻🤔📚 + basè + 📚🤔💻🤔📚
+Welcome to the project ⁨السلام⁩ then ⁨בית⁩ end.
+presentation: ☃️ ▶️ ☕️ ❤️ ❤️ ☃︎
+astral: 🚀😀📈🤔🎁 + basȩ + 🚀😀📈🤔🎁
+Hello123 vs Ｈｅｌｌｏ１２３ mixed
+Hello123 vs Ｈｅｌｌｏ１２３ mixed
+混合 mixed text 测试 with English 中间 and 数字 12345 boundaries
+word1 word2 word3 (ws=0x2029)
+astral: 📈😀🎁💩 + base̊ + 📈😀🎁💩
+diacritic word: ń̋ů canonical
+word1 word2 word3 (ws=0x2029)
+𝐌ath 𝐁𝐎𝐋𝐃 𝐀𝐁𝐂 at i=21
+word1　word2　word3 (ws=0x3000)
+presentation: ⚠️ ⚠️ ☕️
+emoji+combining: 😀⃣ (keycap-ish) and 🇺🇸 flag mix
+diacritic word: īę̆̌ä̋n̆̃ canonical
+astral: 📈🎁 + basȩ + 📈🎁
+Welcome to the project — العالم & שלום — end.
+astral: 💻🚀📈 + basē + 💻🚀📈
+𝐌ath 𝐁𝐎𝐋𝐃 𝐀𝐁𝐂 at i=2
+astral: 📚🎁📈🤔 + basè + 📚🎁📈🤔
+Welcome to the project ⁨السلام⁩ then ⁨בית⁩ end.
+emoji 58: 🏳️‍🌈 after 🏳️‍🌈🏳️‍🌈
+jamo: 각한낸 vs 각한낸감사합니다안녕하세요
+diacritic word: ă̌̂ū̇̀ãą̂ō canonical
+emoji 107: 🏴󠁧󠁢󠁳󠁣󠁴󠁿 after 🏴󠁧󠁢󠁳󠁣󠁴󠁿🏴󠁧󠁢󠁳󠁣󠁴󠁿
+emoji 24: 👩‍💻 after 👩‍💻👩‍💻
+word1 word2 word3 (ws=0x202f)
+混合 mixed text 测试 with English 中间 and 数字 12345 boundaries
+Hello123 vs Ｈｅｌｌｏ１２３ mixed
+astral: 💩🤔📚😀🚀 + basê + 💩🤔📚😀🚀
+astral: 💩😀 + basë + 💩😀
+𝐌ath 𝐁𝐎𝐋𝐃 𝐀𝐁𝐂 at i=11
+Welcome to the project ⁨مدرسة⁩ then ⁨בית⁩ end.
+Welcome to the project — مرحبا & עולם — end.
+Hello123 vs Ｈｅｌｌｏ１２３ mixed
+Welcome to the project ⁨جامعة⁩ then ⁨עולם⁩ end.
+word1 word2 word3 (ws=0xa0)
+astral: 😀💩😀🤔💩 + basė + 😀💩😀🤔💩
+emoji+combining: 😀⃣ (keycap-ish) and 🇺🇸 flag mix
+jamo: 각한낸 vs 각한낸감사합니다안녕하세요
+Welcome to the project ⁨مدرسة⁩ then ⁨בית⁩ end.
+Welcome to the project — كتاب & עולם — end.
+emoji 21: 👨🏿‍🌾 after 👨🏿‍🌾👨🏿‍🌾
+Welcome to the project ⁨جامعة⁩ then ⁨ספר⁩ end.
+Welcome to the project — كتاب & עולם — end.
+𝐌ath 𝐁𝐎𝐋𝐃 𝐀𝐁𝐂 at i=13
+presentation: ☃️ ☃️ ☃︎ ☃️
+word1 word2 word3 (ws=0x1680)
+emoji 31: 👩‍💻 after 👩‍💻👩‍💻
+zalgo: h͕͙͡e̸̹͍ͨͮl͔̺̒͜l̸̷͙͍͊̒̌o͇͊̕
+presentation: ▶️ ▶️ ☃︎
+word1 word2 word3 (ws=0x202f)
+Welcome to the project ⁨السلام⁩ then ⁨שלום⁩ end.
+𝐌ath 𝐁𝐎𝐋𝐃 𝐀𝐁𝐂 at i=15
+𝐌ath 𝐁𝐎𝐋𝐃 𝐀𝐁𝐂 at i=12
+emoji 28: 👩‍💻 after 👩‍💻👩‍💻
+emoji 22: 👩‍💻 after 👩‍💻👩‍💻
+emoji+combining: 😀⃣ (keycap-ish) and 🇺🇸 flag mix
+emoji 5: 👨‍👩‍👧‍👦 after 👨‍👩‍👧‍👦👨‍👩‍👧‍👦
+Welcome to the project — العالم & בית — end.
+word1 word2 word3 (ws=0x2028)
+jamo: 각한낸 vs 각한낸감사합니다안녕하세요
+word1　word2　word3 (ws=0x3000)
+emoji 85: 👩🏾‍🤝‍👨🏻 after 👩🏾‍🤝‍👨🏻👩🏾‍🤝‍👨🏻
+emoji+combining: 😀⃣ (keycap-ish) and 🇺🇸 flag mix
+diacritic word: å̧̄ĕ́û̇̆c̊̄ canonical
+diacritic word: ňĉ́̌â̧̊â canonical
+diacritic word: ć̈n̋̊ī canonical
+混合 mixed text 测试 with English 中间 and 数字 12345 boundaries
+Welcome to the project — العالم & בית — end.
+normalization: Ⓐ vs A
+Welcome to the project ⁨مرحبا⁩ then ⁨שלום⁩ end.
+emoji 114: 👨‍👩‍👧‍👦 after 👨‍👩‍👧‍👦👨‍👩‍👧‍👦
+presentation: ☕️ ▶️ ☕️ ☃️ ☕️ ☕️
+diacritic word: n̈̂ñ̇ canonical
+word1 word2 word3 (ws=0x2029)
+normalization: ℋ vs H
+𝐌ath 𝐁𝐎𝐋𝐃 𝐀𝐁𝐂 at i=23
+astral: 🤔🤔💩 + base̋ + 🤔🤔💩
+emoji 77: 👩‍👩‍👦‍👦 after 👩‍👩‍👦‍👦👩‍👩‍👦‍👦
+diacritic word: ň canonical
+Hello123 vs Ｈｅｌｌｏ１２３ mixed
+Hello123 vs Ｈｅｌｌｏ１２３ mixed
+emoji 46: 👨‍👩‍👧‍👦 after 👨‍👩‍👧‍👦👨‍👩‍👧‍👦
+word1 word2 word3 (ws=0x2007)
+emoji 98: 👨‍👩‍👧‍👦 after 👨‍👩‍👧‍👦👨‍👩‍👧‍👦
+emoji 84: 👩‍💻 after 👩‍💻👩‍💻
+astral: 📚🤔📚💩💻 + base̊ + 📚🤔📚💩💻
+diacritic word: ű̇ canonical
+Welcome to the project — السلام & עולם — end.
+jamo: 각한낸 vs 각한낸감사합니다안녕하세요
+Welcome to the project ⁨كتاب⁩ then ⁨בית⁩ end.
+emoji 80: 👨‍👩‍👧‍👦 after 👨‍👩‍👧‍👦👨‍👩‍👧‍👦
+astral: 🚀📈💻 + basȩ + 🚀📈💻
+word1 word2 word3 (ws=0x2029)
+jamo: 각한낸 vs 각한낸감사합니다안녕하세요
+zalgo: h̗̹͊̓ȅ̢̖ͪl̻̻̬̖̐̊̕͜l̩̜͙̹̅̏o̸͔
+Welcome to the project ⁨السلام⁩ then ⁨עולם⁩ end.
+word1 word2 word3 (ws=0x2007)
+emoji 65: 👨🏿‍🌾 after 👨🏿‍🌾👨🏿‍🌾
+混合 mixed text 测试 with English 中间 and 数字 12345 boundaries
+emoji+combining: 😀⃣ (keycap-ish) and 🇺🇸 flag mix
+Hello123 vs Ｈｅｌｌｏ１２３ mixed
+emoji 15: 👨‍👩‍👧‍👦 after 👨‍👩‍👧‍👦👨‍👩‍👧‍👦
+astral: 🎁😀💻💻📚 + basẽ + 🎁😀💻💻📚
+emoji+combining: 😀⃣ (keycap-ish) and 🇺🇸 flag mix
+emoji+combining: 😀⃣ (keycap-ish) and 🇺🇸 flag mix
+jamo: 각한낸 vs 각한낸감사합니다안녕하세요
+normalization: ℋ vs H
+normalization: ｶﾀｶﾅ vs カタカナ
+word1 word2 word3 (ws=0x2029)
+astral: 🎁📚 + base̋ + 🎁📚
+emoji 42: 🏳️‍🌈 after 🏳️‍🌈🏳️‍🌈
+diacritic word: őn̊̈́õ̧̀n̄̌̆n̆ canonical
+diacritic word: ų̄́ canonical
+emoji 91: 🏳️‍🌈 after 🏳️‍🌈🏳️‍🌈
+word1 word2 word3 (ws=0x2029)
+zalgo: h̼̦̤͎́e̥̱͑̅̑̓ľ͉̀l̷̀ő̒ͨ̃̃
+emoji+combining: 😀⃣ (keycap-ish) and 🇺🇸 flag mix
+Welcome to the project ⁨السلام⁩ then ⁨בית⁩ end.
+emoji+combining: 😀⃣ (keycap-ish) and 🇺🇸 flag mix
+emoji 14: 🏴󠁧󠁢󠁳󠁣󠁴󠁿 after 🏴󠁧󠁢󠁳󠁣󠁴󠁿🏴󠁧󠁢󠁳󠁣󠁴󠁿
+jamo: 각한낸 vs 각한낸감사합니다안녕하세요
+diacritic word: i̇̄ĉ̈̄ canonical
+Welcome to the project ⁨السلام⁩ then ⁨ספר⁩ end.
+Welcome to the project ⁨العالم⁩ then ⁨ספר⁩ end.
+word1​word2​word3 (ws=0x200b)
+emoji 117: 👩‍💻 after 👩‍💻👩‍💻
+Hello123 vs Ｈｅｌｌｏ１２３ mixed
+Welcome to the project ⁨العالم⁩ then ⁨עולם⁩ end.
+astral: 🤔📚🤔💻🤔 + basê + 🤔📚🤔💻🤔
+diacritic word: ě́n̊o̧ã canonical
+diacritic word: n̨ầò̌ canonical
+diacritic word: c̋̂̇ canonical
+diacritic word: c̨̆ canonical
+jamo: 각한낸 vs 각한낸감사합니다안녕하세요
+normalization: Ⅻ vs XII
+diacritic word: ņ̂̃e̊̇̃ȩ̈ǹų̀́ canonical
+diacritic word: ǐǎ̧̈ǐ́̆ canonical
+emoji 17: 🏳️‍🌈 after 🏳️‍🌈🏳️‍🌈
+astral: 📈📚💻 + base̋ + 📈📚💻
+Welcome to the project — مدرسة & בית — end.
+diacritic word: ō̂̋ȩė̌à̧ canonical
+astral: 💩🤔💻🚀📚 + base̊ + 💩🤔💻🚀📚
+Welcome to the project ⁨مدرسة⁩ then ⁨שלום⁩ end.
+astral: 📈🤔🚀🎁🤔 + base̋ + 📈🤔🚀🎁🤔
+Welcome to the project — العالم & ספר — end.
+word1 word2 word3 (ws=0xa0)
+zalgo: h̹͕̀̓̋ĕ̼̄ͪ̓͡l̠͂̀̇ͫl̡̬͚͓̟̍̎o̰̫ͨͦ̿͢͝
+emoji+combining: 😀⃣ (keycap-ish) and 🇺🇸 flag mix
+diacritic word: ĭ̂̄ canonical
+diacritic word: ñu̇̄ę̇̆i̧̋ canonical
+normalization: ℋ vs H
+emoji 109: 👩🏽‍⚕️ after 👩🏽‍⚕️👩🏽‍⚕️
+zalgo: h͚̣͖͒͠e̻̙̦̔̀͊̕͝l͔̼͙ͥl͎̾͝ö̸̡̢̗̖ͧͭ
+presentation: ⚠️ ❤️
+Welcome to the project — مدرسة & בית — end.
+emoji 93: 🏴󠁧󠁢󠁳󠁣󠁴󠁿 after 🏴󠁧󠁢󠁳󠁣󠁴󠁿🏴󠁧󠁢󠁳󠁣󠁴󠁿
+jamo: 각한낸 vs 각한낸감사합니다안녕하세요
+normalization: Ⓐ vs A
+astral: 😀🚀📈📈 + basĕ + 😀🚀📈📈
+Welcome to the project — العالم & ספר — end.
+normalization: ℋ vs H
+astral: 💩💩😀😀 + basȩ + 💩💩😀😀
+Welcome to the project ⁨مدرسة⁩ then ⁨בית⁩ end.
+emoji 54: 🏳️‍🌈 after 🏳️‍🌈🏳️‍🌈
+word1 word2 word3 (ws=0x202f)
+emoji 86: 👨🏿‍🌾 after 👨🏿‍🌾👨🏿‍🌾
+emoji 111: 🏳️‍🌈 after 🏳️‍🌈🏳️‍🌈
+Welcome to the project — السلام & עולם — end.
+emoji 39: 👩‍👩‍👦‍👦 after 👩‍👩‍👦‍👦👩‍👩‍👦‍👦
+Welcome to the project — السلام & ספר — end.
+emoji 56: 🏴󠁧󠁢󠁳󠁣󠁴󠁿 after 🏴󠁧󠁢󠁳󠁣󠁴󠁿🏴󠁧󠁢󠁳󠁣󠁴󠁿
+Welcome to the project — السلام & ספר — end.
+astral: 🤔😀🤔💩 + basě + 🤔😀🤔💩
+Welcome to the project — السلام & עולם — end.
+emoji 73: 👩‍👩‍👦‍👦 after 👩‍👩‍👦‍👦👩‍👩‍👦‍👦
+Welcome to the project ⁨العالم⁩ then ⁨בית⁩ end.
+astral: 😀📚📚 + basē + 😀📚📚
+diacritic word: û̈̀ȯ canonical
+Welcome to the project ⁨جامعة⁩ then ⁨בית⁩ end.
+Welcome to the project ⁨العالم⁩ then ⁨ספר⁩ end.
+word1​word2​word3 (ws=0x200b)
+astral: 🚀🚀🎁💻 + basë + 🚀🚀🎁💻
+jamo: 각한낸 vs 각한낸감사합니다안녕하세요
+emoji 0: 🏳️‍🌈 after 🏳️‍🌈🏳️‍🌈
+Welcome to the project — جامعة & עולם — end.
+𝐌ath 𝐁𝐎𝐋𝐃 𝐀𝐁𝐂 at i=5
+Welcome to the project — مرحبا & שלום — end.
+emoji+combining: 😀⃣ (keycap-ish) and 🇺🇸 flag mix
+Welcome to the project ⁨العالم⁩ then ⁨עולם⁩ end.
+presentation: ☃️ ☃️ ▶️ ▶️ ❤️ ❤️
+emoji 12: 👨‍👩‍👧‍👦 after 👨‍👩‍👧‍👦👨‍👩‍👧‍👦
+混合 mixed text 测试 with English 中间 and 数字 12345 boundaries
+word1 word2 word3 (ws=0x202f)
+emoji 76: 🏴󠁧󠁢󠁳󠁣󠁴󠁿 after 🏴󠁧󠁢󠁳󠁣󠁴󠁿🏴󠁧󠁢󠁳󠁣󠁴󠁿
+zalgo: h̠ͥ̃̽̊éͨ̐̕͡͠l̸͇̗̙̍͞l̴̾̄ͭo̻ͦ
+astral: 🚀💻📈😀 + basę + 🚀💻📈😀
+zalgo: h̬͛e̼ͫ̽͜l̺̠̆̀ͧ͒l̢̛̤̻̻ͫ́ǫ͖̈́̀͞͝
+Welcome to the project ⁨جامعة⁩ then ⁨ספר⁩ end.
+𝐌ath 𝐁𝐎𝐋𝐃 𝐀𝐁𝐂 at i=19
+Welcome to the project — السلام & שלום — end.
+astral: 😀💻💻🎁 + basë + 😀💻💻🎁
+normalization: ㎏ vs kg
+Welcome to the project — العالم & עולם — end.
+astral: 🤔📈💻🚀 + basé + 🤔📈💻🚀
+zalgo: h̢̎̀̆̆͛̕e̡͎̥ͧ́l̷͈͓̪͙̒l̢̜̤̮̐̕ó̼͒
+astral: 💻💻😀🤔 + base̊ + 💻💻😀🤔
+astral: 🚀😀 + basę + 🚀😀
+Welcome to the project — جامعة & ספר — end.
+𝐌ath 𝐁𝐎𝐋𝐃 𝐀𝐁𝐂 at i=28
+normalization: Ⅻ vs XII
+emoji 3: 👩‍💻 after 👩‍💻👩‍💻
+astral: 😀💻📈🤔💩 + base̊ + 😀💻📈🤔💩
+emoji 29: 👩‍👩‍👦‍👦 after 👩‍👩‍👦‍👦👩‍👩‍👦‍👦
+emoji 75: 👩🏽‍⚕️ after 👩🏽‍⚕️👩🏽‍⚕️
+normalization: Ⓐ vs A
+astral: 💩💩🤔💻 + basē + 💩💩🤔💻
+混合 mixed text 测试 with English 中间 and 数字 12345 boundaries
+word1 word2 word3 (ws=0xa0)
+emoji 11: 🏳️‍🌈 after 🏳️‍🌈🏳️‍🌈
+Welcome to the project ⁨جامعة⁩ then ⁨שלום⁩ end.
+混合 mixed text 测试 with English 中间 and 数字 12345 boundaries
+zalgo: ḧ̡̤́e͓͉͊ͥͦͥl̡̝̐̿ͪ͡͠l̤̺̬̅̿ͫo̘̪͔̔̽͜
+emoji+combining: 😀⃣ (keycap-ish) and 🇺🇸 flag mix
+normalization: ㎏ vs kg
+emoji 74: 🏴󠁧󠁢󠁳󠁣󠁴󠁿 after 🏴󠁧󠁢󠁳󠁣󠁴󠁿🏴󠁧󠁢󠁳󠁣󠁴󠁿
+Welcome to the project ⁨العالم⁩ then ⁨עולם⁩ end.
+presentation: ▶️ ▶️
+diacritic word: ǫ̌ĭ̂ canonical
+Hello123 vs Ｈｅｌｌｏ１２３ mixed
+emoji 7: 👨🏿‍🌾 after 👨🏿‍🌾👨🏿‍🌾
+normalization: ｶﾀｶﾅ vs カタカナ
+emoji+combining: 😀⃣ (keycap-ish) and 🇺🇸 flag mix
+zalgo: h̵̺͙̣̝ͪe̸̻̳̅̃́͛lͬ̈́̚͜l̦͡o͔̝ͣ͂͗ͬ͋͟
+jamo: 각한낸 vs 각한낸감사합니다안녕하세요
+Welcome to the project ⁨السلام⁩ then ⁨ספר⁩ end.
+diacritic word: n̊ canonical
+混合 mixed text 测试 with English 中间 and 数字 12345 boundaries
+zalgo: h̵͏̹e͔̗̪̍ḷ̔l͓ͬo͔̭̓ͤ̌͆
+Welcome to the project — جامعة & ספר — end.
+emoji+combining: 😀⃣ (keycap-ish) and 🇺🇸 flag mix
+𝐌ath 𝐁𝐎𝐋𝐃 𝐀𝐁𝐂 at i=36
+emoji 92: 🏳️‍🌈 after 🏳️‍🌈🏳️‍🌈
+emoji+combining: 😀⃣ (keycap-ish) and 🇺🇸 flag mix
+jamo: 각한낸 vs 각한낸감사합니다안녕하세요
+diacritic word: ǎ̋̇c̊̀á̧̌ canonical
+diacritic word: õ̧ canonical
+混合 mixed text 测试 with English 中间 and 数字 12345 boundaries
+emoji 50: 👩🏾‍🤝‍👨🏻 after 👩🏾‍🤝‍👨🏻👩🏾‍🤝‍👨🏻
+diacritic word: őẽ̊̂ canonical
+astral: 💻📈😀💩 + basè + 💻📈😀💩
+astral: 😀📚🎁📚 + basè + 😀📚🎁📚
+word1 word2 word3 (ws=0xa0)
+Welcome to the project — العالم & ספר — end.
+presentation: ❤️ ❤️ ☕️
+Welcome to the project — العالم & עולם — end.
+diacritic word: ȯ̋̊ŭ canonical
+混合 mixed text 测试 with English 中间 and 数字 12345 boundaries
+presentation: ▶️ ▶️ ❤️ ☃️
+astral: 🤔💩💻🤔 + basè + 🤔💩💻🤔
+astral: 💻🤔🎁 + basè + 💻🤔🎁
+diacritic word: ű̃ǹ̈a̧ę̆́ą̀̃ canonical
+diacritic word: è̌ canonical
+presentation: ☃︎ ☃️ ☃️ ❤️ ☃️
+astral: 💻📈😀😀 + basë + 💻📈😀😀
+emoji+combining: 😀⃣ (keycap-ish) and 🇺🇸 flag mix
+emoji+combining: 😀⃣ (keycap-ish) and 🇺🇸 flag mix
+diacritic word: n̂̇ā canonical
+jamo: 각한낸 vs 각한낸감사합니다안녕하세요
+Hello123 vs Ｈｅｌｌｏ１２３ mixed
+presentation: ☃︎ ☃️
+presentation: ⚠️ ☕️
+Welcome to the project — العالم & שלום — end.
+diacritic word: į̊ canonical
+diacritic word: ű̇ canonical
+𝐌ath 𝐁𝐎𝐋𝐃 𝐀𝐁𝐂 at i=33
+diacritic word: ĉ̀̊ṅį̄̊ã́ canonical
+diacritic word: n̨̈̌a̋i̊í̈̃ canonical
+emoji 47: 👩‍👩‍👦‍👦 after 👩‍👩‍👦‍👦👩‍👩‍👦‍👦
+zalgo: h̴ͬḛ͙͗̂̈́͋̚ļ̠̦͓͎̆̈͞l̢͎ͥͦ̾ͨo̥͈ͩ͠
+astral: 🎁😀 + basê + 🎁😀
+word1　word2　word3 (ws=0x3000)
+jamo: 각한낸 vs 각한낸감사합니다안녕하세요
+jamo: 각한낸 vs 각한낸감사합니다안녕하세요
+𝐌ath 𝐁𝐎𝐋𝐃 𝐀𝐁𝐂 at i=31
+presentation: ❤️ ⚠️ ☃︎ ▶️ ☃︎ ☕️
+astral: 🎁🤔💩🎁💩 + basė + 🎁🤔💩🎁💩
+astral: 💻🎁 + basé + 💻🎁
+zalgo: h̷̷̺̪̊̽͞ě̡̯̟͖͋ͧl͇̝͒͊́͋̀l̷̏̏ͬ̊͞o͇̟ͪͫ
+Welcome to the project ⁨جامعة⁩ then ⁨ספר⁩ end.
+astral: 🎁📚 + basė + 🎁📚
+diacritic word: ṅ̃ę̀̄ canonical
+Welcome to the project ⁨العالم⁩ then ⁨עולם⁩ end.
+混合 mixed text 测试 with English 中间 and 数字 12345 boundaries
+emoji+combining: 😀⃣ (keycap-ish) and 🇺🇸 flag mix
+Welcome to the project ⁨جامعة⁩ then ⁨עולם⁩ end.
+zalgo: h̜̬̠̱̋̑ͪḛ̿ͮl̞̮͙͈̎l͙͉̾̅̋ȍ̴͔̦̭͒͝
+diacritic word: ĕc̄ű́ǫ̊ canonical
+emoji 30: 👩🏾‍🤝‍👨🏻 after 👩🏾‍🤝‍👨🏻👩🏾‍🤝‍👨🏻
+emoji 61: 👩‍👩‍👦‍👦 after 👩‍👩‍👦‍👦👩‍👩‍👦‍👦
+Hello123 vs Ｈｅｌｌｏ１２３ mixed
+presentation: ☃︎ ▶️ ☕️ ▶️ ❤️ ⚠️
+diacritic word: u̧ŏc̄̈n̈̇́ canonical
+Hello123 vs Ｈｅｌｌｏ１２３ mixed
+Hello123 vs Ｈｅｌｌｏ１２３ mixed
+Welcome to the project ⁨مرحبا⁩ then ⁨ספר⁩ end.
+diacritic word: c̋̄̇ canonical
+emoji 35: 👩‍👩‍👦‍👦 after 👩‍👩‍👦‍👦👩‍👩‍👦‍👦
+word1​word2​word3 (ws=0x200b)
+Hello123 vs Ｈｅｌｌｏ１２３ mixed
+Hello123 vs Ｈｅｌｌｏ１２３ mixed
+presentation: ❤️ ▶️ ▶️ ☃︎
+𝐌ath 𝐁𝐎𝐋𝐃 𝐀𝐁𝐂 at i=37
+normalization: ｶﾀｶﾅ vs カタカナ
+Welcome to the project — السلام & עולם — end.
+normalization: Ⓐ vs A
+Welcome to the project ⁨العالم⁩ then ⁨בית⁩ end.
+Welcome to the project — مدرسة & בית — end.
+emoji 18: 👩🏾‍🤝‍👨🏻 after 👩🏾‍🤝‍👨🏻👩🏾‍🤝‍👨🏻
+astral: 😀📚🚀🤔 + base̊ + 😀📚🚀🤔
+Welcome to the project — كتاب & ספר — end.
+diacritic word: ò̧̆ë́ĕ̈ĭŭ canonical
+emoji 34: 👨‍👩‍👧‍👦 after 👨‍👩‍👧‍👦👨‍👩‍👧‍👦
+Lorem ipsum مرحبا 世界 👋 Bonjour Привет שלום (i=0)
+Tab	here	and	here	— with NBSP and ZWSP​ mixed. (i=1)
+Composed: é (U+00E9) vs Decomposed: é (e + COMBINING ACUTE) (i=2)
+Emoji ZWJ family: 👩‍👨‍👧‍👦 end (i=3)
+RTL embedded: hello ‮olleh‬ world (i=4)
+Math: 𝐀𝐁𝐂 ≠ ABC (i=5)
+Korean composed/decomposed: 한 vs 한 end (i=6)
+Lorem ipsum مرحبا 世界 👋 Bonjour Привет שלום (i=7)
+Tab	here	and	here	— with NBSP and ZWSP​ mixed. (i=8)
+Composed: é (U+00E9) vs Decomposed: é (e + COMBINING ACUTE) (i=9)
+Emoji ZWJ family: 👩‍👨‍👧‍👦 end (i=10)
+RTL embedded: hello ‮olleh‬ world (i=11)
+Math: 𝐀𝐁𝐂 ≠ ABC (i=12)
+Korean composed/decomposed: 한 vs 한 end (i=13)
+Lorem ipsum مرحبا 世界 👋 Bonjour Привет שלום (i=14)
+Tab	here	and	here	— with NBSP and ZWSP​ mixed. (i=15)
+Composed: é (U+00E9) vs Decomposed: é (e + COMBINING ACUTE) (i=16)
+Emoji ZWJ family: 👩‍👨‍👧‍👦 end (i=17)
+RTL embedded: hello ‮olleh‬ world (i=18)
+Math: 𝐀𝐁𝐂 ≠ ABC (i=19)
+Korean composed/decomposed: 한 vs 한 end (i=20)
+Lorem ipsum مرحبا 世界 👋 Bonjour Привет שלום (i=21)
+Tab	here	and	here	— with NBSP and ZWSP​ mixed. (i=22)
+Composed: é (U+00E9) vs Decomposed: é (e + COMBINING ACUTE) (i=23)
+Emoji ZWJ family: 👩‍👨‍👧‍👦 end (i=24)
+RTL embedded: hello ‮olleh‬ world (i=25)
+Math: 𝐀𝐁𝐂 ≠ ABC (i=26)
+Korean composed/decomposed: 한 vs 한 end (i=27)
+Lorem ipsum مرحبا 世界 👋 Bonjour Привет שלום (i=28)
+Tab	here	and	here	— with NBSP and ZWSP​ mixed. (i=29)
+Composed: é (U+00E9) vs Decomposed: é (e + COMBINING ACUTE) (i=30)
+Emoji ZWJ family: 👩‍👨‍👧‍👦 end (i=31)
+RTL embedded: hello ‮olleh‬ world (i=32)
+Math: 𝐀𝐁𝐂 ≠ ABC (i=33)
+Korean composed/decomposed: 한 vs 한 end (i=34)
+Lorem ipsum مرحبا 世界 👋 Bonjour Привет שלום (i=35)
+Tab	here	and	here	— with NBSP and ZWSP​ mixed. (i=36)
+Composed: é (U+00E9) vs Decomposed: é (e + COMBINING ACUTE) (i=37)
+Emoji ZWJ family: 👩‍👨‍👧‍👦 end (i=38)
+RTL embedded: hello ‮olleh‬ world (i=39)
+Math: 𝐀𝐁𝐂 ≠ ABC (i=40)
+Korean composed/decomposed: 한 vs 한 end (i=41)
+Lorem ipsum مرحبا 世界 👋 Bonjour Привет שלום (i=42)
+Tab	here	and	here	— with NBSP and ZWSP​ mixed. (i=43)
+Composed: é (U+00E9) vs Decomposed: é (e + COMBINING ACUTE) (i=44)
+Emoji ZWJ family: 👩‍👨‍👧‍👦 end (i=45)
+RTL embedded: hello ‮olleh‬ world (i=46)
+Math: 𝐀𝐁𝐂 ≠ ABC (i=47)
+Korean composed/decomposed: 한 vs 한 end (i=48)
+Lorem ipsum مرحبا 世界 👋 Bonjour Привет שלום (i=49)
+Tab	here	and	here	— with NBSP and ZWSP​ mixed. (i=50)
+Composed: é (U+00E9) vs Decomposed: é (e + COMBINING ACUTE) (i=51)
+Emoji ZWJ family: 👩‍👨‍👧‍👦 end (i=52)
+RTL embedded: hello ‮olleh‬ world (i=53)
+Math: 𝐀𝐁𝐂 ≠ ABC (i=54)
+Korean composed/decomposed: 한 vs 한 end (i=55)
+Lorem ipsum مرحبا 世界 👋 Bonjour Привет שלום (i=56)
+Tab	here	and	here	— with NBSP and ZWSP​ mixed. (i=57)
+Composed: é (U+00E9) vs Decomposed: é (e + COMBINING ACUTE) (i=58)
+Emoji ZWJ family: 👩‍👨‍👧‍👦 end (i=59)

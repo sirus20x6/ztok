@@ -1,0 +1,1455 @@
+Four score and seven years ago our fathers brought forth on this continent,
+a new nation, conceived in liberty, and dedicated to the proposition that all
+men are created equal. Now we are engaged in a great civil war, testing whether
+that nation, or any nation so conceived and so dedicated, can long endure. We
+are met on a great battle-field of that war. We have come to dedicate a portion
+of that field, as a final resting place for those who here gave their lives
+that that nation might live. It is altogether fitting and proper that we should
+do this. But, in a larger sense, we can not dedicate, we can not consecrate, we
+can not hallow this ground. The brave men, living and dead, who struggled here,
+have consecrated it, far above our poor power to add or detract. The world
+will little note, nor long remember what we say here, but it can never forget
+what they did here. It is for us the living, rather, to be dedicated here to
+the unfinished work which they who fought here have thus far so nobly advanced.
+
+The accumulation of all powers, legislative, executive, and judiciary, in the
+same hands, whether of one, a few, or many, and whether hereditary,
+self-appointed, or elective, may justly be pronounced the very definition of
+tyranny. Were the federal Constitution, therefore, really chargeable with the
+accumulation of power, or with a mixture of powers, having a dangerous tendency
+to such an accumulation, no further arguments would be necessary to inspire a
+universal reprobation of the system. I persuade myself, however, that it will
+be made apparent to every one, that the charge cannot be supported, and that
+the maxim on which it relies has been totally misconceived and misapplied.
+
+Mathematics is the language with which God wrote the universe. The square of
+the hypotenuse equals the sum of the squares of the other two sides. e^(i*pi)
++ 1 = 0. The integral from 0 to infinity of e^(-x^2) dx equals the square root
+of pi divided by two. These identities span millennia of human inquiry and
+still surprise students encountering them for the first time.
+
+In computing, a tokenizer splits raw text into discrete units suitable for
+further processing by a model. Byte-pair encoding (BPE) is one popular scheme:
+start from individual bytes, then merge the most frequent adjacent pair,
+repeating until a target vocabulary size is reached. Modern large language
+models such as GPT-4, Claude, and Llama all rely on variants of this algorithm.
+Four score and seven years ago our fathers brought forth on this continent,
+a new nation, conceived in liberty, and dedicated to the proposition that all
+men are created equal. Now we are engaged in a great civil war, testing whether
+that nation, or any nation so conceived and so dedicated, can long endure. We
+are met on a great battle-field of that war. We have come to dedicate a portion
+of that field, as a final resting place for those who here gave their lives
+that that nation might live. It is altogether fitting and proper that we should
+do this. But, in a larger sense, we can not dedicate, we can not consecrate, we
+can not hallow this ground. The brave men, living and dead, who struggled here,
+have consecrated it, far above our poor power to add or detract. The world
+will little note, nor long remember what we say here, but it can never forget
+what they did here. It is for us the living, rather, to be dedicated here to
+the unfinished work which they who fought here have thus far so nobly advanced.
+
+The accumulation of all powers, legislative, executive, and judiciary, in the
+same hands, whether of one, a few, or many, and whether hereditary,
+self-appointed, or elective, may justly be pronounced the very definition of
+tyranny. Were the federal Constitution, therefore, really chargeable with the
+accumulation of power, or with a mixture of powers, having a dangerous tendency
+to such an accumulation, no further arguments would be necessary to inspire a
+universal reprobation of the system. I persuade myself, however, that it will
+be made apparent to every one, that the charge cannot be supported, and that
+the maxim on which it relies has been totally misconceived and misapplied.
+
+Mathematics is the language with which God wrote the universe. The square of
+the hypotenuse equals the sum of the squares of the other two sides. e^(i*pi)
++ 1 = 0. The integral from 0 to infinity of e^(-x^2) dx equals the square root
+of pi divided by two. These identities span millennia of human inquiry and
+still surprise students encountering them for the first time.
+
+In computing, a tokenizer splits raw text into discrete units suitable for
+further processing by a model. Byte-pair encoding (BPE) is one popular scheme:
+start from individual bytes, then merge the most frequent adjacent pair,
+repeating until a target vocabulary size is reached. Modern large language
+models such as GPT-4, Claude, and Llama all rely on variants of this algorithm.
+Four score and seven years ago our fathers brought forth on this continent,
+a new nation, conceived in liberty, and dedicated to the proposition that all
+men are created equal. Now we are engaged in a great civil war, testing whether
+that nation, or any nation so conceived and so dedicated, can long endure. We
+are met on a great battle-field of that war. We have come to dedicate a portion
+of that field, as a final resting place for those who here gave their lives
+that that nation might live. It is altogether fitting and proper that we should
+do this. But, in a larger sense, we can not dedicate, we can not consecrate, we
+can not hallow this ground. The brave men, living and dead, who struggled here,
+have consecrated it, far above our poor power to add or detract. The world
+will little note, nor long remember what we say here, but it can never forget
+what they did here. It is for us the living, rather, to be dedicated here to
+the unfinished work which they who fought here have thus far so nobly advanced.
+
+The accumulation of all powers, legislative, executive, and judiciary, in the
+same hands, whether of one, a few, or many, and whether hereditary,
+self-appointed, or elective, may justly be pronounced the very definition of
+tyranny. Were the federal Constitution, therefore, really chargeable with the
+accumulation of power, or with a mixture of powers, having a dangerous tendency
+to such an accumulation, no further arguments would be necessary to inspire a
+universal reprobation of the system. I persuade myself, however, that it will
+be made apparent to every one, that the charge cannot be supported, and that
+the maxim on which it relies has been totally misconceived and misapplied.
+
+Mathematics is the language with which God wrote the universe. The square of
+the hypotenuse equals the sum of the squares of the other two sides. e^(i*pi)
++ 1 = 0. The integral from 0 to infinity of e^(-x^2) dx equals the square root
+of pi divided by two. These identities span millennia of human inquiry and
+still surprise students encountering them for the first time.
+
+In computing, a tokenizer splits raw text into discrete units suitable for
+further processing by a model. Byte-pair encoding (BPE) is one popular scheme:
+start from individual bytes, then merge the most frequent adjacent pair,
+repeating until a target vocabulary size is reached. Modern large language
+models such as GPT-4, Claude, and Llama all rely on variants of this algorithm.
+Four score and seven years ago our fathers brought forth on this continent,
+a new nation, conceived in liberty, and dedicated to the proposition that all
+men are created equal. Now we are engaged in a great civil war, testing whether
+that nation, or any nation so conceived and so dedicated, can long endure. We
+are met on a great battle-field of that war. We have come to dedicate a portion
+of that field, as a final resting place for those who here gave their lives
+that that nation might live. It is altogether fitting and proper that we should
+do this. But, in a larger sense, we can not dedicate, we can not consecrate, we
+can not hallow this ground. The brave men, living and dead, who struggled here,
+have consecrated it, far above our poor power to add or detract. The world
+will little note, nor long remember what we say here, but it can never forget
+what they did here. It is for us the living, rather, to be dedicated here to
+the unfinished work which they who fought here have thus far so nobly advanced.
+
+The accumulation of all powers, legislative, executive, and judiciary, in the
+same hands, whether of one, a few, or many, and whether hereditary,
+self-appointed, or elective, may justly be pronounced the very definition of
+tyranny. Were the federal Constitution, therefore, really chargeable with the
+accumulation of power, or with a mixture of powers, having a dangerous tendency
+to such an accumulation, no further arguments would be necessary to inspire a
+universal reprobation of the system. I persuade myself, however, that it will
+be made apparent to every one, that the charge cannot be supported, and that
+the maxim on which it relies has been totally misconceived and misapplied.
+
+Mathematics is the language with which God wrote the universe. The square of
+the hypotenuse equals the sum of the squares of the other two sides. e^(i*pi)
++ 1 = 0. The integral from 0 to infinity of e^(-x^2) dx equals the square root
+of pi divided by two. These identities span millennia of human inquiry and
+still surprise students encountering them for the first time.
+
+In computing, a tokenizer splits raw text into discrete units suitable for
+further processing by a model. Byte-pair encoding (BPE) is one popular scheme:
+start from individual bytes, then merge the most frequent adjacent pair,
+repeating until a target vocabulary size is reached. Modern large language
+models such as GPT-4, Claude, and Llama all rely on variants of this algorithm.
+Four score and seven years ago our fathers brought forth on this continent,
+a new nation, conceived in liberty, and dedicated to the proposition that all
+men are created equal. Now we are engaged in a great civil war, testing whether
+that nation, or any nation so conceived and so dedicated, can long endure. We
+are met on a great battle-field of that war. We have come to dedicate a portion
+of that field, as a final resting place for those who here gave their lives
+that that nation might live. It is altogether fitting and proper that we should
+do this. But, in a larger sense, we can not dedicate, we can not consecrate, we
+can not hallow this ground. The brave men, living and dead, who struggled here,
+have consecrated it, far above our poor power to add or detract. The world
+will little note, nor long remember what we say here, but it can never forget
+what they did here. It is for us the living, rather, to be dedicated here to
+the unfinished work which they who fought here have thus far so nobly advanced.
+
+The accumulation of all powers, legislative, executive, and judiciary, in the
+same hands, whether of one, a few, or many, and whether hereditary,
+self-appointed, or elective, may justly be pronounced the very definition of
+tyranny. Were the federal Constitution, therefore, really chargeable with the
+accumulation of power, or with a mixture of powers, having a dangerous tendency
+to such an accumulation, no further arguments would be necessary to inspire a
+universal reprobation of the system. I persuade myself, however, that it will
+be made apparent to every one, that the charge cannot be supported, and that
+the maxim on which it relies has been totally misconceived and misapplied.
+
+Mathematics is the language with which God wrote the universe. The square of
+the hypotenuse equals the sum of the squares of the other two sides. e^(i*pi)
++ 1 = 0. The integral from 0 to infinity of e^(-x^2) dx equals the square root
+of pi divided by two. These identities span millennia of human inquiry and
+still surprise students encountering them for the first time.
+
+In computing, a tokenizer splits raw text into discrete units suitable for
+further processing by a model. Byte-pair encoding (BPE) is one popular scheme:
+start from individual bytes, then merge the most frequent adjacent pair,
+repeating until a target vocabulary size is reached. Modern large language
+models such as GPT-4, Claude, and Llama all rely on variants of this algorithm.
+Four score and seven years ago our fathers brought forth on this continent,
+a new nation, conceived in liberty, and dedicated to the proposition that all
+men are created equal. Now we are engaged in a great civil war, testing whether
+that nation, or any nation so conceived and so dedicated, can long endure. We
+are met on a great battle-field of that war. We have come to dedicate a portion
+of that field, as a final resting place for those who here gave their lives
+that that nation might live. It is altogether fitting and proper that we should
+do this. But, in a larger sense, we can not dedicate, we can not consecrate, we
+can not hallow this ground. The brave men, living and dead, who struggled here,
+have consecrated it, far above our poor power to add or detract. The world
+will little note, nor long remember what we say here, but it can never forget
+what they did here. It is for us the living, rather, to be dedicated here to
+the unfinished work which they who fought here have thus far so nobly advanced.
+
+The accumulation of all powers, legislative, executive, and judiciary, in the
+same hands, whether of one, a few, or many, and whether hereditary,
+self-appointed, or elective, may justly be pronounced the very definition of
+tyranny. Were the federal Constitution, therefore, really chargeable with the
+accumulation of power, or with a mixture of powers, having a dangerous tendency
+to such an accumulation, no further arguments would be necessary to inspire a
+universal reprobation of the system. I persuade myself, however, that it will
+be made apparent to every one, that the charge cannot be supported, and that
+the maxim on which it relies has been totally misconceived and misapplied.
+
+Mathematics is the language with which God wrote the universe. The square of
+the hypotenuse equals the sum of the squares of the other two sides. e^(i*pi)
++ 1 = 0. The integral from 0 to infinity of e^(-x^2) dx equals the square root
+of pi divided by two. These identities span millennia of human inquiry and
+still surprise students encountering them for the first time.
+
+In computing, a tokenizer splits raw text into discrete units suitable for
+further processing by a model. Byte-pair encoding (BPE) is one popular scheme:
+start from individual bytes, then merge the most frequent adjacent pair,
+repeating until a target vocabulary size is reached. Modern large language
+models such as GPT-4, Claude, and Llama all rely on variants of this algorithm.
+Four score and seven years ago our fathers brought forth on this continent,
+a new nation, conceived in liberty, and dedicated to the proposition that all
+men are created equal. Now we are engaged in a great civil war, testing whether
+that nation, or any nation so conceived and so dedicated, can long endure. We
+are met on a great battle-field of that war. We have come to dedicate a portion
+of that field, as a final resting place for those who here gave their lives
+that that nation might live. It is altogether fitting and proper that we should
+do this. But, in a larger sense, we can not dedicate, we can not consecrate, we
+can not hallow this ground. The brave men, living and dead, who struggled here,
+have consecrated it, far above our poor power to add or detract. The world
+will little note, nor long remember what we say here, but it can never forget
+what they did here. It is for us the living, rather, to be dedicated here to
+the unfinished work which they who fought here have thus far so nobly advanced.
+
+The accumulation of all powers, legislative, executive, and judiciary, in the
+same hands, whether of one, a few, or many, and whether hereditary,
+self-appointed, or elective, may justly be pronounced the very definition of
+tyranny. Were the federal Constitution, therefore, really chargeable with the
+accumulation of power, or with a mixture of powers, having a dangerous tendency
+to such an accumulation, no further arguments would be necessary to inspire a
+universal reprobation of the system. I persuade myself, however, that it will
+be made apparent to every one, that the charge cannot be supported, and that
+the maxim on which it relies has been totally misconceived and misapplied.
+
+Mathematics is the language with which God wrote the universe. The square of
+the hypotenuse equals the sum of the squares of the other two sides. e^(i*pi)
++ 1 = 0. The integral from 0 to infinity of e^(-x^2) dx equals the square root
+of pi divided by two. These identities span millennia of human inquiry and
+still surprise students encountering them for the first time.
+
+In computing, a tokenizer splits raw text into discrete units suitable for
+further processing by a model. Byte-pair encoding (BPE) is one popular scheme:
+start from individual bytes, then merge the most frequent adjacent pair,
+repeating until a target vocabulary size is reached. Modern large language
+models such as GPT-4, Claude, and Llama all rely on variants of this algorithm.
+Four score and seven years ago our fathers brought forth on this continent,
+a new nation, conceived in liberty, and dedicated to the proposition that all
+men are created equal. Now we are engaged in a great civil war, testing whether
+that nation, or any nation so conceived and so dedicated, can long endure. We
+are met on a great battle-field of that war. We have come to dedicate a portion
+of that field, as a final resting place for those who here gave their lives
+that that nation might live. It is altogether fitting and proper that we should
+do this. But, in a larger sense, we can not dedicate, we can not consecrate, we
+can not hallow this ground. The brave men, living and dead, who struggled here,
+have consecrated it, far above our poor power to add or detract. The world
+will little note, nor long remember what we say here, but it can never forget
+what they did here. It is for us the living, rather, to be dedicated here to
+the unfinished work which they who fought here have thus far so nobly advanced.
+
+The accumulation of all powers, legislative, executive, and judiciary, in the
+same hands, whether of one, a few, or many, and whether hereditary,
+self-appointed, or elective, may justly be pronounced the very definition of
+tyranny. Were the federal Constitution, therefore, really chargeable with the
+accumulation of power, or with a mixture of powers, having a dangerous tendency
+to such an accumulation, no further arguments would be necessary to inspire a
+universal reprobation of the system. I persuade myself, however, that it will
+be made apparent to every one, that the charge cannot be supported, and that
+the maxim on which it relies has been totally misconceived and misapplied.
+
+Mathematics is the language with which God wrote the universe. The square of
+the hypotenuse equals the sum of the squares of the other two sides. e^(i*pi)
++ 1 = 0. The integral from 0 to infinity of e^(-x^2) dx equals the square root
+of pi divided by two. These identities span millennia of human inquiry and
+still surprise students encountering them for the first time.
+
+In computing, a tokenizer splits raw text into discrete units suitable for
+further processing by a model. Byte-pair encoding (BPE) is one popular scheme:
+start from individual bytes, then merge the most frequent adjacent pair,
+repeating until a target vocabulary size is reached. Modern large language
+models such as GPT-4, Claude, and Llama all rely on variants of this algorithm.
+Four score and seven years ago our fathers brought forth on this continent,
+a new nation, conceived in liberty, and dedicated to the proposition that all
+men are created equal. Now we are engaged in a great civil war, testing whether
+that nation, or any nation so conceived and so dedicated, can long endure. We
+are met on a great battle-field of that war. We have come to dedicate a portion
+of that field, as a final resting place for those who here gave their lives
+that that nation might live. It is altogether fitting and proper that we should
+do this. But, in a larger sense, we can not dedicate, we can not consecrate, we
+can not hallow this ground. The brave men, living and dead, who struggled here,
+have consecrated it, far above our poor power to add or detract. The world
+will little note, nor long remember what we say here, but it can never forget
+what they did here. It is for us the living, rather, to be dedicated here to
+the unfinished work which they who fought here have thus far so nobly advanced.
+
+The accumulation of all powers, legislative, executive, and judiciary, in the
+same hands, whether of one, a few, or many, and whether hereditary,
+self-appointed, or elective, may justly be pronounced the very definition of
+tyranny. Were the federal Constitution, therefore, really chargeable with the
+accumulation of power, or with a mixture of powers, having a dangerous tendency
+to such an accumulation, no further arguments would be necessary to inspire a
+universal reprobation of the system. I persuade myself, however, that it will
+be made apparent to every one, that the charge cannot be supported, and that
+the maxim on which it relies has been totally misconceived and misapplied.
+
+Mathematics is the language with which God wrote the universe. The square of
+the hypotenuse equals the sum of the squares of the other two sides. e^(i*pi)
++ 1 = 0. The integral from 0 to infinity of e^(-x^2) dx equals the square root
+of pi divided by two. These identities span millennia of human inquiry and
+still surprise students encountering them for the first time.
+
+In computing, a tokenizer splits raw text into discrete units suitable for
+further processing by a model. Byte-pair encoding (BPE) is one popular scheme:
+start from individual bytes, then merge the most frequent adjacent pair,
+repeating until a target vocabulary size is reached. Modern large language
+models such as GPT-4, Claude, and Llama all rely on variants of this algorithm.
+Four score and seven years ago our fathers brought forth on this continent,
+a new nation, conceived in liberty, and dedicated to the proposition that all
+men are created equal. Now we are engaged in a great civil war, testing whether
+that nation, or any nation so conceived and so dedicated, can long endure. We
+are met on a great battle-field of that war. We have come to dedicate a portion
+of that field, as a final resting place for those who here gave their lives
+that that nation might live. It is altogether fitting and proper that we should
+do this. But, in a larger sense, we can not dedicate, we can not consecrate, we
+can not hallow this ground. The brave men, living and dead, who struggled here,
+have consecrated it, far above our poor power to add or detract. The world
+will little note, nor long remember what we say here, but it can never forget
+what they did here. It is for us the living, rather, to be dedicated here to
+the unfinished work which they who fought here have thus far so nobly advanced.
+
+The accumulation of all powers, legislative, executive, and judiciary, in the
+same hands, whether of one, a few, or many, and whether hereditary,
+self-appointed, or elective, may justly be pronounced the very definition of
+tyranny. Were the federal Constitution, therefore, really chargeable with the
+accumulation of power, or with a mixture of powers, having a dangerous tendency
+to such an accumulation, no further arguments would be necessary to inspire a
+universal reprobation of the system. I persuade myself, however, that it will
+be made apparent to every one, that the charge cannot be supported, and that
+the maxim on which it relies has been totally misconceived and misapplied.
+
+Mathematics is the language with which God wrote the universe. The square of
+the hypotenuse equals the sum of the squares of the other two sides. e^(i*pi)
++ 1 = 0. The integral from 0 to infinity of e^(-x^2) dx equals the square root
+of pi divided by two. These identities span millennia of human inquiry and
+still surprise students encountering them for the first time.
+
+In computing, a tokenizer splits raw text into discrete units suitable for
+further processing by a model. Byte-pair encoding (BPE) is one popular scheme:
+start from individual bytes, then merge the most frequent adjacent pair,
+repeating until a target vocabulary size is reached. Modern large language
+models such as GPT-4, Claude, and Llama all rely on variants of this algorithm.
+Four score and seven years ago our fathers brought forth on this continent,
+a new nation, conceived in liberty, and dedicated to the proposition that all
+men are created equal. Now we are engaged in a great civil war, testing whether
+that nation, or any nation so conceived and so dedicated, can long endure. We
+are met on a great battle-field of that war. We have come to dedicate a portion
+of that field, as a final resting place for those who here gave their lives
+that that nation might live. It is altogether fitting and proper that we should
+do this. But, in a larger sense, we can not dedicate, we can not consecrate, we
+can not hallow this ground. The brave men, living and dead, who struggled here,
+have consecrated it, far above our poor power to add or detract. The world
+will little note, nor long remember what we say here, but it can never forget
+what they did here. It is for us the living, rather, to be dedicated here to
+the unfinished work which they who fought here have thus far so nobly advanced.
+
+The accumulation of all powers, legislative, executive, and judiciary, in the
+same hands, whether of one, a few, or many, and whether hereditary,
+self-appointed, or elective, may justly be pronounced the very definition of
+tyranny. Were the federal Constitution, therefore, really chargeable with the
+accumulation of power, or with a mixture of powers, having a dangerous tendency
+to such an accumulation, no further arguments would be necessary to inspire a
+universal reprobation of the system. I persuade myself, however, that it will
+be made apparent to every one, that the charge cannot be supported, and that
+the maxim on which it relies has been totally misconceived and misapplied.
+
+Mathematics is the language with which God wrote the universe. The square of
+the hypotenuse equals the sum of the squares of the other two sides. e^(i*pi)
++ 1 = 0. The integral from 0 to infinity of e^(-x^2) dx equals the square root
+of pi divided by two. These identities span millennia of human inquiry and
+still surprise students encountering them for the first time.
+
+In computing, a tokenizer splits raw text into discrete units suitable for
+further processing by a model. Byte-pair encoding (BPE) is one popular scheme:
+start from individual bytes, then merge the most frequent adjacent pair,
+repeating until a target vocabulary size is reached. Modern large language
+models such as GPT-4, Claude, and Llama all rely on variants of this algorithm.
+Four score and seven years ago our fathers brought forth on this continent,
+a new nation, conceived in liberty, and dedicated to the proposition that all
+men are created equal. Now we are engaged in a great civil war, testing whether
+that nation, or any nation so conceived and so dedicated, can long endure. We
+are met on a great battle-field of that war. We have come to dedicate a portion
+of that field, as a final resting place for those who here gave their lives
+that that nation might live. It is altogether fitting and proper that we should
+do this. But, in a larger sense, we can not dedicate, we can not consecrate, we
+can not hallow this ground. The brave men, living and dead, who struggled here,
+have consecrated it, far above our poor power to add or detract. The world
+will little note, nor long remember what we say here, but it can never forget
+what they did here. It is for us the living, rather, to be dedicated here to
+the unfinished work which they who fought here have thus far so nobly advanced.
+
+The accumulation of all powers, legislative, executive, and judiciary, in the
+same hands, whether of one, a few, or many, and whether hereditary,
+self-appointed, or elective, may justly be pronounced the very definition of
+tyranny. Were the federal Constitution, therefore, really chargeable with the
+accumulation of power, or with a mixture of powers, having a dangerous tendency
+to such an accumulation, no further arguments would be necessary to inspire a
+universal reprobation of the system. I persuade myself, however, that it will
+be made apparent to every one, that the charge cannot be supported, and that
+the maxim on which it relies has been totally misconceived and misapplied.
+
+Mathematics is the language with which God wrote the universe. The square of
+the hypotenuse equals the sum of the squares of the other two sides. e^(i*pi)
++ 1 = 0. The integral from 0 to infinity of e^(-x^2) dx equals the square root
+of pi divided by two. These identities span millennia of human inquiry and
+still surprise students encountering them for the first time.
+
+In computing, a tokenizer splits raw text into discrete units suitable for
+further processing by a model. Byte-pair encoding (BPE) is one popular scheme:
+start from individual bytes, then merge the most frequent adjacent pair,
+repeating until a target vocabulary size is reached. Modern large language
+models such as GPT-4, Claude, and Llama all rely on variants of this algorithm.
+Four score and seven years ago our fathers brought forth on this continent,
+a new nation, conceived in liberty, and dedicated to the proposition that all
+men are created equal. Now we are engaged in a great civil war, testing whether
+that nation, or any nation so conceived and so dedicated, can long endure. We
+are met on a great battle-field of that war. We have come to dedicate a portion
+of that field, as a final resting place for those who here gave their lives
+that that nation might live. It is altogether fitting and proper that we should
+do this. But, in a larger sense, we can not dedicate, we can not consecrate, we
+can not hallow this ground. The brave men, living and dead, who struggled here,
+have consecrated it, far above our poor power to add or detract. The world
+will little note, nor long remember what we say here, but it can never forget
+what they did here. It is for us the living, rather, to be dedicated here to
+the unfinished work which they who fought here have thus far so nobly advanced.
+
+The accumulation of all powers, legislative, executive, and judiciary, in the
+same hands, whether of one, a few, or many, and whether hereditary,
+self-appointed, or elective, may justly be pronounced the very definition of
+tyranny. Were the federal Constitution, therefore, really chargeable with the
+accumulation of power, or with a mixture of powers, having a dangerous tendency
+to such an accumulation, no further arguments would be necessary to inspire a
+universal reprobation of the system. I persuade myself, however, that it will
+be made apparent to every one, that the charge cannot be supported, and that
+the maxim on which it relies has been totally misconceived and misapplied.
+
+Mathematics is the language with which God wrote the universe. The square of
+the hypotenuse equals the sum of the squares of the other two sides. e^(i*pi)
++ 1 = 0. The integral from 0 to infinity of e^(-x^2) dx equals the square root
+of pi divided by two. These identities span millennia of human inquiry and
+still surprise students encountering them for the first time.
+
+In computing, a tokenizer splits raw text into discrete units suitable for
+further processing by a model. Byte-pair encoding (BPE) is one popular scheme:
+start from individual bytes, then merge the most frequent adjacent pair,
+repeating until a target vocabulary size is reached. Modern large language
+models such as GPT-4, Claude, and Llama all rely on variants of this algorithm.
+Four score and seven years ago our fathers brought forth on this continent,
+a new nation, conceived in liberty, and dedicated to the proposition that all
+men are created equal. Now we are engaged in a great civil war, testing whether
+that nation, or any nation so conceived and so dedicated, can long endure. We
+are met on a great battle-field of that war. We have come to dedicate a portion
+of that field, as a final resting place for those who here gave their lives
+that that nation might live. It is altogether fitting and proper that we should
+do this. But, in a larger sense, we can not dedicate, we can not consecrate, we
+can not hallow this ground. The brave men, living and dead, who struggled here,
+have consecrated it, far above our poor power to add or detract. The world
+will little note, nor long remember what we say here, but it can never forget
+what they did here. It is for us the living, rather, to be dedicated here to
+the unfinished work which they who fought here have thus far so nobly advanced.
+
+The accumulation of all powers, legislative, executive, and judiciary, in the
+same hands, whether of one, a few, or many, and whether hereditary,
+self-appointed, or elective, may justly be pronounced the very definition of
+tyranny. Were the federal Constitution, therefore, really chargeable with the
+accumulation of power, or with a mixture of powers, having a dangerous tendency
+to such an accumulation, no further arguments would be necessary to inspire a
+universal reprobation of the system. I persuade myself, however, that it will
+be made apparent to every one, that the charge cannot be supported, and that
+the maxim on which it relies has been totally misconceived and misapplied.
+
+Mathematics is the language with which God wrote the universe. The square of
+the hypotenuse equals the sum of the squares of the other two sides. e^(i*pi)
++ 1 = 0. The integral from 0 to infinity of e^(-x^2) dx equals the square root
+of pi divided by two. These identities span millennia of human inquiry and
+still surprise students encountering them for the first time.
+
+In computing, a tokenizer splits raw text into discrete units suitable for
+further processing by a model. Byte-pair encoding (BPE) is one popular scheme:
+start from individual bytes, then merge the most frequent adjacent pair,
+repeating until a target vocabulary size is reached. Modern large language
+models such as GPT-4, Claude, and Llama all rely on variants of this algorithm.
+Four score and seven years ago our fathers brought forth on this continent,
+a new nation, conceived in liberty, and dedicated to the proposition that all
+men are created equal. Now we are engaged in a great civil war, testing whether
+that nation, or any nation so conceived and so dedicated, can long endure. We
+are met on a great battle-field of that war. We have come to dedicate a portion
+of that field, as a final resting place for those who here gave their lives
+that that nation might live. It is altogether fitting and proper that we should
+do this. But, in a larger sense, we can not dedicate, we can not consecrate, we
+can not hallow this ground. The brave men, living and dead, who struggled here,
+have consecrated it, far above our poor power to add or detract. The world
+will little note, nor long remember what we say here, but it can never forget
+what they did here. It is for us the living, rather, to be dedicated here to
+the unfinished work which they who fought here have thus far so nobly advanced.
+
+The accumulation of all powers, legislative, executive, and judiciary, in the
+same hands, whether of one, a few, or many, and whether hereditary,
+self-appointed, or elective, may justly be pronounced the very definition of
+tyranny. Were the federal Constitution, therefore, really chargeable with the
+accumulation of power, or with a mixture of powers, having a dangerous tendency
+to such an accumulation, no further arguments would be necessary to inspire a
+universal reprobation of the system. I persuade myself, however, that it will
+be made apparent to every one, that the charge cannot be supported, and that
+the maxim on which it relies has been totally misconceived and misapplied.
+
+Mathematics is the language with which God wrote the universe. The square of
+the hypotenuse equals the sum of the squares of the other two sides. e^(i*pi)
++ 1 = 0. The integral from 0 to infinity of e^(-x^2) dx equals the square root
+of pi divided by two. These identities span millennia of human inquiry and
+still surprise students encountering them for the first time.
+
+In computing, a tokenizer splits raw text into discrete units suitable for
+further processing by a model. Byte-pair encoding (BPE) is one popular scheme:
+start from individual bytes, then merge the most frequent adjacent pair,
+repeating until a target vocabulary size is reached. Modern large language
+models such as GPT-4, Claude, and Llama all rely on variants of this algorithm.
+Four score and seven years ago our fathers brought forth on this continent,
+a new nation, conceived in liberty, and dedicated to the proposition that all
+men are created equal. Now we are engaged in a great civil war, testing whether
+that nation, or any nation so conceived and so dedicated, can long endure. We
+are met on a great battle-field of that war. We have come to dedicate a portion
+of that field, as a final resting place for those who here gave their lives
+that that nation might live. It is altogether fitting and proper that we should
+do this. But, in a larger sense, we can not dedicate, we can not consecrate, we
+can not hallow this ground. The brave men, living and dead, who struggled here,
+have consecrated it, far above our poor power to add or detract. The world
+will little note, nor long remember what we say here, but it can never forget
+what they did here. It is for us the living, rather, to be dedicated here to
+the unfinished work which they who fought here have thus far so nobly advanced.
+
+The accumulation of all powers, legislative, executive, and judiciary, in the
+same hands, whether of one, a few, or many, and whether hereditary,
+self-appointed, or elective, may justly be pronounced the very definition of
+tyranny. Were the federal Constitution, therefore, really chargeable with the
+accumulation of power, or with a mixture of powers, having a dangerous tendency
+to such an accumulation, no further arguments would be necessary to inspire a
+universal reprobation of the system. I persuade myself, however, that it will
+be made apparent to every one, that the charge cannot be supported, and that
+the maxim on which it relies has been totally misconceived and misapplied.
+
+Mathematics is the language with which God wrote the universe. The square of
+the hypotenuse equals the sum of the squares of the other two sides. e^(i*pi)
++ 1 = 0. The integral from 0 to infinity of e^(-x^2) dx equals the square root
+of pi divided by two. These identities span millennia of human inquiry and
+still surprise students encountering them for the first time.
+
+In computing, a tokenizer splits raw text into discrete units suitable for
+further processing by a model. Byte-pair encoding (BPE) is one popular scheme:
+start from individual bytes, then merge the most frequent adjacent pair,
+repeating until a target vocabulary size is reached. Modern large language
+models such as GPT-4, Claude, and Llama all rely on variants of this algorithm.
+Four score and seven years ago our fathers brought forth on this continent,
+a new nation, conceived in liberty, and dedicated to the proposition that all
+men are created equal. Now we are engaged in a great civil war, testing whether
+that nation, or any nation so conceived and so dedicated, can long endure. We
+are met on a great battle-field of that war. We have come to dedicate a portion
+of that field, as a final resting place for those who here gave their lives
+that that nation might live. It is altogether fitting and proper that we should
+do this. But, in a larger sense, we can not dedicate, we can not consecrate, we
+can not hallow this ground. The brave men, living and dead, who struggled here,
+have consecrated it, far above our poor power to add or detract. The world
+will little note, nor long remember what we say here, but it can never forget
+what they did here. It is for us the living, rather, to be dedicated here to
+the unfinished work which they who fought here have thus far so nobly advanced.
+
+The accumulation of all powers, legislative, executive, and judiciary, in the
+same hands, whether of one, a few, or many, and whether hereditary,
+self-appointed, or elective, may justly be pronounced the very definition of
+tyranny. Were the federal Constitution, therefore, really chargeable with the
+accumulation of power, or with a mixture of powers, having a dangerous tendency
+to such an accumulation, no further arguments would be necessary to inspire a
+universal reprobation of the system. I persuade myself, however, that it will
+be made apparent to every one, that the charge cannot be supported, and that
+the maxim on which it relies has been totally misconceived and misapplied.
+
+Mathematics is the language with which God wrote the universe. The square of
+the hypotenuse equals the sum of the squares of the other two sides. e^(i*pi)
++ 1 = 0. The integral from 0 to infinity of e^(-x^2) dx equals the square root
+of pi divided by two. These identities span millennia of human inquiry and
+still surprise students encountering them for the first time.
+
+In computing, a tokenizer splits raw text into discrete units suitable for
+further processing by a model. Byte-pair encoding (BPE) is one popular scheme:
+start from individual bytes, then merge the most frequent adjacent pair,
+repeating until a target vocabulary size is reached. Modern large language
+models such as GPT-4, Claude, and Llama all rely on variants of this algorithm.
+Four score and seven years ago our fathers brought forth on this continent,
+a new nation, conceived in liberty, and dedicated to the proposition that all
+men are created equal. Now we are engaged in a great civil war, testing whether
+that nation, or any nation so conceived and so dedicated, can long endure. We
+are met on a great battle-field of that war. We have come to dedicate a portion
+of that field, as a final resting place for those who here gave their lives
+that that nation might live. It is altogether fitting and proper that we should
+do this. But, in a larger sense, we can not dedicate, we can not consecrate, we
+can not hallow this ground. The brave men, living and dead, who struggled here,
+have consecrated it, far above our poor power to add or detract. The world
+will little note, nor long remember what we say here, but it can never forget
+what they did here. It is for us the living, rather, to be dedicated here to
+the unfinished work which they who fought here have thus far so nobly advanced.
+
+The accumulation of all powers, legislative, executive, and judiciary, in the
+same hands, whether of one, a few, or many, and whether hereditary,
+self-appointed, or elective, may justly be pronounced the very definition of
+tyranny. Were the federal Constitution, therefore, really chargeable with the
+accumulation of power, or with a mixture of powers, having a dangerous tendency
+to such an accumulation, no further arguments would be necessary to inspire a
+universal reprobation of the system. I persuade myself, however, that it will
+be made apparent to every one, that the charge cannot be supported, and that
+the maxim on which it relies has been totally misconceived and misapplied.
+
+Mathematics is the language with which God wrote the universe. The square of
+the hypotenuse equals the sum of the squares of the other two sides. e^(i*pi)
++ 1 = 0. The integral from 0 to infinity of e^(-x^2) dx equals the square root
+of pi divided by two. These identities span millennia of human inquiry and
+still surprise students encountering them for the first time.
+
+In computing, a tokenizer splits raw text into discrete units suitable for
+further processing by a model. Byte-pair encoding (BPE) is one popular scheme:
+start from individual bytes, then merge the most frequent adjacent pair,
+repeating until a target vocabulary size is reached. Modern large language
+models such as GPT-4, Claude, and Llama all rely on variants of this algorithm.
+Four score and seven years ago our fathers brought forth on this continent,
+a new nation, conceived in liberty, and dedicated to the proposition that all
+men are created equal. Now we are engaged in a great civil war, testing whether
+that nation, or any nation so conceived and so dedicated, can long endure. We
+are met on a great battle-field of that war. We have come to dedicate a portion
+of that field, as a final resting place for those who here gave their lives
+that that nation might live. It is altogether fitting and proper that we should
+do this. But, in a larger sense, we can not dedicate, we can not consecrate, we
+can not hallow this ground. The brave men, living and dead, who struggled here,
+have consecrated it, far above our poor power to add or detract. The world
+will little note, nor long remember what we say here, but it can never forget
+what they did here. It is for us the living, rather, to be dedicated here to
+the unfinished work which they who fought here have thus far so nobly advanced.
+
+The accumulation of all powers, legislative, executive, and judiciary, in the
+same hands, whether of one, a few, or many, and whether hereditary,
+self-appointed, or elective, may justly be pronounced the very definition of
+tyranny. Were the federal Constitution, therefore, really chargeable with the
+accumulation of power, or with a mixture of powers, having a dangerous tendency
+to such an accumulation, no further arguments would be necessary to inspire a
+universal reprobation of the system. I persuade myself, however, that it will
+be made apparent to every one, that the charge cannot be supported, and that
+the maxim on which it relies has been totally misconceived and misapplied.
+
+Mathematics is the language with which God wrote the universe. The square of
+the hypotenuse equals the sum of the squares of the other two sides. e^(i*pi)
++ 1 = 0. The integral from 0 to infinity of e^(-x^2) dx equals the square root
+of pi divided by two. These identities span millennia of human inquiry and
+still surprise students encountering them for the first time.
+
+In computing, a tokenizer splits raw text into discrete units suitable for
+further processing by a model. Byte-pair encoding (BPE) is one popular scheme:
+start from individual bytes, then merge the most frequent adjacent pair,
+repeating until a target vocabulary size is reached. Modern large language
+models such as GPT-4, Claude, and Llama all rely on variants of this algorithm.
+Four score and seven years ago our fathers brought forth on this continent,
+a new nation, conceived in liberty, and dedicated to the proposition that all
+men are created equal. Now we are engaged in a great civil war, testing whether
+that nation, or any nation so conceived and so dedicated, can long endure. We
+are met on a great battle-field of that war. We have come to dedicate a portion
+of that field, as a final resting place for those who here gave their lives
+that that nation might live. It is altogether fitting and proper that we should
+do this. But, in a larger sense, we can not dedicate, we can not consecrate, we
+can not hallow this ground. The brave men, living and dead, who struggled here,
+have consecrated it, far above our poor power to add or detract. The world
+will little note, nor long remember what we say here, but it can never forget
+what they did here. It is for us the living, rather, to be dedicated here to
+the unfinished work which they who fought here have thus far so nobly advanced.
+
+The accumulation of all powers, legislative, executive, and judiciary, in the
+same hands, whether of one, a few, or many, and whether hereditary,
+self-appointed, or elective, may justly be pronounced the very definition of
+tyranny. Were the federal Constitution, therefore, really chargeable with the
+accumulation of power, or with a mixture of powers, having a dangerous tendency
+to such an accumulation, no further arguments would be necessary to inspire a
+universal reprobation of the system. I persuade myself, however, that it will
+be made apparent to every one, that the charge cannot be supported, and that
+the maxim on which it relies has been totally misconceived and misapplied.
+
+Mathematics is the language with which God wrote the universe. The square of
+the hypotenuse equals the sum of the squares of the other two sides. e^(i*pi)
++ 1 = 0. The integral from 0 to infinity of e^(-x^2) dx equals the square root
+of pi divided by two. These identities span millennia of human inquiry and
+still surprise students encountering them for the first time.
+
+In computing, a tokenizer splits raw text into discrete units suitable for
+further processing by a model. Byte-pair encoding (BPE) is one popular scheme:
+start from individual bytes, then merge the most frequent adjacent pair,
+repeating until a target vocabulary size is reached. Modern large language
+models such as GPT-4, Claude, and Llama all rely on variants of this algorithm.
+Four score and seven years ago our fathers brought forth on this continent,
+a new nation, conceived in liberty, and dedicated to the proposition that all
+men are created equal. Now we are engaged in a great civil war, testing whether
+that nation, or any nation so conceived and so dedicated, can long endure. We
+are met on a great battle-field of that war. We have come to dedicate a portion
+of that field, as a final resting place for those who here gave their lives
+that that nation might live. It is altogether fitting and proper that we should
+do this. But, in a larger sense, we can not dedicate, we can not consecrate, we
+can not hallow this ground. The brave men, living and dead, who struggled here,
+have consecrated it, far above our poor power to add or detract. The world
+will little note, nor long remember what we say here, but it can never forget
+what they did here. It is for us the living, rather, to be dedicated here to
+the unfinished work which they who fought here have thus far so nobly advanced.
+
+The accumulation of all powers, legislative, executive, and judiciary, in the
+same hands, whether of one, a few, or many, and whether hereditary,
+self-appointed, or elective, may justly be pronounced the very definition of
+tyranny. Were the federal Constitution, therefore, really chargeable with the
+accumulation of power, or with a mixture of powers, having a dangerous tendency
+to such an accumulation, no further arguments would be necessary to inspire a
+universal reprobation of the system. I persuade myself, however, that it will
+be made apparent to every one, that the charge cannot be supported, and that
+the maxim on which it relies has been totally misconceived and misapplied.
+
+Mathematics is the language with which God wrote the universe. The square of
+the hypotenuse equals the sum of the squares of the other two sides. e^(i*pi)
++ 1 = 0. The integral from 0 to infinity of e^(-x^2) dx equals the square root
+of pi divided by two. These identities span millennia of human inquiry and
+still surprise students encountering them for the first time.
+
+In computing, a tokenizer splits raw text into discrete units suitable for
+further processing by a model. Byte-pair encoding (BPE) is one popular scheme:
+start from individual bytes, then merge the most frequent adjacent pair,
+repeating until a target vocabulary size is reached. Modern large language
+models such as GPT-4, Claude, and Llama all rely on variants of this algorithm.
+Four score and seven years ago our fathers brought forth on this continent,
+a new nation, conceived in liberty, and dedicated to the proposition that all
+men are created equal. Now we are engaged in a great civil war, testing whether
+that nation, or any nation so conceived and so dedicated, can long endure. We
+are met on a great battle-field of that war. We have come to dedicate a portion
+of that field, as a final resting place for those who here gave their lives
+that that nation might live. It is altogether fitting and proper that we should
+do this. But, in a larger sense, we can not dedicate, we can not consecrate, we
+can not hallow this ground. The brave men, living and dead, who struggled here,
+have consecrated it, far above our poor power to add or detract. The world
+will little note, nor long remember what we say here, but it can never forget
+what they did here. It is for us the living, rather, to be dedicated here to
+the unfinished work which they who fought here have thus far so nobly advanced.
+
+The accumulation of all powers, legislative, executive, and judiciary, in the
+same hands, whether of one, a few, or many, and whether hereditary,
+self-appointed, or elective, may justly be pronounced the very definition of
+tyranny. Were the federal Constitution, therefore, really chargeable with the
+accumulation of power, or with a mixture of powers, having a dangerous tendency
+to such an accumulation, no further arguments would be necessary to inspire a
+universal reprobation of the system. I persuade myself, however, that it will
+be made apparent to every one, that the charge cannot be supported, and that
+the maxim on which it relies has been totally misconceived and misapplied.
+
+Mathematics is the language with which God wrote the universe. The square of
+the hypotenuse equals the sum of the squares of the other two sides. e^(i*pi)
++ 1 = 0. The integral from 0 to infinity of e^(-x^2) dx equals the square root
+of pi divided by two. These identities span millennia of human inquiry and
+still surprise students encountering them for the first time.
+
+In computing, a tokenizer splits raw text into discrete units suitable for
+further processing by a model. Byte-pair encoding (BPE) is one popular scheme:
+start from individual bytes, then merge the most frequent adjacent pair,
+repeating until a target vocabulary size is reached. Modern large language
+models such as GPT-4, Claude, and Llama all rely on variants of this algorithm.
+Four score and seven years ago our fathers brought forth on this continent,
+a new nation, conceived in liberty, and dedicated to the proposition that all
+men are created equal. Now we are engaged in a great civil war, testing whether
+that nation, or any nation so conceived and so dedicated, can long endure. We
+are met on a great battle-field of that war. We have come to dedicate a portion
+of that field, as a final resting place for those who here gave their lives
+that that nation might live. It is altogether fitting and proper that we should
+do this. But, in a larger sense, we can not dedicate, we can not consecrate, we
+can not hallow this ground. The brave men, living and dead, who struggled here,
+have consecrated it, far above our poor power to add or detract. The world
+will little note, nor long remember what we say here, but it can never forget
+what they did here. It is for us the living, rather, to be dedicated here to
+the unfinished work which they who fought here have thus far so nobly advanced.
+
+The accumulation of all powers, legislative, executive, and judiciary, in the
+same hands, whether of one, a few, or many, and whether hereditary,
+self-appointed, or elective, may justly be pronounced the very definition of
+tyranny. Were the federal Constitution, therefore, really chargeable with the
+accumulation of power, or with a mixture of powers, having a dangerous tendency
+to such an accumulation, no further arguments would be necessary to inspire a
+universal reprobation of the system. I persuade myself, however, that it will
+be made apparent to every one, that the charge cannot be supported, and that
+the maxim on which it relies has been totally misconceived and misapplied.
+
+Mathematics is the language with which God wrote the universe. The square of
+the hypotenuse equals the sum of the squares of the other two sides. e^(i*pi)
++ 1 = 0. The integral from 0 to infinity of e^(-x^2) dx equals the square root
+of pi divided by two. These identities span millennia of human inquiry and
+still surprise students encountering them for the first time.
+
+In computing, a tokenizer splits raw text into discrete units suitable for
+further processing by a model. Byte-pair encoding (BPE) is one popular scheme:
+start from individual bytes, then merge the most frequent adjacent pair,
+repeating until a target vocabulary size is reached. Modern large language
+models such as GPT-4, Claude, and Llama all rely on variants of this algorithm.
+Four score and seven years ago our fathers brought forth on this continent,
+a new nation, conceived in liberty, and dedicated to the proposition that all
+men are created equal. Now we are engaged in a great civil war, testing whether
+that nation, or any nation so conceived and so dedicated, can long endure. We
+are met on a great battle-field of that war. We have come to dedicate a portion
+of that field, as a final resting place for those who here gave their lives
+that that nation might live. It is altogether fitting and proper that we should
+do this. But, in a larger sense, we can not dedicate, we can not consecrate, we
+can not hallow this ground. The brave men, living and dead, who struggled here,
+have consecrated it, far above our poor power to add or detract. The world
+will little note, nor long remember what we say here, but it can never forget
+what they did here. It is for us the living, rather, to be dedicated here to
+the unfinished work which they who fought here have thus far so nobly advanced.
+
+The accumulation of all powers, legislative, executive, and judiciary, in the
+same hands, whether of one, a few, or many, and whether hereditary,
+self-appointed, or elective, may justly be pronounced the very definition of
+tyranny. Were the federal Constitution, therefore, really chargeable with the
+accumulation of power, or with a mixture of powers, having a dangerous tendency
+to such an accumulation, no further arguments would be necessary to inspire a
+universal reprobation of the system. I persuade myself, however, that it will
+be made apparent to every one, that the charge cannot be supported, and that
+the maxim on which it relies has been totally misconceived and misapplied.
+
+Mathematics is the language with which God wrote the universe. The square of
+the hypotenuse equals the sum of the squares of the other two sides. e^(i*pi)
++ 1 = 0. The integral from 0 to infinity of e^(-x^2) dx equals the square root
+of pi divided by two. These identities span millennia of human inquiry and
+still surprise students encountering them for the first time.
+
+In computing, a tokenizer splits raw text into discrete units suitable for
+further processing by a model. Byte-pair encoding (BPE) is one popular scheme:
+start from individual bytes, then merge the most frequent adjacent pair,
+repeating until a target vocabulary size is reached. Modern large language
+models such as GPT-4, Claude, and Llama all rely on variants of this algorithm.
+Four score and seven years ago our fathers brought forth on this continent,
+a new nation, conceived in liberty, and dedicated to the proposition that all
+men are created equal. Now we are engaged in a great civil war, testing whether
+that nation, or any nation so conceived and so dedicated, can long endure. We
+are met on a great battle-field of that war. We have come to dedicate a portion
+of that field, as a final resting place for those who here gave their lives
+that that nation might live. It is altogether fitting and proper that we should
+do this. But, in a larger sense, we can not dedicate, we can not consecrate, we
+can not hallow this ground. The brave men, living and dead, who struggled here,
+have consecrated it, far above our poor power to add or detract. The world
+will little note, nor long remember what we say here, but it can never forget
+what they did here. It is for us the living, rather, to be dedicated here to
+the unfinished work which they who fought here have thus far so nobly advanced.
+
+The accumulation of all powers, legislative, executive, and judiciary, in the
+same hands, whether of one, a few, or many, and whether hereditary,
+self-appointed, or elective, may justly be pronounced the very definition of
+tyranny. Were the federal Constitution, therefore, really chargeable with the
+accumulation of power, or with a mixture of powers, having a dangerous tendency
+to such an accumulation, no further arguments would be necessary to inspire a
+universal reprobation of the system. I persuade myself, however, that it will
+be made apparent to every one, that the charge cannot be supported, and that
+the maxim on which it relies has been totally misconceived and misapplied.
+
+Mathematics is the language with which God wrote the universe. The square of
+the hypotenuse equals the sum of the squares of the other two sides. e^(i*pi)
++ 1 = 0. The integral from 0 to infinity of e^(-x^2) dx equals the square root
+of pi divided by two. These identities span millennia of human inquiry and
+still surprise students encountering them for the first time.
+
+In computing, a tokenizer splits raw text into discrete units suitable for
+further processing by a model. Byte-pair encoding (BPE) is one popular scheme:
+start from individual bytes, then merge the most frequent adjacent pair,
+repeating until a target vocabulary size is reached. Modern large language
+models such as GPT-4, Claude, and Llama all rely on variants of this algorithm.
+Four score and seven years ago our fathers brought forth on this continent,
+a new nation, conceived in liberty, and dedicated to the proposition that all
+men are created equal. Now we are engaged in a great civil war, testing whether
+that nation, or any nation so conceived and so dedicated, can long endure. We
+are met on a great battle-field of that war. We have come to dedicate a portion
+of that field, as a final resting place for those who here gave their lives
+that that nation might live. It is altogether fitting and proper that we should
+do this. But, in a larger sense, we can not dedicate, we can not consecrate, we
+can not hallow this ground. The brave men, living and dead, who struggled here,
+have consecrated it, far above our poor power to add or detract. The world
+will little note, nor long remember what we say here, but it can never forget
+what they did here. It is for us the living, rather, to be dedicated here to
+the unfinished work which they who fought here have thus far so nobly advanced.
+
+The accumulation of all powers, legislative, executive, and judiciary, in the
+same hands, whether of one, a few, or many, and whether hereditary,
+self-appointed, or elective, may justly be pronounced the very definition of
+tyranny. Were the federal Constitution, therefore, really chargeable with the
+accumulation of power, or with a mixture of powers, having a dangerous tendency
+to such an accumulation, no further arguments would be necessary to inspire a
+universal reprobation of the system. I persuade myself, however, that it will
+be made apparent to every one, that the charge cannot be supported, and that
+the maxim on which it relies has been totally misconceived and misapplied.
+
+Mathematics is the language with which God wrote the universe. The square of
+the hypotenuse equals the sum of the squares of the other two sides. e^(i*pi)
++ 1 = 0. The integral from 0 to infinity of e^(-x^2) dx equals the square root
+of pi divided by two. These identities span millennia of human inquiry and
+still surprise students encountering them for the first time.
+
+In computing, a tokenizer splits raw text into discrete units suitable for
+further processing by a model. Byte-pair encoding (BPE) is one popular scheme:
+start from individual bytes, then merge the most frequent adjacent pair,
+repeating until a target vocabulary size is reached. Modern large language
+models such as GPT-4, Claude, and Llama all rely on variants of this algorithm.
+Four score and seven years ago our fathers brought forth on this continent,
+a new nation, conceived in liberty, and dedicated to the proposition that all
+men are created equal. Now we are engaged in a great civil war, testing whether
+that nation, or any nation so conceived and so dedicated, can long endure. We
+are met on a great battle-field of that war. We have come to dedicate a portion
+of that field, as a final resting place for those who here gave their lives
+that that nation might live. It is altogether fitting and proper that we should
+do this. But, in a larger sense, we can not dedicate, we can not consecrate, we
+can not hallow this ground. The brave men, living and dead, who struggled here,
+have consecrated it, far above our poor power to add or detract. The world
+will little note, nor long remember what we say here, but it can never forget
+what they did here. It is for us the living, rather, to be dedicated here to
+the unfinished work which they who fought here have thus far so nobly advanced.
+
+The accumulation of all powers, legislative, executive, and judiciary, in the
+same hands, whether of one, a few, or many, and whether hereditary,
+self-appointed, or elective, may justly be pronounced the very definition of
+tyranny. Were the federal Constitution, therefore, really chargeable with the
+accumulation of power, or with a mixture of powers, having a dangerous tendency
+to such an accumulation, no further arguments would be necessary to inspire a
+universal reprobation of the system. I persuade myself, however, that it will
+be made apparent to every one, that the charge cannot be supported, and that
+the maxim on which it relies has been totally misconceived and misapplied.
+
+Mathematics is the language with which God wrote the universe. The square of
+the hypotenuse equals the sum of the squares of the other two sides. e^(i*pi)
++ 1 = 0. The integral from 0 to infinity of e^(-x^2) dx equals the square root
+of pi divided by two. These identities span millennia of human inquiry and
+still surprise students encountering them for the first time.
+
+In computing, a tokenizer splits raw text into discrete units suitable for
+further processing by a model. Byte-pair encoding (BPE) is one popular scheme:
+start from individual bytes, then merge the most frequent adjacent pair,
+repeating until a target vocabulary size is reached. Modern large language
+models such as GPT-4, Claude, and Llama all rely on variants of this algorithm.
+Four score and seven years ago our fathers brought forth on this continent,
+a new nation, conceived in liberty, and dedicated to the proposition that all
+men are created equal. Now we are engaged in a great civil war, testing whether
+that nation, or any nation so conceived and so dedicated, can long endure. We
+are met on a great battle-field of that war. We have come to dedicate a portion
+of that field, as a final resting place for those who here gave their lives
+that that nation might live. It is altogether fitting and proper that we should
+do this. But, in a larger sense, we can not dedicate, we can not consecrate, we
+can not hallow this ground. The brave men, living and dead, who struggled here,
+have consecrated it, far above our poor power to add or detract. The world
+will little note, nor long remember what we say here, but it can never forget
+what they did here. It is for us the living, rather, to be dedicated here to
+the unfinished work which they who fought here have thus far so nobly advanced.
+
+The accumulation of all powers, legislative, executive, and judiciary, in the
+same hands, whether of one, a few, or many, and whether hereditary,
+self-appointed, or elective, may justly be pronounced the very definition of
+tyranny. Were the federal Constitution, therefore, really chargeable with the
+accumulation of power, or with a mixture of powers, having a dangerous tendency
+to such an accumulation, no further arguments would be necessary to inspire a
+universal reprobation of the system. I persuade myself, however, that it will
+be made apparent to every one, that the charge cannot be supported, and that
+the maxim on which it relies has been totally misconceived and misapplied.
+
+Mathematics is the language with which God wrote the universe. The square of
+the hypotenuse equals the sum of the squares of the other two sides. e^(i*pi)
++ 1 = 0. The integral from 0 to infinity of e^(-x^2) dx equals the square root
+of pi divided by two. These identities span millennia of human inquiry and
+still surprise students encountering them for the first time.
+
+In computing, a tokenizer splits raw text into discrete units suitable for
+further processing by a model. Byte-pair encoding (BPE) is one popular scheme:
+start from individual bytes, then merge the most frequent adjacent pair,
+repeating until a target vocabulary size is reached. Modern large language
+models such as GPT-4, Claude, and Llama all rely on variants of this algorithm.
+Four score and seven years ago our fathers brought forth on this continent,
+a new nation, conceived in liberty, and dedicated to the proposition that all
+men are created equal. Now we are engaged in a great civil war, testing whether
+that nation, or any nation so conceived and so dedicated, can long endure. We
+are met on a great battle-field of that war. We have come to dedicate a portion
+of that field, as a final resting place for those who here gave their lives
+that that nation might live. It is altogether fitting and proper that we should
+do this. But, in a larger sense, we can not dedicate, we can not consecrate, we
+can not hallow this ground. The brave men, living and dead, who struggled here,
+have consecrated it, far above our poor power to add or detract. The world
+will little note, nor long remember what we say here, but it can never forget
+what they did here. It is for us the living, rather, to be dedicated here to
+the unfinished work which they who fought here have thus far so nobly advanced.
+
+The accumulation of all powers, legislative, executive, and judiciary, in the
+same hands, whether of one, a few, or many, and whether hereditary,
+self-appointed, or elective, may justly be pronounced the very definition of
+tyranny. Were the federal Constitution, therefore, really chargeable with the
+accumulation of power, or with a mixture of powers, having a dangerous tendency
+to such an accumulation, no further arguments would be necessary to inspire a
+universal reprobation of the system. I persuade myself, however, that it will
+be made apparent to every one, that the charge cannot be supported, and that
+the maxim on which it relies has been totally misconceived and misapplied.
+
+Mathematics is the language with which God wrote the universe. The square of
+the hypotenuse equals the sum of the squares of the other two sides. e^(i*pi)
++ 1 = 0. The integral from 0 to infinity of e^(-x^2) dx equals the square root
+of pi divided by two. These identities span millennia of human inquiry and
+still surprise students encountering them for the first time.
+
+In computing, a tokenizer splits raw text into discrete units suitable for
+further processing by a model. Byte-pair encoding (BPE) is one popular scheme:
+start from individual bytes, then merge the most frequent adjacent pair,
+repeating until a target vocabulary size is reached. Modern large language
+models such as GPT-4, Claude, and Llama all rely on variants of this algorithm.
+Four score and seven years ago our fathers brought forth on this continent,
+a new nation, conceived in liberty, and dedicated to the proposition that all
+men are created equal. Now we are engaged in a great civil war, testing whether
+that nation, or any nation so conceived and so dedicated, can long endure. We
+are met on a great battle-field of that war. We have come to dedicate a portion
+of that field, as a final resting place for those who here gave their lives
+that that nation might live. It is altogether fitting and proper that we should
+do this. But, in a larger sense, we can not dedicate, we can not consecrate, we
+can not hallow this ground. The brave men, living and dead, who struggled here,
+have consecrated it, far above our poor power to add or detract. The world
+will little note, nor long remember what we say here, but it can never forget
+what they did here. It is for us the living, rather, to be dedicated here to
+the unfinished work which they who fought here have thus far so nobly advanced.
+
+The accumulation of all powers, legislative, executive, and judiciary, in the
+same hands, whether of one, a few, or many, and whether hereditary,
+self-appointed, or elective, may justly be pronounced the very definition of
+tyranny. Were the federal Constitution, therefore, really chargeable with the
+accumulation of power, or with a mixture of powers, having a dangerous tendency
+to such an accumulation, no further arguments would be necessary to inspire a
+universal reprobation of the system. I persuade myself, however, that it will
+be made apparent to every one, that the charge cannot be supported, and that
+the maxim on which it relies has been totally misconceived and misapplied.
+
+Mathematics is the language with which God wrote the universe. The square of
+the hypotenuse equals the sum of the squares of the other two sides. e^(i*pi)
++ 1 = 0. The integral from 0 to infinity of e^(-x^2) dx equals the square root
+of pi divided by two. These identities span millennia of human inquiry and
+still surprise students encountering them for the first time.
+
+In computing, a tokenizer splits raw text into discrete units suitable for
+further processing by a model. Byte-pair encoding (BPE) is one popular scheme:
+start from individual bytes, then merge the most frequent adjacent pair,
+repeating until a target vocabulary size is reached. Modern large language
+models such as GPT-4, Claude, and Llama all rely on variants of this algorithm.
+Four score and seven years ago our fathers brought forth on this continent,
+a new nation, conceived in liberty, and dedicated to the proposition that all
+men are created equal. Now we are engaged in a great civil war, testing whether
+that nation, or any nation so conceived and so dedicated, can long endure. We
+are met on a great battle-field of that war. We have come to dedicate a portion
+of that field, as a final resting place for those who here gave their lives
+that that nation might live. It is altogether fitting and proper that we should
+do this. But, in a larger sense, we can not dedicate, we can not consecrate, we
+can not hallow this ground. The brave men, living and dead, who struggled here,
+have consecrated it, far above our poor power to add or detract. The world
+will little note, nor long remember what we say here, but it can never forget
+what they did here. It is for us the living, rather, to be dedicated here to
+the unfinished work which they who fought here have thus far so nobly advanced.
+
+The accumulation of all powers, legislative, executive, and judiciary, in the
+same hands, whether of one, a few, or many, and whether hereditary,
+self-appointed, or elective, may justly be pronounced the very definition of
+tyranny. Were the federal Constitution, therefore, really chargeable with the
+accumulation of power, or with a mixture of powers, having a dangerous tendency
+to such an accumulation, no further arguments would be necessary to inspire a
+universal reprobation of the system. I persuade myself, however, that it will
+be made apparent to every one, that the charge cannot be supported, and that
+the maxim on which it relies has been totally misconceived and misapplied.
+
+Mathematics is the language with which God wrote the universe. The square of
+the hypotenuse equals the sum of the squares of the other two sides. e^(i*pi)
++ 1 = 0. The integral from 0 to infinity of e^(-x^2) dx equals the square root
+of pi divided by two. These identities span millennia of human inquiry and
+still surprise students encountering them for the first time.
+
+In computing, a tokenizer splits raw text into discrete units suitable for
+further processing by a model. Byte-pair encoding (BPE) is one popular scheme:
+start from individual bytes, then merge the most frequent adjacent pair,
+repeating until a target vocabulary size is reached. Modern large language
+models such as GPT-4, Claude, and Llama all rely on variants of this algorithm.
+Four score and seven years ago our fathers brought forth on this continent,
+a new nation, conceived in liberty, and dedicated to the proposition that all
+men are created equal. Now we are engaged in a great civil war, testing whether
+that nation, or any nation so conceived and so dedicated, can long endure. We
+are met on a great battle-field of that war. We have come to dedicate a portion
+of that field, as a final resting place for those who here gave their lives
+that that nation might live. It is altogether fitting and proper that we should
+do this. But, in a larger sense, we can not dedicate, we can not consecrate, we
+can not hallow this ground. The brave men, living and dead, who struggled here,
+have consecrated it, far above our poor power to add or detract. The world
+will little note, nor long remember what we say here, but it can never forget
+what they did here. It is for us the living, rather, to be dedicated here to
+the unfinished work which they who fought here have thus far so nobly advanced.
+
+The accumulation of all powers, legislative, executive, and judiciary, in the
+same hands, whether of one, a few, or many, and whether hereditary,
+self-appointed, or elective, may justly be pronounced the very definition of
+tyranny. Were the federal Constitution, therefore, really chargeable with the
+accumulation of power, or with a mixture of powers, having a dangerous tendency
+to such an accumulation, no further arguments would be necessary to inspire a
+universal reprobation of the system. I persuade myself, however, that it will
+be made apparent to every one, that the charge cannot be supported, and that
+the maxim on which it relies has been totally misconceived and misapplied.
+
+Mathematics is the language with which God wrote the universe. The square of
+the hypotenuse equals the sum of the squares of the other two sides. e^(i*pi)
++ 1 = 0. The integral from 0 to infinity of e^(-x^2) dx equals the square root
+of pi divided by two. These identities span millennia of human inquiry and
+still surprise students encountering them for the first time.
+
+In computing, a tokenizer splits raw text into discrete units suitable for
+further processing by a model. Byte-pair encoding (BPE) is one popular scheme:
+start from individual bytes, then merge the most frequent adjacent pair,
+repeating until a target vocabulary size is reached. Modern large language
+models such as GPT-4, Claude, and Llama all rely on variants of this algorithm.
+Four score and seven years ago our fathers brought forth on this continent,
+a new nation, conceived in liberty, and dedicated to the proposition that all
+men are created equal. Now we are engaged in a great civil war, testing whether
+that nation, or any nation so conceived and so dedicated, can long endure. We
+are met on a great battle-field of that war. We have come to dedicate a portion
+of that field, as a final resting place for those who here gave their lives
+that that nation might live. It is altogether fitting and proper that we should
+do this. But, in a larger sense, we can not dedicate, we can not consecrate, we
+can not hallow this ground. The brave men, living and dead, who struggled here,
+have consecrated it, far above our poor power to add or detract. The world
+will little note, nor long remember what we say here, but it can never forget
+what they did here. It is for us the living, rather, to be dedicated here to
+the unfinished work which they who fought here have thus far so nobly advanced.
+
+The accumulation of all powers, legislative, executive, and judiciary, in the
+same hands, whether of one, a few, or many, and whether hereditary,
+self-appointed, or elective, may justly be pronounced the very definition of
+tyranny. Were the federal Constitution, therefore, really chargeable with the
+accumulation of power, or with a mixture of powers, having a dangerous tendency
+to such an accumulation, no further arguments would be necessary to inspire a
+universal reprobation of the system. I persuade myself, however, that it will
+be made apparent to every one, that the charge cannot be supported, and that
+the maxim on which it relies has been totally misconceived and misapplied.
+
+Mathematics is the language with which God wrote the universe. The square of
+the hypotenuse equals the sum of the squares of the other two sides. e^(i*pi)
++ 1 = 0. The integral from 0 to infinity of e^(-x^2) dx equals the square root
+of pi divided by two. These identities span millennia of human inquiry and
+still surprise students encountering them for the first time.
+
+In computing, a tokenizer splits raw text into discrete units suitable for
+further processing by a model. Byte-pair encoding (BPE) is one popular scheme:
+start from individual bytes, then merge the most frequent adjacent pair,
+repeating until a target vocabulary size is reached. Modern large language
+models such as GPT-4, Claude, and Llama all rely on variants of this algorithm.
+Four score and seven years ago our fathers brought forth on this continent,
+a new nation, conceived in liberty, and dedicated to the proposition that all
+men are created equal. Now we are engaged in a great civil war, testing whether
+that nation, or any nation so conceived and so dedicated, can long endure. We
+are met on a great battle-field of that war. We have come to dedicate a portion
+of that field, as a final resting place for those who here gave their lives
+that that nation might live. It is altogether fitting and proper that we should
+do this. But, in a larger sense, we can not dedicate, we can not consecrate, we
+can not hallow this ground. The brave men, living and dead, who struggled here,
+have consecrated it, far above our poor power to add or detract. The world
+will little note, nor long remember what we say here, but it can never forget
+what they did here. It is for us the living, rather, to be dedicated here to
+the unfinished work which they who fought here have thus far so nobly advanced.
+
+The accumulation of all powers, legislative, executive, and judiciary, in the
+same hands, whether of one, a few, or many, and whether hereditary,
+self-appointed, or elective, may justly be pronounced the very definition of
+tyranny. Were the federal Constitution, therefore, really chargeable with the
+accumulation of power, or with a mixture of powers, having a dangerous tendency
+to such an accumulation, no further arguments would be necessary to inspire a
+universal reprobation of the system. I persuade myself, however, that it will
+be made apparent to every one, that the charge cannot be supported, and that
+the maxim on which it relies has been totally misconceived and misapplied.
+
+Mathematics is the language with which God wrote the universe. The square of
+the hypotenuse equals the sum of the squares of the other two sides. e^(i*pi)
++ 1 = 0. The integral from 0 to infinity of e^(-x^2) dx equals the square root
+of pi divided by two. These identities span millennia of human inquiry and
+still surprise students encountering them for the first time.
+
+In computing, a tokenizer splits raw text into discrete units suitable for
+further processing by a model. Byte-pair encoding (BPE) is one popular scheme:
+start from individual bytes, then merge the most frequent adjacent pair,
+repeating until a target vocabulary size is reached. Modern large language
+models such as GPT-4, Claude, and Llama all rely on variants of this algorithm.
+Four score and seven years ago our fathers brought forth on this continent,
+a new nation, conceived in liberty, and dedicated to the proposition that all
+men are created equal. Now we are engaged in a great civil war, testing whether
+that nation, or any nation so conceived and so dedicated, can long endure. We
+are met on a great battle-field of that war. We have come to dedicate a portion
+of that field, as a final resting place for those who here gave their lives
+that that nation might live. It is altogether fitting and proper that we should
+do this. But, in a larger sense, we can not dedicate, we can not consecrate, we
+can not hallow this ground. The brave men, living and dead, who struggled here,
+have consecrated it, far above our poor power to add or detract. The world
+will little note, nor long remember what we say here, but it can never forget
+what they did here. It is for us the living, rather, to be dedicated here to
+the unfinished work which they who fought here have thus far so nobly advanced.
+
+The accumulation of all powers, legislative, executive, and judiciary, in the
+same hands, whether of one, a few, or many, and whether hereditary,
+self-appointed, or elective, may justly be pronounced the very definition of
+tyranny. Were the federal Constitution, therefore, really chargeable with the
+accumulation of power, or with a mixture of powers, having a dangerous tendency
+to such an accumulation, no further arguments would be necessary to inspire a
+universal reprobation of the system. I persuade myself, however, that it will
+be made apparent to every one, that the charge cannot be supported, and that
+the maxim on which it relies has been totally misconceived and misapplied.
+
+Mathematics is the language with which God wrote the universe. The square of
+the hypotenuse equals the sum of the squares of the other two sides. e^(i*pi)
++ 1 = 0. The integral from 0 to infinity of e^(-x^2) dx equals the square root
+of pi divided by two. These identities span millennia of human inquiry and
+still surprise students encountering them for the first time.
+
+In computing, a tokenizer splits raw text into discrete units suitable for
+further processing by a model. Byte-pair encoding (BPE) is one popular scheme:
+start from individual bytes, then merge the most frequent adjacent pair,
+repeating until a target vocabulary size is reached. Modern large language
+models such as GPT-4, Claude, and Llama all rely on variants of this algorithm.
+Four score and seven years ago our fathers brought forth on this continent,
+a new nation, conceived in liberty, and dedicated to the proposition that all
+men are created equal. Now we are engaged in a great civil war, testing whether
+that nation, or any nation so conceived and so dedicated, can long endure. We
+are met on a great battle-field of that war. We have come to dedicate a portion
+of that field, as a final resting place for those who here gave their lives
+that that nation might live. It is altogether fitting and proper that we should
+do this. But, in a larger sense, we can not dedicate, we can not consecrate, we
+can not hallow this ground. The brave men, living and dead, who struggled here,
+have consecrated it, far above our poor power to add or detract. The world
+will little note, nor long remember what we say here, but it can never forget
+what they did here. It is for us the living, rather, to be dedicated here to
+the unfinished work which they who fought here have thus far so nobly advanced.
+
+The accumulation of all powers, legislative, executive, and judiciary, in the
+same hands, whether of one, a few, or many, and whether hereditary,
+self-appointed, or elective, may justly be pronounced the very definition of
+tyranny. Were the federal Constitution, therefore, really chargeable with the
+accumulation of power, or with a mixture of powers, having a dangerous tendency
+to such an accumulation, no further arguments would be necessary to inspire a
+universal reprobation of the system. I persuade myself, however, that it will
+be made apparent to every one, that the charge cannot be supported, and that
+the maxim on which it relies has been totally misconceived and misapplied.
+
+Mathematics is the language with which God wrote the universe. The square of
+the hypotenuse equals the sum of the squares of the other two sides. e^(i*pi)
++ 1 = 0. The integral from 0 to infinity of e^(-x^2) dx equals the square root
+of pi divided by two. These identities span millennia of human inquiry and
+still surprise students encountering them for the first time.
+
+In computing, a tokenizer splits raw text into discrete units suitable for
+further processing by a model. Byte-pair encoding (BPE) is one popular scheme:
+start from individual bytes, then merge the most frequent adjacent pair,
+repeating until a target vocabulary size is reached. Modern large language
+models such as GPT-4, Claude, and Llama all rely on variants of this algorithm.
+Four score and seven years ago our fathers brought forth on this continent,
+a new nation, conceived in liberty, and dedicated to the proposition that all
+men are created equal. Now we are engaged in a great civil war, testing whether
+that nation, or any nation so conceived and so dedicated, can long endure. We
+are met on a great battle-field of that war. We have come to dedicate a portion
+of that field, as a final resting place for those who here gave their lives
+that that nation might live. It is altogether fitting and proper that we should
+do this. But, in a larger sense, we can not dedicate, we can not consecrate, we
+can not hallow this ground. The brave men, living and dead, who struggled here,
+have consecrated it, far above our poor power to add or detract. The world
+will little note, nor long remember what we say here, but it can never forget
+what they did here. It is for us the living, rather, to be dedicated here to
+the unfinished work which they who fought here have thus far so nobly advanced.
+
+The accumulation of all powers, legislative, executive, and judiciary, in the
+same hands, whether of one, a few, or many, and whether hereditary,
+self-appointed, or elective, may justly be pronounced the very definition of
+tyranny. Were the federal Constitution, therefore, really chargeable with the
+accumulation of power, or with a mixture of powers, having a dangerous tendency
+to such an accumulation, no further arguments would be necessary to inspire a
+universal reprobation of the system. I persuade myself, however, that it will
+be made apparent to every one, that the charge cannot be supported, and that
+the maxim on which it relies has been totally misconceived and misapplied.
+
+Mathematics is the language with which God wrote the universe. The square of
+the hypotenuse equals the sum of the squares of the other two sides. e^(i*pi)
++ 1 = 0. The integral from 0 to infinity of e^(-x^2) dx equals the square root
+of pi divided by two. These identities span millennia of human inquiry and
+still surprise students encountering them for the first time.
+
+In computing, a tokenizer splits raw text into discrete units suitable for
+further processing by a model. Byte-pair encoding (BPE) is one popular scheme:
+start from individual bytes, then merge the most frequent adjacent pair,
+repeating until a target vocabulary size is reached. Modern large language
+models such as GPT-4, Claude, and Llama all rely on variants of this algorithm.
+Four score and seven years ago our fathers brought forth on this continent,
+a new nation, conceived in liberty, and dedicated to the proposition that all
+men are created equal. Now we are engaged in a great civil war, testing whether
+that nation, or any nation so conceived and so dedicated, can long endure. We
+are met on a great battle-field of that war. We have come to dedicate a portion
+of that field, as a final resting place for those who here gave their lives
+that that nation might live. It is altogether fitting and proper that we should
+do this. But, in a larger sense, we can not dedicate, we can not consecrate, we
+can not hallow this ground. The brave men, living and dead, who struggled here,
+have consecrated it, far above our poor power to add or detract. The world
+will little note, nor long remember what we say here, but it can never forget
+what they did here. It is for us the living, rather, to be dedicated here to
+the unfinished work which they who fought here have thus far so nobly advanced.
+
+The accumulation of all powers, legislative, executive, and judiciary, in the
+same hands, whether of one, a few, or many, and whether hereditary,
+self-appointed, or elective, may justly be pronounced the very definition of
+tyranny. Were the federal Constitution, therefore, really chargeable with the
+accumulation of power, or with a mixture of powers, having a dangerous tendency
+to such an accumulation, no further arguments would be necessary to inspire a
+universal reprobation of the system. I persuade myself, however, that it will
+be made apparent to every one, that the charge cannot be supported, and that
+the maxim on which it relies has been totally misconceived and misapplied.
+
+Mathematics is the language with which God wrote the universe. The square of
+the hypotenuse equals the sum of the squares of the other two sides. e^(i*pi)
++ 1 = 0. The integral from 0 to infinity of e^(-x^2) dx equals the square root
+of pi divided by two. These identities span millennia of human inquiry and
+still surprise students encountering them for the first time.
+
+In computing, a tokenizer splits raw text into discrete units suitable for
+further processing by a model. Byte-pair encoding (BPE) is one popular scheme:
+start from individual bytes, then merge the most frequent adjacent pair,
+repeating until a target vocabulary size is reached. Modern large language
+models such as GPT-4, Claude, and Llama all rely on variants of this algorithm.
+Four score and seven years ago our fathers brought forth on this continent,
+a new nation, conceived in liberty, and dedicated to the proposition that all
+men are created equal. Now we are engaged in a great civil war, testing whether
+that nation, or any nation so conceived and so dedicated, can long endure. We
+are met on a great battle-field of that war. We have come to dedicate a portion
+of that field, as a final resting place for those who here gave their lives
+that that nation might live. It is altogether fitting and proper that we should
+do this. But, in a larger sense, we can not dedicate, we can not consecrate, we
+can not hallow this ground. The brave men, living and dead, who struggled here,
+have consecrated it, far above our poor power to add or detract. The world
+will little note, nor long remember what we say here, but it can never forget
+what they did here. It is for us the living, rather, to be dedicated here to
+the unfinished work which they who fought here have thus far so nobly advanced.
+
+The accumulation of all powers, legislative, executive, and judiciary, in the
+same hands, whether of one, a few, or many, and whether hereditary,
+self-appointed, or elective, may justly be pronounced the very definition of
+tyranny. Were the federal Constitution, therefore, really chargeable with the
+accumulation of power, or with a mixture of powers, having a dangerous tendency
+to such an accumulation, no further arguments would be necessary to inspire a
+universal reprobation of the system. I persuade myself, however, that it will
+be made apparent to every one, that the charge cannot be supported, and that
+the maxim on which it relies has been totally misconceived and misapplied.
+
+Mathematics is the language with which God wrote the universe. The square of
+the hypotenuse equals the sum of the squares of the other two sides. e^(i*pi)
++ 1 = 0. The integral from 0 to infinity of e^(-x^2) dx equals the square root
+of pi divided by two. These identities span millennia of human inquiry and
+still surprise students encountering them for the first time.
+
+In computing, a tokenizer splits raw text into discrete units suitable for
+further processing by a model. Byte-pair encoding (BPE) is one popular scheme:
+start from individual bytes, then merge the most frequent adjacent pair,
+repeating until a target vocabulary size is reached. Modern large language
+models such as GPT-4, Claude, and Llama all rely on variants of this algorithm.
+Four score and seven years ago our fathers brought forth on this continent,
+a new nation, conceived in liberty, and dedicated to the proposition that all
+men are created equal. Now we are engaged in a great civil war, testing whether
+that nation, or any nation so conceived and so dedicated, can long endure. We
+are met on a great battle-field of that war. We have come to dedicate a portion
+of that field, as a final resting place for those who here gave their lives
+that that nation might live. It is altogether fitting and proper that we should
+do this. But, in a larger sense, we can not dedicate, we can not consecrate, we
+can not hallow this ground. The brave men, living and dead, who struggled here,
+have consecrated it, far above our poor power to add or detract. The world
+will little note, nor long remember what we say here, but it can never forget
+what they did here. It is for us the living, rather, to be dedicated here to
+the unfinished work which they who fought here have thus far so nobly advanced.
+
+The accumulation of all powers, legislative, executive, and judiciary, in the
+same hands, whether of one, a few, or many, and whether hereditary,
+self-appointed, or elective, may justly be pronounced the very definition of
+tyranny. Were the federal Constitution, therefore, really chargeable with the
+accumulation of power, or with a mixture of powers, having a dangerous tendency
+to such an accumulation, no further arguments would be necessary to inspire a
+universal reprobation of the system. I persuade myself, however, that it will
+be made apparent to every one, that the charge cannot be supported, and that
+the maxim on which it relies has been totally misconceived and misapplied.
+
+Mathematics is the language with which God wrote the universe. The square of
+the hypotenuse equals the sum of the squares of the other two sides. e^(i*pi)
++ 1 = 0. The integral from 0 to infinity of e^(-x^2) dx equals the square root
+of pi divided by two. These identities span millennia of human inquiry and
+still surprise students encountering them for the first time.
+
+In computing, a tokenizer splits raw text into discrete units suitable for
+further processing by a model. Byte-pair encoding (BPE) is one popular scheme:
+start from individual bytes, then merge the most frequent adjacent pair,
+repeating until a target vocabulary size is reached. Modern large language
+models such as GPT-4, Claude, and Llama all rely on variants of this algorithm.
+Four score and seven years ago our fathers brought forth on this continent,
+a new nation, conceived in liberty, and dedicated to the proposition that all
+men are created equal. Now we are engaged in a great civil war, testing whether
+that nation, or any nation so conceived and so dedicated, can long endure. We
+are met on a great battle-field of that war. We have come to dedicate a portion
+of that field, as a final resting place for those who here gave their lives
+that that nation might live. It is altogether fitting and proper that we should
+do this. But, in a larger sense, we can not dedicate, we can not consecrate, we
+can not hallow this ground. The brave men, living and dead, who struggled here,
+have consecrated it, far above our poor power to add or detract. The world
+will little note, nor long remember what we say here, but it can never forget
+what they did here. It is for us the living, rather, to be dedicated here to
+the unfinished work which they who fought here have thus far so nobly advanced.
+
+The accumulation of all powers, legislative, executive, and judiciary, in the
+same hands, whether of one, a few, or many, and whether hereditary,
+self-appointed, or elective, may justly be pronounced the very definition of
+tyranny. Were the federal Constitution, therefore, really chargeable with the
+accumulation of power, or with a mixture of powers, having a dangerous tendency
+to such an accumulation, no further arguments would be necessary to inspire a
+universal reprobation of the system. I persuade myself, however, that it will
+be made apparent to every one, that the charge cannot be supported, and that
+the maxim on which it relies has been totally misconceived and misapplied.
+
+Mathematics is the language with which God wrote the universe. The square of
+the hypotenuse equals the sum of the squares of the other two sides. e^(i*pi)
++ 1 = 0. The integral from 0 to infinity of e^(-x^2) dx equals the square root
+of pi divided by two. These identities span millennia of human inquiry and
+still surprise students encountering them for the first time.
+
+In computing, a tokenizer splits raw text into discrete units suitable for
+further processing by a model. Byte-pair encoding (BPE) is one popular scheme:
+start from individual bytes, then merge the most frequent adjacent pair,
+repeating until a target vocabulary size is reached. Modern large language
+models such as GPT-4, Claude, and Llama all rely on variants of this algorithm.
+Four score and seven years ago our fathers brought forth on this continent,
+a new nation, conceived in liberty, and dedicated to the proposition that all
+men are created equal. Now we are engaged in a great civil war, testing whether
+that nation, or any nation so conceived and so dedicated, can long endure. We
+are met on a great battle-field of that war. We have come to dedicate a portion
+of that field, as a final resting place for those who here gave their lives
+that that nation might live. It is altogether fitting and proper that we should
+do this. But, in a larger sense, we can not dedicate, we can not consecrate, we
+can not hallow this ground. The brave men, living and dead, who struggled here,
+have consecrated it, far above our poor power to add or detract. The world
+will little note, nor long remember what we say here, but it can never forget
+what they did here. It is for us the living, rather, to be dedicated here to
+the unfinished work which they who fought here have thus far so nobly advanced.
+
+The accumulation of all powers, legislative, executive, and judiciary, in the
+same hands, whether of one, a few, or many, and whether hereditary,
+self-appointed, or elective, may justly be pronounced the very definition of
+tyranny. Were the federal Constitution, therefore, really chargeable with the
+accumulation of power, or with a mixture of powers, having a dangerous tendency
+to such an accumu

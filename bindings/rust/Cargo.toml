@@ -1,0 +1,49 @@
+[package]
+name = "ztok"
+version = "1.22.0"
+edition = "2021"
+rust-version = "1.74"
+description = "Idiomatic safe Rust bindings for libztok — a fast multithreaded tokenizer written in Zig"
+license = "AGPL-3.0-only"
+repository = "https://github.com/sirus20x6/ztok"
+homepage = "https://github.com/sirus20x6/ztok"
+documentation = "https://docs.rs/ztok"
+readme = "README.md"
+keywords = ["tokenizer", "bpe", "tiktoken", "nlp", "llm"]
+categories = ["api-bindings", "text-processing"]
+
+# Exclude test/CI artifacts from the published crate. The C library is
+# located at runtime via pkg-config / LD_LIBRARY_PATH; we never bundle
+# libztok itself in the crate.
+exclude = [
+    "tests/fixtures/*",
+    "target/*",
+]
+
+[features]
+# pkg-config-driven link resolution (default). build.rs shells out to
+# `pkg-config --libs ztok` to discover the search path. Override by
+# setting ZTOK_LIB_DIR / ZTOK_INCLUDE_DIR.
+default = ["pkg-config"]
+pkg-config = []
+
+# Statically link libztok.a instead of the shared object. Requires the
+# static archive to be discoverable on the link path (typical Zig install
+# produces both at `zig-out/lib/`).
+link-static = []
+
+[dev-dependencies]
+# Deterministic fuzz harness mirrors the Python/Node/Ruby/Go ones, which
+# all use a fixed-seed PRNG rather than proptest. rand 0.8 is the
+# long-term-stable line.
+rand = "0.8"
+
+[lib]
+name = "ztok"
+path = "src/lib.rs"
+
+[package.metadata.docs.rs]
+# docs.rs has no libztok available, so build only the docs surface and
+# skip the link step. Users still see the full type signatures.
+no-default-features = true
+features = []

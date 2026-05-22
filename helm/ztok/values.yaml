@@ -1,0 +1,352 @@
+# -- Default values for the ztok chart.
+# This is a YAML-formatted file. Declare variables to be passed into
+# templates. Lines beginning with `# --` are picked up by helm-docs.
+
+## @section Global
+##
+
+# -- Override the chart's computed name (default: chart name).
+nameOverride: ""
+# -- Override the fully qualified release name (default: <release>-<chart>).
+fullnameOverride: ""
+
+## @section Image
+##
+
+image:
+  # -- Container image repository for `ztok serve`. Replace with the
+  # registry you actually publish to (the default is a placeholder).
+  repository: ghcr.io/sirus20x6/ztok
+  # -- Image tag. Pinning to an exact version (not `latest`) is
+  # strongly recommended in production so rollbacks are deterministic.
+  tag: 1.22.0
+  # -- Image pull policy. `IfNotPresent` is the right default for
+  # pinned tags; switch to `Always` if you use mutable tags like
+  # `main` or `nightly`.
+  pullPolicy: IfNotPresent
+
+# -- Optional image-pull secrets (list of `{name: secretName}`).
+imagePullSecrets: []
+#  - name: ghcr-pull
+
+## @section Workload
+##
+
+# -- Number of pod replicas. Ignored when `autoscaling.enabled=true`
+# (the HPA owns replica count after install).
+replicaCount: 3
+
+# -- Extra arguments appended to the `ztok serve` command line. Use
+# this for flags the chart does not template explicitly, e.g.
+# `--workers 4` or `--cl100k`.
+extraArgs: []
+#  - --cl100k
+#  - --workers
+#  - "4"
+
+# -- Extra environment variables added to the container.
+extraEnv: []
+#  - name: ZTOK_LOG_LEVEL
+#    value: info
+
+# -- Pod-level annotations (merged with default rollout-trigger
+# annotation that re-rolls pods when the auth secret changes).
+podAnnotations: {}
+
+# -- Pod-level labels.
+podLabels: {}
+
+# -- Node selector for pod scheduling.
+nodeSelector: {}
+
+# -- Tolerations for pod scheduling.
+tolerations: []
+
+# -- Affinity / anti-affinity rules. Default is empty — production
+# users should add pod anti-affinity to spread replicas across nodes.
+affinity: {}
+
+# -- Topology spread constraints (preferred over affinity for
+# zone/node spreading on modern clusters).
+topologySpreadConstraints: []
+
+# -- Termination grace period (seconds). ztok closes connections
+# cleanly on SIGTERM; 30s is plenty for typical request lengths.
+terminationGracePeriodSeconds: 30
+
+## @section Vocab / model source
+##
+
+# The `ztok serve --model PATH` flag needs a vocab/model file
+# available inside the container. The chart supports three mount
+# modes; pick exactly one:
+#   1. configMap.enabled=true  — load from a ConfigMap (suits
+#      vocab/model files <= ~1 MiB; ConfigMap object size cap is 1 MiB).
+#   2. pvc.enabled=true        — mount an existing PVC at a known path.
+#   3. neither                 — assume the image already contains
+#      the model at `vocab.path`.
+vocab:
+  # -- Absolute path inside the container where the model file lives
+  # (passed to `ztok serve --model`).
+  path: /vocabs/llama2.model
+  configMap:
+    # -- Mount the vocab from a user-provided ConfigMap. The chart
+    # does NOT create the ConfigMap — bring your own (the file is
+    # typically too sensitive / too large to template into values).
+    enabled: false
+    # -- Name of the existing ConfigMap that holds the vocab file.
+    name: ""
+    # -- Key inside the ConfigMap whose value is the vocab file.
+    # The mount uses `subPath` so other keys in the ConfigMap are
+    # ignored.
+    key: vocab
+  pvc:
+    # -- Mount the vocab from an existing PVC. The chart does NOT
+    # create the PVC (binding model artifacts to chart lifecycle is
+    # rarely what users want — they usually load the model once and
+    # share it across installs).
+    enabled: false
+    # -- Name of the existing PVC.
+    claimName: ""
+    # -- `subPath` inside the PVC relative to its root. Empty mounts
+    # the volume root.
+    subPath: ""
+    # -- Mount the PVC read-only (recommended for shared model
+    # storage). The PVC's `accessModes` must still permit the mount.
+    readOnly: true
+
+## @section Auth
+##
+
+auth:
+  # -- Enable bearer-token auth (`--auth-token-file`). When true the
+  # chart mounts `auth.tokenSecretName` and passes the file path to
+  # the binary. Health checks bypass auth.
+  enabled: true
+  # -- Name of an existing Secret with key `token` holding the bearer
+  # token. The chart does not create this Secret unless `auth.create`
+  # is true (see below).
+  tokenSecretName: ztok-auth
+  # -- If true, the chart will create the auth Secret from
+  # `auth.tokenValue`. Disabled by default because most users prefer
+  # to manage secrets out-of-band (sealed-secrets, external-secrets,
+  # Vault).
+  create: false
+  # -- Token value used when `auth.create=true`. Ignored otherwise.
+  # PROVIDE A REAL VALUE — the default is intentionally weak so
+  # leaving it unset fails closed.
+  tokenValue: "CHANGE_ME"
+
+## @section Rate limit
+##
+
+rateLimit:
+  # -- Enable per-client-IP token-bucket rate limiting
+  # (`--rate-limit REQ_PER_SEC`). `/health` is exempt.
+  enabled: true
+  # -- Requests per second per client IP.
+  reqPerSec: 100
+
+## @section Resources
+##
+
+# -- Container resource requests and limits. Defaults sized for a
+# Llama-2 SentencePiece model serving moderate load; tune for your
+# vocab + traffic.
+resources:
+  limits:
+    cpu: "2"
+    memory: 1Gi
+  requests:
+    cpu: 500m
+    memory: 256Mi
+
+## @section Service
+##
+
+service:
+  # -- Service type. `ClusterIP` is the safe default; switch to
+  # `LoadBalancer` / `NodePort` only when external exposure is
+  # explicitly desired (use Ingress otherwise).
+  type: ClusterIP
+  # -- Service port (the port clients connect to).
+  port: 7890
+  # -- Optional `nodePort` when `type=NodePort`. Leave empty to let
+  # the API server assign one.
+  nodePort: ""
+  # -- Extra annotations on the Service object (e.g. for cloud LB
+  # backend config).
+  annotations: {}
+
+## @section ServiceAccount
+##
+
+serviceAccount:
+  # -- Create a dedicated ServiceAccount for the workload. Strongly
+  # recommended so RBAC / IRSA / Workload Identity bindings have a
+  # stable principal.
+  create: true
+  # -- Name of the ServiceAccount. If empty and `create=true`, the
+  # chart computes a name; if empty and `create=false`, the
+  # namespace's `default` SA is used.
+  name: ""
+  # -- Extra annotations (e.g. `eks.amazonaws.com/role-arn` for IRSA,
+  # `iam.gke.io/gcp-service-account` for Workload Identity).
+  annotations: {}
+  # -- Whether to auto-mount the SA token. The serve binary does not
+  # call the Kubernetes API, so the default is `false` for least
+  # privilege.
+  automountServiceAccountToken: false
+
+## @section Probes
+##
+
+probes:
+  liveness:
+    enabled: true
+    initialDelaySeconds: 10
+    periodSeconds: 30
+    timeoutSeconds: 5
+    failureThreshold: 3
+  readiness:
+    enabled: true
+    initialDelaySeconds: 5
+    periodSeconds: 10
+    timeoutSeconds: 3
+    failureThreshold: 3
+  startup:
+    # -- Startup probe protects slow initial vocab loads from
+    # tripping the liveness probe. Tune `failureThreshold` upward for
+    # very large models (each failure is `periodSeconds` apart).
+    enabled: true
+    initialDelaySeconds: 5
+    periodSeconds: 5
+    timeoutSeconds: 3
+    failureThreshold: 60
+
+## @section Security
+##
+
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 65532
+  runAsGroup: 65532
+  fsGroup: 65532
+  seccompProfile:
+    type: RuntimeDefault
+
+containerSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 65532
+  runAsGroup: 65532
+  readOnlyRootFilesystem: true
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+      - ALL
+
+## @section Autoscaling
+##
+
+autoscaling:
+  # -- Enable HorizontalPodAutoscaler. When true, `replicaCount` is
+  # ignored after install.
+  enabled: false
+  minReplicas: 3
+  maxReplicas: 10
+  # -- Target CPU utilization (percentage of requests). Set to `null`
+  # to omit the CPU metric.
+  targetCPUUtilizationPercentage: 70
+  # -- Target memory utilization. Set to `null` to omit.
+  targetMemoryUtilizationPercentage: null
+  # -- Extra HPA behavior block (scale-up/scale-down policies). See
+  # `autoscaling/v2.HorizontalPodAutoscalerBehavior`.
+  behavior: {}
+
+## @section PodDisruptionBudget
+##
+
+podDisruptionBudget:
+  # -- Create a PDB. Recommended for any workload with replicaCount > 1
+  # so node drains / cluster upgrades preserve serving capacity.
+  enabled: false
+  # -- `minAvailable` (string or int). Mutually exclusive with
+  # `maxUnavailable`; set only one.
+  minAvailable: 1
+  # -- `maxUnavailable`. Leave null to use `minAvailable`.
+  maxUnavailable: null
+
+## @section Prometheus
+##
+
+prometheus:
+  serviceMonitor:
+    # -- Create a Prometheus Operator ServiceMonitor. Requires the
+    # CRD to be installed in the cluster.
+    enabled: false
+    # -- Namespace to create the ServiceMonitor in. Empty = release
+    # namespace.
+    namespace: ""
+    # -- Scrape interval.
+    interval: 30s
+    # -- Scrape timeout.
+    scrapeTimeout: 10s
+    # -- Extra labels added to the ServiceMonitor (your Prometheus
+    # likely selects ServiceMonitors by `release: kube-prometheus`).
+    labels: {}
+    # -- Metric relabelings applied at scrape time.
+    metricRelabelings: []
+    # -- Target relabelings applied before scrape.
+    relabelings: []
+
+## @section Ingress
+##
+
+ingress:
+  # -- Create an Ingress object.
+  enabled: false
+  # -- IngressClass name. Leave empty to use the cluster default.
+  className: nginx
+  # -- Ingress annotations (e.g. cert-manager issuer, body-size).
+  annotations: {}
+  hosts:
+    - host: ztok.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  # -- TLS configuration; one entry per cert.
+  tls: []
+  #  - hosts:
+  #      - ztok.example.com
+  #    secretName: ztok-tls
+
+## @section Persistent cache
+##
+
+# `ztok serve` does NOT currently expose a persistent prefix-cache
+# directory flag. This block reserves the wiring so when the binary
+# grows that knob, enabling `persistentCache.enabled=true` here will
+# Just Work: the PVC is created, mounted at `persistentCache.mountPath`,
+# and the cache directory survives pod restarts.
+persistentCache:
+  enabled: false
+  size: 10Gi
+  # -- StorageClass name. Empty = cluster default.
+  storageClass: ""
+  # -- Access mode. `ReadWriteOnce` is universal; only switch to
+  # `ReadWriteMany` if every replica must share one cache.
+  accessMode: ReadWriteOnce
+  # -- Mount path inside the container.
+  mountPath: /var/cache/ztok
+  # -- Annotations added to the PVC.
+  annotations: {}
+
+## @section Misc volumes
+##
+
+# -- Extra volumes added to the Pod spec. Useful for sidecars or
+# secondary configmaps.
+extraVolumes: []
+
+# -- Extra volume mounts added to the ztok container.
+extraVolumeMounts: []

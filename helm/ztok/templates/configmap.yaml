@@ -1,0 +1,25 @@
+{{/*
+The chart does NOT create the vocab ConfigMap itself — vocab files are
+typically too large or too sensitive to template through `helm install`,
+and the file is mode-specific (binary SentencePiece protobuf, JSON
+tokenizer.json, raw tiktoken BPE, ...). Users supply a ready-made
+ConfigMap (or PVC) and reference it via `vocab.configMap.name`.
+
+This file exists as a placeholder so the templates/ directory has a
+configmap.yaml at the path callers can override with `--values` or
+post-renderer plugins, and so the chart README has a stable section
+to point at for instructions. The render is guarded by a guaranteed
+false condition so `helm install` with no overrides produces zero
+ConfigMap objects from this chart.
+*/}}
+{{- if false }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "ztok.fullname" . }}-vocab
+  namespace: {{ .Release.Namespace | quote }}
+  labels:
+    {{- include "ztok.labels" . | nindent 4 }}
+binaryData:
+  vocab: ""  # base64-encoded vocab; see chart README for the helper.
+{{- end }}

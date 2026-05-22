@@ -1,0 +1,15 @@
+// CZtok — Swift module shim around libztok's C ABI.
+//
+// `import CZtok` from Swift exposes every symbol declared in ztok.h
+// (e.g. `ztok_pipeline_new`, `ztok_encode`, the `ztok_status` enum).
+//
+// `link "ztok"` tells the SPM driver to append `-lztok` to the linker
+// command. Combined with the `pkgConfig: "ztok"` declaration in
+// Package.swift, that's enough for SPM to resolve libztok.{so,dylib}
+// as long as the library is on the standard search path (or
+// LD_LIBRARY_PATH / DYLD_LIBRARY_PATH at run time).
+module CZtok [system] {
+    header "include/ztok.h"
+    link "ztok"
+    export *
+}

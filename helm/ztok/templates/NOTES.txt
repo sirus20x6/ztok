@@ -1,0 +1,49 @@
+Thanks for installing {{ .Chart.Name }} v{{ .Chart.Version }} (app v{{ .Chart.AppVersion }}).
+
+Release : {{ .Release.Name }}
+Namespace : {{ .Release.Namespace }}
+Replicas : {{ if .Values.autoscaling.enabled }}HPA {{ .Values.autoscaling.minReplicas }}-{{ .Values.autoscaling.maxReplicas }}{{ else }}{{ .Values.replicaCount }}{{ end }}
+Image : {{ include "ztok.image" . }}
+
+1. Wait for the rollout to finish:
+
+   kubectl rollout status deployment/{{ include "ztok.fullname" . }} -n {{ .Release.Namespace }}
+
+2. Reach the service from inside the cluster:
+
+   curl http://{{ include "ztok.fullname" . }}.{{ .Release.Namespace }}.svc.cluster.local:{{ .Values.service.port }}/health
+
+{{- if .Values.auth.enabled }}
+
+   All non-/health requests need a bearer token:
+
+   TOKEN=$(kubectl get secret {{ include "ztok.authSecretName" . }} -n {{ .Release.Namespace }} -o jsonpath='{.data.token}' | base64 -d)
+   curl -H "Authorization: Bearer $TOKEN" \
+        http://{{ include "ztok.fullname" . }}.{{ .Release.Namespace }}.svc.cluster.local:{{ .Values.service.port }}/encode \
+        -d '{"text":"hello world"}'
+{{- end }}
+
+3. Quick port-forward for local testing:
+
+   kubectl port-forward -n {{ .Release.Namespace }} svc/{{ include "ztok.fullname" . }} {{ .Values.service.port }}:{{ .Values.service.port }}
+
+{{- if .Values.ingress.enabled }}
+
+4. Ingress hosts:
+{{- range .Values.ingress.hosts }}
+   - http{{ if $.Values.ingress.tls }}s{{ end }}://{{ .host }}
+{{- end }}
+{{- end }}
+
+5. Run `helm test {{ .Release.Name }} -n {{ .Release.Namespace }}` to fire
+   the bundled connectivity test against /health.
+
+{{- if and .Values.auth.enabled .Values.auth.create (eq .Values.auth.tokenValue "CHANGE_ME") }}
+
+WARNING: auth.create=true was used WITHOUT overriding auth.tokenValue.
+         The default value `CHANGE_ME` is in the Secret; rotate it
+         immediately, e.g.:
+
+   helm upgrade {{ .Release.Name }} <chart> -n {{ .Release.Namespace }} \
+     --reuse-values --set-string auth.tokenValue=$(openssl rand -hex 32)
+{{- end }}

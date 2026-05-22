@@ -1,0 +1,313 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ztok-wasm vs tiktoken-js — browser bench</title>
+<style>
+  :root { color-scheme: light dark; --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace; }
+  body { font-family: system-ui, -apple-system, sans-serif; max-width: 900px; margin: 2rem auto; padding: 0 1rem; line-height: 1.4; }
+  h1 { margin: 0 0 0.25rem; }
+  .sub { color: #888; margin: 0 0 1.5rem; font-size: 0.9rem; }
+  fieldset { border: 1px solid #ccc; border-radius: 6px; padding: 0.75rem 1rem; margin-bottom: 1rem; }
+  legend { padding: 0 0.4rem; font-weight: 600; }
+  button { padding: 0.5rem 1rem; border: 1px solid #888; border-radius: 4px; background: #f3f3f3; cursor: pointer; font-size: 14px; }
+  button:disabled { opacity: 0.5; cursor: not-allowed; }
+  table { width: 100%; border-collapse: collapse; margin-top: 1rem; font-family: var(--mono); font-size: 13px; }
+  th, td { padding: 0.4rem 0.6rem; text-align: left; border-bottom: 1px solid #ddd; }
+  th { background: #f0f0f0; font-weight: 600; }
+  td.num { text-align: right; font-variant-numeric: tabular-nums; }
+  .winner { background: rgba(0, 180, 0, 0.12); font-weight: 600; }
+  .log { font-family: var(--mono); font-size: 12px; background: #f8f8f8; padding: 0.5rem; border-radius: 4px; max-height: 12rem; overflow: auto; white-space: pre-wrap; }
+  .err { color: #b22; }
+  @media (prefers-color-scheme: dark) {
+    .log, th { background: #1e1e1e; }
+    fieldset { border-color: #444; }
+    button { background: #2a2a2a; color: #eee; border-color: #666; }
+    th { color: #eee; }
+    td { border-bottom-color: #333; }
+    .winner { background: rgba(60, 220, 60, 0.18); }
+  }
+</style>
+</head>
+<body>
+<h1>ztok-wasm vs tiktoken-js</h1>
+<p class="sub">Single-threaded, in-browser, same corpus through both encoders. ztok is a Zig 0.16 BPE engine cross-compiled to <code>wasm32-freestanding</code> (~310 KB ungzipped, 109 KB gzip), <strong>with the WebAssembly SIMD128 proposal enabled</strong> so the BPE merge loop's min-scan uses <code>i32x4.min_u</code> opcodes. tiktoken-js is OpenAI's reference TS port. Both consume the same <code>cl100k_base.tiktoken</code> file, so the merge tables are bit-identical.</p>
+<p class="sub" id="simd-status"></p>
+
+<fieldset>
+  <legend>1. Vocab</legend>
+  <p style="margin:0 0 0.5rem">Pick <code>cl100k_base.tiktoken</code> (get it from <a href="https://huggingface.co/Xenova/openai-cl100k_base/tree/main">huggingface.co/Xenova/openai-cl100k_base</a> or the openai/tiktoken repo). Both engines load from this exact byte buffer.</p>
+  <input id="vocab" type="file" accept=".tiktoken,.txt,application/octet-stream">
+  <span id="vocab-status" class="sub"></span>
+</fieldset>
+
+<fieldset>
+  <legend>2. Corpus</legend>
+  <label><input type="radio" name="corpus" value="builtin" checked> Built-in 100 KB Wikipedia-ish sample (vendored as <code>corpus-small.txt</code>)</label><br>
+  <label><input type="radio" name="corpus" value="custom"> Upload your own</label>
+  <input id="corpus-file" type="file" accept=".txt,text/plain" style="margin-left:1.5rem" disabled>
+  <span id="corpus-status" class="sub"></span>
+</fieldset>
+
+<fieldset>
+  <legend>3. Run</legend>
+  <button id="run" disabled>Run bench</button>
+  <span class="sub" style="margin-left:1rem">repeats: <input id="iters" type="number" value="3" min="1" max="20" style="width:4rem"></span>
+</fieldset>
+
+<div id="results"></div>
+<div id="log" class="log"></div>
+
+<script type="module">
+"use strict";
+
+// ---- log helper -----------------------------------------------------
+const logEl = document.getElementById("log");
+function log(msg) { logEl.textContent += msg + "\n"; logEl.scrollTop = logEl.scrollHeight; }
+function logErr(msg) { logEl.innerHTML += `<span class="err">${msg}</span>\n`; logEl.scrollTop = logEl.scrollHeight; }
+
+// ---- SIMD128 feature detection -------------------------------------
+// Standard `WebAssembly.validate` probe: a module that returns a
+// `v128.const 0...0` value. Runtimes lacking simd128 reject the
+// v128 type. Body layout:
+//   locals_count(1) + v128.const(2) + 16-byte immediate + end(1) = 20 B
+const SIMD_PROBE = new Uint8Array([
+  0x00,0x61,0x73,0x6d, 0x01,0x00,0x00,0x00,
+  0x01,0x05,0x01,0x60,0x00,0x01,0x7b,   // type sec: () -> v128
+  0x03,0x02,0x01,0x00,                  // func 0 of type 0
+  0x0a,0x16,0x01,0x14,0x00,             // code sec: 1 func, body=20, locals=0
+  0xfd,0x0c,                            // v128.const
+  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+  0x0b,                                 // end
+]);
+const HAS_SIMD = WebAssembly.validate(SIMD_PROBE);
+{
+  const el = document.getElementById("simd-status");
+  if (HAS_SIMD) {
+    el.innerHTML = "<strong>SIMD128:</strong> &#x2713; supported &mdash; using the SIMD-enabled wasm build.";
+  } else {
+    el.innerHTML = "<strong style='color:#b22'>SIMD128: &#x2717; NOT supported</strong> by this browser. " +
+      "ztok-wasm refuses to load. Upgrade to Chrome 91+, Firefox 89+, or Safari 16.4+.";
+  }
+}
+
+// ---- ztok wasm loader -----------------------------------------------
+let ztok = null;
+let ztokPipe = 0;
+
+async function initZtok() {
+  if (!HAS_SIMD) {
+    throw new Error("browser lacks wasm SIMD128 — cannot load ztok_browser.wasm. " +
+      "Build the scalar fallback with `zig build ztok-wasm-browser-scalar` and load " +
+      "that instead if you need to support legacy browsers.");
+  }
+  const resp = await fetch("ztok_browser.wasm");
+  if (!resp.ok) throw new Error(`fetch ztok wasm: ${resp.status}`);
+  const { instance } = await WebAssembly.instantiateStreaming(resp, {});
+  ztok = instance.exports;
+  const v = new TextDecoder().decode(new Uint8Array(ztok.memory.buffer,
+    ztok.ztok_version_ptr(), ztok.ztok_version_len()));
+  log(`ztok wasm loaded (version ${v}, SIMD128)`);
+}
+
+function ztokLoadVocab(bytes) {
+  if (ztokPipe !== 0) { ztok.ztok_pipeline_free(ztokPipe); ztokPipe = 0; }
+  const vp = ztok.ztok_malloc(bytes.length);
+  new Uint8Array(ztok.memory.buffer).set(bytes, vp);
+  const sp = ztok.ztok_malloc(4);
+  ztokPipe = ztok.ztok_pipeline_new_bpe_from_tiktoken_bytes(vp, bytes.length, sp);
+  const st = new Int32Array(ztok.memory.buffer, sp, 1)[0];
+  ztok.ztok_free(vp); ztok.ztok_free(sp);
+  if (st !== 0 || ztokPipe === 0) throw new Error(`ztok load: status ${st}`);
+}
+
+function ztokEncode(bytes) {
+  const ip = ztok.ztok_malloc(bytes.length);
+  new Uint8Array(ztok.memory.buffer).set(bytes, ip);
+  const out = ztok.ztok_malloc(8);
+  const rc = ztok.ztok_encode(ztokPipe, ip, bytes.length, out, out + 4);
+  if (rc !== 0) {
+    ztok.ztok_free(ip); ztok.ztok_free(out);
+    throw new Error(`ztok encode rc=${rc}`);
+  }
+  const u32 = new Uint32Array(ztok.memory.buffer);
+  const idsPtr = u32[out >>> 2];
+  const idsLen = u32[(out + 4) >>> 2];
+  // Copy out so a subsequent grow doesn't invalidate our view.
+  const ids = new Uint32Array(idsLen);
+  ids.set(new Uint32Array(ztok.memory.buffer, idsPtr, idsLen));
+  if (idsPtr !== 0) ztok.ztok_free(idsPtr);
+  ztok.ztok_free(ip); ztok.ztok_free(out);
+  return ids;
+}
+
+// ---- tiktoken-js loader ---------------------------------------------
+// Xenova's @dqbd/tiktoken via jsdelivr ESM. The package exposes
+// `init`, `Tiktoken`, and a `cl100k_base` factory we drive from a raw
+// byte buffer.
+//
+// Network paths can be flaky; we surface failures into the log so the
+// user knows the bench couldn't compare.
+let tiktokenMod = null;
+let tiktokenEnc = null;
+
+async function initTiktoken() {
+  log("loading tiktoken-js from jsdelivr...");
+  // Try the lite wasm-backed build first; fall back to the JS build.
+  // The lite import is what works in the browser.
+  try {
+    tiktokenMod = await import("https://cdn.jsdelivr.net/npm/js-tiktoken@1.0.21/dist/lite.js");
+    log("loaded js-tiktoken (pure JS, lite)");
+    return "js-tiktoken";
+  } catch (e) {
+    log("js-tiktoken load failed: " + e.message);
+  }
+  try {
+    tiktokenMod = await import("https://cdn.jsdelivr.net/npm/@dqbd/tiktoken@1.0.21/lite/+esm");
+    if (tiktokenMod.init) await tiktokenMod.init(async () => {
+      const w = await fetch("https://cdn.jsdelivr.net/npm/@dqbd/tiktoken@1.0.21/lite/tiktoken_bg.wasm");
+      return await w.arrayBuffer();
+    });
+    log("loaded @dqbd/tiktoken lite (wasm)");
+    return "@dqbd/tiktoken";
+  } catch (e) {
+    logErr("tiktoken-js load failed: " + e.message);
+    throw e;
+  }
+}
+
+function tiktokenLoadVocab(bytes, kind) {
+  // The two libs differ in how they instantiate from a tiktoken
+  // vocab; both ultimately want the same { bpe_ranks, special_tokens,
+  // pat_str } shape that js-tiktoken's `Tiktoken` ctor takes.
+  const decoded = parseCl100kVocab(bytes);
+  if (kind === "js-tiktoken") {
+    tiktokenEnc = new tiktokenMod.Tiktoken(decoded);
+  } else {
+    tiktokenEnc = new tiktokenMod.Tiktoken(decoded);
+  }
+}
+
+// cl100k pat_str — must match what tiktoken-js expects byte-for-byte.
+const CL100K_PAT = "(?i:'s|'t|'re|'ve|'m|'ll|'d)|[^\\r\\n\\p{L}\\p{N}]?\\p{L}+|\\p{N}{1,3}| ?[^\\s\\p{L}\\p{N}]+[\\r\\n]*|\\s*[\\r\\n]+|\\s+(?!\\S)|\\s+";
+
+function parseCl100kVocab(bytes) {
+  // tiktoken-js wants { bpe_ranks: "<base64> <rank>\n...", ... }.
+  // Conveniently that IS the on-disk format of cl100k_base.tiktoken,
+  // so we just decode it as UTF-8 and hand it back.
+  const text = new TextDecoder().decode(bytes);
+  return {
+    bpe_ranks: text,
+    special_tokens: {
+      "<|endoftext|>": 100257,
+      "<|fim_prefix|>": 100258,
+      "<|fim_middle|>": 100259,
+      "<|fim_suffix|>": 100260,
+      "<|endofprompt|>": 100276,
+    },
+    pat_str: CL100K_PAT,
+  };
+}
+
+function tiktokenEncode(bytes) {
+  // tiktoken-js encode takes a string; the corpus we benchmark is UTF-8
+  // text so decode once.
+  const text = new TextDecoder().decode(bytes);
+  return tiktokenEnc.encode(text);
+}
+
+// ---- corpus ---------------------------------------------------------
+let corpusBytes = null;
+
+async function loadBuiltinCorpus() {
+  const resp = await fetch("corpus-small.txt");
+  if (!resp.ok) throw new Error(`fetch corpus: ${resp.status}`);
+  corpusBytes = new Uint8Array(await resp.arrayBuffer());
+}
+
+// ---- bench loop -----------------------------------------------------
+function runOne(name, encodeFn, bytes, iters) {
+  // Warmup.
+  for (let i = 0; i < 2; i++) encodeFn(bytes);
+  const t0 = performance.now();
+  let totalIds = 0;
+  for (let i = 0; i < iters; i++) {
+    const ids = encodeFn(bytes);
+    totalIds += ids.length;
+  }
+  const ms = performance.now() - t0;
+  const totalBytes = bytes.length * iters;
+  const mbps = (totalBytes / 1e6) / (ms / 1000);
+  return { name, ms, mbps, ids_per_call: totalIds / iters };
+}
+
+// ---- UI -------------------------------------------------------------
+document.querySelectorAll('input[name="corpus"]').forEach((r) =>
+  r.addEventListener("change", () => {
+    const custom = document.querySelector('input[name="corpus"]:checked').value === "custom";
+    document.getElementById("corpus-file").disabled = !custom;
+  }));
+
+document.getElementById("corpus-file").addEventListener("change", async (e) => {
+  const f = e.target.files[0]; if (!f) return;
+  corpusBytes = new Uint8Array(await f.arrayBuffer());
+  document.getElementById("corpus-status").textContent = ` ${f.name} (${corpusBytes.length} bytes)`;
+});
+
+document.getElementById("vocab").addEventListener("change", async (e) => {
+  const f = e.target.files[0]; if (!f) return;
+  const bytes = new Uint8Array(await f.arrayBuffer());
+  try {
+    document.getElementById("vocab-status").textContent = " loading...";
+    if (!ztok) await initZtok();
+    const tk = await initTiktoken();
+    ztokLoadVocab(bytes);
+    tiktokenLoadVocab(bytes, tk);
+    document.getElementById("vocab-status").textContent =
+      ` ${f.name} (${(bytes.length/1024).toFixed(0)} KB) loaded into both engines.`;
+    document.getElementById("run").disabled = false;
+  } catch (err) {
+    document.getElementById("vocab-status").innerHTML = `<span class="err">${err.message}</span>`;
+  }
+});
+
+document.getElementById("run").addEventListener("click", async () => {
+  try {
+    if (!corpusBytes) {
+      const which = document.querySelector('input[name="corpus"]:checked').value;
+      if (which === "builtin") await loadBuiltinCorpus();
+      else { logErr("upload a corpus first"); return; }
+    }
+    const iters = parseInt(document.getElementById("iters").value, 10) || 3;
+    log(`\ncorpus=${corpusBytes.length} bytes, iters=${iters}`);
+
+    const zRes = runOne("ztok-wasm", ztokEncode, corpusBytes, iters);
+    log(`ztok-wasm:    ${zRes.ms.toFixed(0)} ms, ${zRes.mbps.toFixed(2)} MB/s, ${zRes.ids_per_call} ids`);
+
+    const tRes = runOne("tiktoken-js", tiktokenEncode, corpusBytes, iters);
+    log(`tiktoken-js:  ${tRes.ms.toFixed(0)} ms, ${tRes.mbps.toFixed(2)} MB/s, ${tRes.ids_per_call} ids`);
+
+    const ids_match = zRes.ids_per_call === tRes.ids_per_call;
+    log(`id counts match: ${ids_match}`);
+
+    const tbl = document.getElementById("results");
+    const zw = zRes.mbps >= tRes.mbps;
+    tbl.innerHTML = `
+      <table>
+        <thead><tr><th>engine</th><th class="num">elapsed (ms)</th><th class="num">throughput (MB/s)</th><th class="num">ids/encode</th></tr></thead>
+        <tbody>
+          <tr class="${zw ? "winner" : ""}"><td>ztok-wasm</td><td class="num">${zRes.ms.toFixed(0)}</td><td class="num">${zRes.mbps.toFixed(2)}</td><td class="num">${zRes.ids_per_call}</td></tr>
+          <tr class="${zw ? "" : "winner"}"><td>tiktoken-js</td><td class="num">${tRes.ms.toFixed(0)}</td><td class="num">${tRes.mbps.toFixed(2)}</td><td class="num">${tRes.ids_per_call}</td></tr>
+        </tbody>
+      </table>`;
+  } catch (err) {
+    logErr(err.message);
+  }
+});
+
+// Eager-init both engines so the user only waits on the vocab.
+initZtok().catch((e) => logErr("ztok init: " + e.message));
+</script>
+</body>
+</html>

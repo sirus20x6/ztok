@@ -1,0 +1,261 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ztok wasm demo</title>
+<style>
+  :root { color-scheme: light dark; --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace; }
+  body { font-family: system-ui, -apple-system, sans-serif; max-width: 960px; margin: 2rem auto; padding: 0 1rem; line-height: 1.4; }
+  h1 { margin: 0 0 0.25rem; }
+  .sub { color: #888; margin: 0 0 1.5rem; font-size: 0.9rem; }
+  fieldset { border: 1px solid #ccc; border-radius: 6px; padding: 0.75rem 1rem; margin-bottom: 1rem; }
+  legend { padding: 0 0.4rem; font-weight: 600; }
+  textarea { width: 100%; box-sizing: border-box; min-height: 6rem; font-family: var(--mono); font-size: 13px; padding: 0.5rem; border: 1px solid #ccc; border-radius: 4px; }
+  button { padding: 0.4rem 0.9rem; border: 1px solid #888; border-radius: 4px; background: #f3f3f3; cursor: pointer; }
+  button:disabled { opacity: 0.5; cursor: not-allowed; }
+  button + button { margin-left: 0.5rem; }
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+  .pane { background: #f8f8f8; padding: 0.5rem; border-radius: 4px; min-height: 4rem; font-family: var(--mono); font-size: 12px; white-space: pre-wrap; word-break: break-word; }
+  .pane h3 { margin: 0 0 0.3rem; font-size: 0.85rem; color: #555; text-transform: uppercase; letter-spacing: 0.04em; }
+  .id { display: inline-block; padding: 1px 4px; margin: 1px; border-radius: 3px; background: #ddd; }
+  .id[data-h="0"] { background: #ffe2e2; } .id[data-h="1"] { background: #ffe9d6; }
+  .id[data-h="2"] { background: #fff3c1; } .id[data-h="3"] { background: #e1f7c1; }
+  .id[data-h="4"] { background: #c4f5e9; } .id[data-h="5"] { background: #c1e1ff; }
+  .id[data-h="6"] { background: #d6c1ff; } .id[data-h="7"] { background: #ffc1ed; }
+  .stats { font-family: var(--mono); font-size: 12px; color: #555; margin-top: 0.5rem; }
+  .err { color: #b22; font-family: var(--mono); }
+  @media (prefers-color-scheme: dark) {
+    .pane { background: #1e1e1e; }
+    .id { background: #333; color: #eee; }
+    fieldset { border-color: #444; }
+    button { background: #2a2a2a; color: #eee; border-color: #666; }
+  }
+</style>
+</head>
+<body>
+<h1>ztok wasm demo</h1>
+<p class="sub">In-browser BPE tokenizer. Loads <code>ztok_browser.wasm</code> (~310 KB, built with WebAssembly SIMD128 enabled), parses a tiktoken vocab in the page, encodes locally — no network round-trip. <span id="ver"></span></p>
+<p class="sub" id="simd-status"></p>
+
+<fieldset>
+  <legend>1. Load vocab</legend>
+  <p style="margin:0 0 0.5rem">Pick a <code>.tiktoken</code> file. <code>cl100k_base.tiktoken</code> from the openai/tiktoken repo works as-is. The cl100k pre-tokenizer is hard-wired (so this demo expects a cl100k-style vocab).</p>
+  <input id="vocab" type="file" accept=".tiktoken,.txt,application/octet-stream">
+  <span id="vocab-status" class="stats"></span>
+</fieldset>
+
+<fieldset>
+  <legend>2. Encode</legend>
+  <textarea id="input" placeholder="Paste text here...">The quick brown fox jumps over the lazy dog.</textarea>
+  <div style="margin-top:0.5rem">
+    <button id="encode" disabled>Encode</button>
+    <button id="bench" disabled>Bench (×100)</button>
+    <span id="bench-result" class="stats"></span>
+  </div>
+</fieldset>
+
+<div class="grid">
+  <div class="pane">
+    <h3>Token ids</h3>
+    <div id="ids"></div>
+    <div id="ids-stats" class="stats"></div>
+  </div>
+  <div class="pane">
+    <h3>Decoded round-trip</h3>
+    <div id="decoded"></div>
+    <div id="decode-stats" class="stats"></div>
+  </div>
+</div>
+
+<p class="sub" style="margin-top:1.5rem"><strong>note:</strong> some browsers refuse to <code>fetch</code> a local <code>file://</code> wasm. If <code>index.html</code> fails to load the wasm, run <code>python3 -m http.server</code> from this directory and visit <code>http://localhost:8000</code> instead.</p>
+
+<script type="module">
+"use strict";
+
+// ---- SIMD128 feature detection -------------------------------------
+// Standard `WebAssembly.validate` probe: a module returning a
+// `v128.const 0..0`. Runtimes without simd128 reject the v128 type.
+const SIMD_PROBE = new Uint8Array([
+  0x00,0x61,0x73,0x6d, 0x01,0x00,0x00,0x00,
+  0x01,0x05,0x01,0x60,0x00,0x01,0x7b,
+  0x03,0x02,0x01,0x00,
+  0x0a,0x16,0x01,0x14,0x00,
+  0xfd,0x0c,
+  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+  0x0b,
+]);
+const HAS_SIMD = WebAssembly.validate(SIMD_PROBE);
+{
+  const el = document.getElementById("simd-status");
+  if (HAS_SIMD) {
+    el.innerHTML = "<strong>SIMD128:</strong> &#x2713; available";
+  } else {
+    el.innerHTML = "<strong style='color:#b22'>SIMD128: &#x2717; not supported by this browser.</strong> " +
+      "ztok-wasm requires it (since 2026 the SIMD opcodes are baseline in the BPE merge loop). " +
+      "Upgrade to Chrome 91+ / Firefox 89+ / Safari 16.4+.";
+  }
+}
+
+// ---- wasm loader ----------------------------------------------------
+//
+// Single instance, lazily created. We can't reuse it across vocabs
+// safely (allocator state would leak across loads if a previous
+// pipeline wasn't freed); but the encode/decode/free wrappers below
+// pair every alloc with a free.
+
+let exp = null;
+let memU8 = () => new Uint8Array(exp.memory.buffer);
+let memU32 = () => new Uint32Array(exp.memory.buffer);
+let memI32 = () => new Int32Array(exp.memory.buffer);
+
+async function loadWasm() {
+  if (!HAS_SIMD) {
+    throw new Error("browser lacks WebAssembly SIMD128 — ztok_browser.wasm won't instantiate. " +
+      "Build a scalar fallback via `zig build ztok-wasm-browser-scalar` if you need to support older browsers.");
+  }
+  // No syscalls, no WASI — bare instantiate.
+  const resp = await fetch("ztok_browser.wasm");
+  if (!resp.ok) throw new Error(`fetch failed: ${resp.status}`);
+  const { instance } = await WebAssembly.instantiateStreaming(resp, {});
+  exp = instance.exports;
+  const verPtr = exp.ztok_version_ptr();
+  const verLen = exp.ztok_version_len();
+  const ver = new TextDecoder().decode(memU8().subarray(verPtr, verPtr + verLen));
+  document.getElementById("ver").textContent = `loaded ztok ${ver}.`;
+}
+
+// ---- helpers --------------------------------------------------------
+// Each `malloc/free` pair is wrapped so we can't leak on exceptions.
+
+function withBuf(bytes, fn) {
+  const ptr = exp.ztok_malloc(bytes.length);
+  if (ptr === 0) throw new Error("ztok_malloc returned 0");
+  memU8().set(bytes, ptr);
+  try { return fn(ptr); } finally { exp.ztok_free(ptr); }
+}
+
+function readU32(ptr) { return memU32()[ptr >>> 2]; }
+function readI32(ptr) { return memI32()[ptr >>> 2]; }
+
+// ---- pipeline state -------------------------------------------------
+
+let pipePtr = 0;
+
+function freePipeline() {
+  if (pipePtr !== 0) { exp.ztok_pipeline_free(pipePtr); pipePtr = 0; }
+}
+
+async function loadVocab(file) {
+  if (!exp) await loadWasm();
+  freePipeline();
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  const t0 = performance.now();
+  pipePtr = withBuf(bytes, (vp) => {
+    const statusPtr = exp.ztok_malloc(4);
+    try {
+      const p = exp.ztok_pipeline_new_bpe_from_tiktoken_bytes(vp, bytes.length, statusPtr);
+      const st = readI32(statusPtr);
+      if (st !== 0 || p === 0) throw new Error(`pipeline_new status=${st}`);
+      return p;
+    } finally { exp.ztok_free(statusPtr); }
+  });
+  const ms = (performance.now() - t0).toFixed(1);
+  document.getElementById("vocab-status").textContent =
+    `loaded ${file.name} (${(bytes.length/1024).toFixed(1)} KB) in ${ms} ms`;
+  document.getElementById("encode").disabled = false;
+  document.getElementById("bench").disabled = false;
+}
+
+// ---- encode / decode ------------------------------------------------
+
+function encode(text) {
+  const input = new TextEncoder().encode(text);
+  return withBuf(input, (ip) => {
+    // Two contiguous u32 out-slots.
+    const out = exp.ztok_malloc(8);
+    try {
+      const rc = exp.ztok_encode(pipePtr, ip, input.length, out, out + 4);
+      if (rc !== 0) throw new Error(`encode rc=${rc}`);
+      const idsPtr = readU32(out);
+      const idsLen = readU32(out + 4);
+      const ids = Array.from(new Uint32Array(exp.memory.buffer, idsPtr, idsLen));
+      if (idsPtr !== 0) exp.ztok_free(idsPtr);
+      return ids;
+    } finally { exp.ztok_free(out); }
+  });
+}
+
+function decode(ids) {
+  const buf = new Uint32Array(ids);
+  const byteView = new Uint8Array(buf.buffer);
+  return withBuf(byteView, (idsPtr) => {
+    const out = exp.ztok_malloc(8);
+    try {
+      const rc = exp.ztok_decode(pipePtr, idsPtr, ids.length, out, out + 4);
+      if (rc !== 0) throw new Error(`decode rc=${rc}`);
+      const bytesPtr = readU32(out);
+      const bytesLen = readU32(out + 4);
+      const decoded = new TextDecoder().decode(new Uint8Array(exp.memory.buffer, bytesPtr, bytesLen));
+      if (bytesPtr !== 0) exp.ztok_free(bytesPtr);
+      return decoded;
+    } finally { exp.ztok_free(out); }
+  });
+}
+
+// ---- UI wiring ------------------------------------------------------
+
+document.getElementById("vocab").addEventListener("change", async (e) => {
+  const f = e.target.files[0]; if (!f) return;
+  try { await loadVocab(f); } catch (err) {
+    document.getElementById("vocab-status").innerHTML =
+      `<span class="err">${err.message}</span>`;
+  }
+});
+
+document.getElementById("encode").addEventListener("click", () => {
+  const text = document.getElementById("input").value;
+  try {
+    const t0 = performance.now();
+    const ids = encode(text);
+    const tEnc = performance.now() - t0;
+
+    const t1 = performance.now();
+    const decoded = decode(ids);
+    const tDec = performance.now() - t1;
+
+    const idsHtml = ids.map((id, i) =>
+      `<span class="id" data-h="${i & 7}" title="id ${id}">${id}</span>`).join("");
+    document.getElementById("ids").innerHTML = idsHtml;
+    document.getElementById("ids-stats").textContent =
+      `${ids.length} ids, ${text.length} bytes, ${(text.length/ids.length).toFixed(2)} bytes/token, encode ${tEnc.toFixed(2)} ms`;
+
+    document.getElementById("decoded").textContent = decoded;
+    document.getElementById("decode-stats").textContent =
+      `${decoded.length} bytes, decode ${tDec.toFixed(2)} ms, round-trip ${decoded === text ? "OK" : "MISMATCH"}`;
+  } catch (err) {
+    document.getElementById("ids").innerHTML = `<span class="err">${err.message}</span>`;
+  }
+});
+
+document.getElementById("bench").addEventListener("click", () => {
+  const text = document.getElementById("input").value;
+  if (text.length === 0) return;
+  const iters = 100;
+  // Warmup so JIT + allocator stabilize.
+  for (let i = 0; i < 5; i++) encode(text);
+  const t0 = performance.now();
+  for (let i = 0; i < iters; i++) encode(text);
+  const ms = performance.now() - t0;
+  const totalBytes = text.length * iters;
+  const mbps = (totalBytes / 1e6) / (ms / 1000);
+  document.getElementById("bench-result").textContent =
+    `${iters} encodes of ${text.length} B in ${ms.toFixed(1)} ms → ${mbps.toFixed(2)} MB/s`;
+});
+
+loadWasm().catch((e) => {
+  document.getElementById("ver").innerHTML = `<span class="err">wasm load failed: ${e.message}</span>`;
+});
+</script>
+</body>
+</html>

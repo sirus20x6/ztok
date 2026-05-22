@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <LangVersion>12</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <!-- CS1591: tolerate missing XML docs on internal helpers.
+         CA2255: ModuleInitializer is the documented way to install a
+                 DllImportResolver before the first P/Invoke; the analyzer's
+                 warning targets app code that shouldn't rely on it, but
+                 library FFI setup is a legitimate use. -->
+    <NoWarn>$(NoWarn);CS1591;CA2255</NoWarn>
+
+    <!-- NuGet metadata -->
+    <PackageId>Ztok</PackageId>
+    <Version>1.23.0</Version>
+    <Authors>ztok contributors</Authors>
+    <Description>Idiomatic .NET binding for libztok, a fast multithreaded tokenizer library written in Zig. Wraps the stable C ABI declared in include/ztok.h.</Description>
+    <PackageTags>tokenizer;nlp;bpe;tiktoken;wordpiece;sentencepiece;ffi;native;zig</PackageTags>
+    <RepositoryUrl>https://github.com/sirus20x6/ztok</RepositoryUrl>
+    <PackageLicenseExpression>AGPL-3.0-only</PackageLicenseExpression>
+  </PropertyGroup>
+
+</Project>

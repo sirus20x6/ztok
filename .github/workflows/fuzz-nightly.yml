@@ -1,0 +1,341 @@
+# ztok nightly fuzz suite.
+#
+# Runs all five fuzz harnesses (Zig + Python + Node + Ruby + Go bindings)
+# every night at 04:37 UTC, deliberately off the :00 / :30 cron spikes
+# that pile up on GitHub-hosted runners. Each job picks a fresh 32-bit
+# seed derived from the run id so successive nights explore different
+# byte sequences; on failure the job files (or de-dups) a GitHub Issue
+# tagged `fuzz-failure` with the seed and the tail of the run log so
+# the failure is reproducible offline via:
+#
+#   FUZZ_SEED=<hex> ZTOK_FUZZ_ITERS=100000 <command from the issue>
+#
+# Each harness file accepts FUZZ_SEED (override) + ZTOK_FUZZ_ITERS /
+# ZTOK_FUZZ_BUDGET_SECS (scale knobs); the Go binding uses native
+# testing.F which drives its own coverage-guided mutator and doesn't
+# need either knob.
+#
+# Action pins: every action is pinned to a tagged release per the
+# project ops constraints.
+
+name: nightly fuzz
+
+on:
+  schedule:
+    - cron: '37 4 * * *'           # 04:37 UTC daily — off the :00/:30 spike
+  workflow_dispatch:               # manual trigger for testing
+
+# Allow filing issues on failure. `actions: read` is needed for
+# github-script to fetch the run URL.
+permissions:
+  contents: read
+  issues: write
+  actions: read
+
+# Don't pile up overlapping nightly runs if a previous one is still
+# going long (or if someone hand-fires workflow_dispatch on top of the
+# cron). Latest wins.
+concurrency:
+  group: fuzz-nightly-${{ github.workflow }}
+  cancel-in-progress: false
+
+env:
+  ZIG_VERSION: "0.16.0"
+
+jobs:
+  # ----------------------------------------------------------------
+  # Seed derivation: a single up-front job computes the per-run hex
+  # seed so every harness in the matrix uses the SAME value. That
+  # keeps cross-language repros sensible: if Python and Node fail on
+  # the same seed they're hitting the same byte sequence.
+  # ----------------------------------------------------------------
+  seed:
+    name: derive nightly seed
+    runs-on: ubuntu-24.04
+    outputs:
+      seed: ${{ steps.derive.outputs.seed }}
+    steps:
+      - name: Derive 32-bit seed from run id + timestamp
+        id: derive
+        shell: bash
+        run: |
+          # Mix run id with current epoch seconds so workflow_dispatch
+          # runs within the same minute still pick distinct seeds. Mask
+          # to 32 bits (the Node xorshift32 / Ruby Random / Python
+          # random / Zig PRNG all accept at least that much) and
+          # format as 0x-prefixed hex so each harness's parseInt /
+          # Number / Integer accepts it uniformly.
+          mix=$(( ${{ github.run_id }} ^ $(date +%s) ))
+          seed=$(printf '0x%08x' $(( mix & 0xffffffff )))
+          echo "seed=$seed" >> "$GITHUB_OUTPUT"
+          echo "Derived nightly seed: $seed"
+
+  # ----------------------------------------------------------------
+  # 1/5: Zig native fuzz harness. Runs the corpus-driven loop in
+  # fuzz/encode_decode.zig for 25 minutes of wall-clock (leaves 5 min
+  # slack against the 30-minute job timeout for setup/teardown).
+  # ----------------------------------------------------------------
+  zig-fuzz:
+    name: zig fuzz
+    needs: seed
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Zig
+        uses: mlugg/setup-zig@v2
+        with:
+          version: ${{ env.ZIG_VERSION }}
+
+      - name: Cache zig build artefacts
+        uses: actions/cache@v4
+        with:
+          path: |
+            .zig-cache
+            ~/.cache/zig
+          key: zig-fuzz-${{ env.ZIG_VERSION }}-${{ hashFiles('build.zig', 'build.zig.zon') }}
+          restore-keys: |
+            zig-fuzz-${{ env.ZIG_VERSION }}-
+
+      - name: Run zig fuzz harness (25 min budget)
+        id: run
+        env:
+          FUZZ_SEED: ${{ needs.seed.outputs.seed }}
+          ZTOK_FUZZ_BUDGET_SECS: "1500"
+        run: |
+          # Tee to a log so the failure step can attach the tail.
+          mkdir -p /tmp/ztok_fuzz
+          set -o pipefail
+          zig build fuzz 2>&1 | tee /tmp/ztok_fuzz/zig.log
+
+      - name: File issue on failure
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const seed = '${{ needs.seed.outputs.seed }}';
+            const job = 'zig-fuzz';
+            const title = `[fuzz-failure] ${job} (seed ${seed})`;
+            const repro = `FUZZ_SEED=${seed} ZTOK_FUZZ_BUDGET_SECS=1500 zig build fuzz`;
+            const logPath = '/tmp/ztok_fuzz/zig.log';
+            await require(`${process.env.GITHUB_WORKSPACE}/.github/workflows/fuzz-issue.js`)({
+              github, context, title, seed, job, repro, logPath,
+            });
+
+  # ----------------------------------------------------------------
+  # 2/5: Python binding fuzz. 100k iterations with the rotating seed.
+  # ----------------------------------------------------------------
+  python-fuzz:
+    name: python fuzz
+    needs: seed
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Zig
+        uses: mlugg/setup-zig@v2
+        with:
+          version: ${{ env.ZIG_VERSION }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Build libztok (ReleaseSafe)
+        run: zig build -Doptimize=ReleaseSafe
+
+      - name: Install Python binding
+        working-directory: bindings/python
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e . pytest
+
+      - name: Run python fuzz harness (100k iters)
+        env:
+          FUZZ_SEED: ${{ needs.seed.outputs.seed }}
+          ZTOK_FUZZ_ITERS: "100000"
+          ZTOK_LIB_PATH: ${{ github.workspace }}/zig-out/lib/libztok.so
+        run: |
+          mkdir -p /tmp/ztok_fuzz
+          set -o pipefail
+          python -m pytest bindings/python/tests/test_fuzz.py -v 2>&1 | tee /tmp/ztok_fuzz/python.log
+
+      - name: File issue on failure
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const seed = '${{ needs.seed.outputs.seed }}';
+            const job = 'python-fuzz';
+            const title = `[fuzz-failure] ${job} (seed ${seed})`;
+            const repro = `FUZZ_SEED=${seed} ZTOK_FUZZ_ITERS=100000 python -m pytest bindings/python/tests/test_fuzz.py -v`;
+            const logPath = '/tmp/ztok_fuzz/python.log';
+            await require(`${process.env.GITHUB_WORKSPACE}/.github/workflows/fuzz-issue.js`)({
+              github, context, title, seed, job, repro, logPath,
+            });
+
+  # ----------------------------------------------------------------
+  # 3/5: Node.js binding fuzz. 100k iters via node --test.
+  # ----------------------------------------------------------------
+  node-fuzz:
+    name: node fuzz
+    needs: seed
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Zig
+        uses: mlugg/setup-zig@v2
+        with:
+          version: ${{ env.ZIG_VERSION }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Build libztok (ReleaseSafe)
+        run: zig build -Doptimize=ReleaseSafe
+
+      - name: Install Node binding deps
+        working-directory: bindings/nodejs
+        run: npm install --no-audit --no-fund
+
+      - name: Run node fuzz harness (100k iters)
+        env:
+          FUZZ_SEED: ${{ needs.seed.outputs.seed }}
+          ZTOK_FUZZ_ITERS: "100000"
+          ZTOK_LIB_PATH: ${{ github.workspace }}/zig-out/lib/libztok.so
+        run: |
+          mkdir -p /tmp/ztok_fuzz
+          set -o pipefail
+          node --test bindings/nodejs/test/fuzz.test.js 2>&1 | tee /tmp/ztok_fuzz/node.log
+
+      - name: File issue on failure
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const seed = '${{ needs.seed.outputs.seed }}';
+            const job = 'node-fuzz';
+            const title = `[fuzz-failure] ${job} (seed ${seed})`;
+            const repro = `FUZZ_SEED=${seed} ZTOK_FUZZ_ITERS=100000 node --test bindings/nodejs/test/fuzz.test.js`;
+            const logPath = '/tmp/ztok_fuzz/node.log';
+            await require(`${process.env.GITHUB_WORKSPACE}/.github/workflows/fuzz-issue.js`)({
+              github, context, title, seed, job, repro, logPath,
+            });
+
+  # ----------------------------------------------------------------
+  # 4/5: Ruby binding fuzz. 100k iters via Minitest.
+  # ----------------------------------------------------------------
+  ruby-fuzz:
+    name: ruby fuzz
+    needs: seed
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Zig
+        uses: mlugg/setup-zig@v2
+        with:
+          version: ${{ env.ZIG_VERSION }}
+
+      - name: Set up Ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: "3.3"
+          bundler-cache: false
+
+      - name: Install ffi gem
+        run: gem install ffi --no-document
+
+      - name: Build libztok (ReleaseSafe)
+        run: zig build -Doptimize=ReleaseSafe
+
+      - name: Run ruby fuzz harness (100k iters)
+        env:
+          FUZZ_SEED: ${{ needs.seed.outputs.seed }}
+          ZTOK_FUZZ_ITERS: "100000"
+          ZTOK_LIB_PATH: ${{ github.workspace }}/zig-out/lib/libztok.so
+        working-directory: bindings/ruby
+        run: |
+          mkdir -p /tmp/ztok_fuzz
+          set -o pipefail
+          ruby -Ilib -Itest test/test_fuzz.rb 2>&1 | tee /tmp/ztok_fuzz/ruby.log
+
+      - name: File issue on failure
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const seed = '${{ needs.seed.outputs.seed }}';
+            const job = 'ruby-fuzz';
+            const title = `[fuzz-failure] ${job} (seed ${seed})`;
+            const repro = `FUZZ_SEED=${seed} ZTOK_FUZZ_ITERS=100000 ruby -Ilib -Itest bindings/ruby/test/test_fuzz.rb`;
+            const logPath = '/tmp/ztok_fuzz/ruby.log';
+            await require(`${process.env.GITHUB_WORKSPACE}/.github/workflows/fuzz-issue.js`)({
+              github, context, title, seed, job, repro, logPath,
+            });
+
+  # ----------------------------------------------------------------
+  # 5/5: Go binding fuzz. Native testing.F is coverage-guided so it
+  # drives its own mutator — we just hand it a 20-minute budget.
+  # No FUZZ_SEED needed; the per-job title still embeds the global
+  # seed so the issue dedups against the same nightly run.
+  # ----------------------------------------------------------------
+  go-fuzz:
+    name: go fuzz
+    needs: seed
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Zig
+        uses: mlugg/setup-zig@v2
+        with:
+          version: ${{ env.ZIG_VERSION }}
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.22"
+
+      - name: Build libztok (ReleaseSafe)
+        run: zig build -Doptimize=ReleaseSafe
+
+      - name: Run go fuzz harness (20 min)
+        env:
+          CGO_LDFLAGS: -L${{ github.workspace }}/zig-out/lib -lztok
+          CGO_CFLAGS: -I${{ github.workspace }}/zig-out/include
+          LD_LIBRARY_PATH: ${{ github.workspace }}/zig-out/lib
+          ZTOK_LIB_PATH: ${{ github.workspace }}/zig-out/lib/libztok.so
+        run: |
+          mkdir -p /tmp/ztok_fuzz
+          set -o pipefail
+          go test -fuzz=FuzzRoundTrip -fuzztime=20m ./bindings/go/... 2>&1 | tee /tmp/ztok_fuzz/go.log
+
+      - name: File issue on failure
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const seed = '${{ needs.seed.outputs.seed }}';
+            const job = 'go-fuzz';
+            const title = `[fuzz-failure] ${job} (seed ${seed})`;
+            const repro = `go test -fuzz=FuzzRoundTrip -fuzztime=20m ./bindings/go/...`;
+            const logPath = '/tmp/ztok_fuzz/go.log';
+            await require(`${process.env.GITHUB_WORKSPACE}/.github/workflows/fuzz-issue.js`)({
+              github, context, title, seed, job, repro, logPath,
+            });
