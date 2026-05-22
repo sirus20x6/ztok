@@ -154,6 +154,10 @@ jobs:
         if: steps.detect_go.outputs.present == 'true'
         working-directory: bindings/go
         env:
+          # Default Go build resolves via `#cgo pkg-config: ztok`; point
+          # pkg-config at the ztok.pc that `zig build` installs. CGO_*
+          # are kept as a belt-and-suspenders fallback.
+          PKG_CONFIG_PATH: ${{ github.workspace }}/zig-out/lib/pkgconfig
           CGO_LDFLAGS: -L${{ github.workspace }}/zig-out/lib -lztok
           CGO_CFLAGS: -I${{ github.workspace }}/zig-out/include
           LD_LIBRARY_PATH: ${{ github.workspace }}/zig-out/lib
