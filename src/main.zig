@@ -267,6 +267,7 @@ const Args = struct {
     vocab_root: ?[]const u8 = null,
     iters: ?u32 = null,
     corpus_bytes: ?usize = null,
+    corpus_file: ?[]const u8 = null,
     // merge-vocab
     on_conflict: ?[]const u8 = null,
     prefix_b: ?[]const u8 = null,
@@ -509,6 +510,10 @@ const Args = struct {
             } else if (std.mem.eql(u8, tok, "--corpus-bytes")) {
                 if (i + 1 >= raw.len) return error.MissingValue;
                 a.corpus_bytes = try std.fmt.parseInt(usize, raw[i + 1], 10);
+                i += 1;
+            } else if (std.mem.eql(u8, tok, "--corpus-file")) {
+                if (i + 1 >= raw.len) return error.MissingValue;
+                a.corpus_file = raw[i + 1];
                 i += 1;
             } else if (std.mem.eql(u8, tok, "--seq-len")) {
                 if (i + 1 >= raw.len) return error.MissingValue;
@@ -2013,6 +2018,7 @@ fn cmdBench(gpa: std.mem.Allocator, raw: []const []const u8, out: *std.Io.Writer
         .vocab_root = vocab_root,
         .format = fmt,
         .corpus_bytes = args.corpus_bytes orelse (1024 * 1024),
+        .corpus_file = args.corpus_file,
     }, out);
     defer result.deinit(gpa);
     try out.flush();

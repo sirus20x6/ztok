@@ -166,6 +166,11 @@ pub const BenchOptions = struct {
     /// hit the encode hot path and small enough to keep `--quick`
     /// runs sub-second.
     corpus_bytes: usize = 1024 * 1024,
+    /// Read the benchmark corpus from this file instead of synthesizing
+    /// one. Lets ztok and an external tokenizer (e.g. tiktoken via
+    /// `bench/bench_competitors.py --corpus PATH`) be timed on identical
+    /// bytes. When set, `corpus_bytes` is ignored.
+    corpus_file: ?[]const u8 = null,
     /// Skip batch shapes (single-thread only) — useful for
     /// non-batch hardware or for tracking single-thread regressions
     /// independently.
@@ -222,9 +227,13 @@ pub fn runBench(
     opts: BenchOptions,
     out: *std.Io.Writer,
 ) !BenchResult {
-    // Synthesize a fixed corpus once — every scenario runs against the
-    // same bytes so per-scenario throughputs are comparable.
-    const corpus = try synthesizeCorpus(allocator, opts.corpus_bytes);
+    // Either read a real corpus file (for cross-tokenizer comparison on
+    // identical bytes) or synthesize a fixed one. Every scenario runs
+    // against the same bytes so per-scenario throughputs are comparable.
+    const corpus = if (opts.corpus_file) |path| blk: {
+        const io = std.Io.Threaded.global_single_threaded.io();
+        break :blk try std.Io.Dir.cwd().readFileAlloc(io, path, allocator, .unlimited);
+    } else try synthesizeCorpus(allocator, opts.corpus_bytes);
     defer allocator.free(corpus);
 
     const selected: []const Scenario = if (opts.include) |inc| inc else &all_scenarios;
