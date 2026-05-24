@@ -475,6 +475,8 @@ pub const Error = error{
     OverlapTooLarge,
     /// `max_tokens == 0`.
     InvalidMaxTokens,
+    /// `stride == 0` (chunkIds) would never make progress.
+    InvalidStride,
 } || std.mem.Allocator.Error;
 
 /// Chunk `text` according to `opts`. The returned `ChunkResult` owns
@@ -591,6 +593,72 @@ pub fn chunkText(
         .chunks = out_chunks,
         .arena = arena,
     };
+}
+
+/// Window an ALREADY-ENCODED id stream into fixed `window`-token chunks
+/// advancing by `stride` tokens, without re-tokenizing. This is the
+/// "late chunking" entry point: embedding pipelines encode once, run the
+/// model over the full sequence, then split into windows here — so the
+/// id stream the embedder saw and the chunk boundaries agree exactly.
+///
+/// `offsets`, when non-null, must be parallel to `ids` (one `Span` per
+/// id) and supplies each chunk's `byte_start`/`byte_end` in the original
+/// input. When null, byte ranges are reported as 0 (token ranges are
+/// always exact). Overlap is `window - stride` when `stride < window`;
+/// `stride >= window` produces non-overlapping (and, if `stride >
+/// window`, gapped) windows. The returned `ChunkResult` owns an arena
+/// backing every chunk's `ids` slice, exactly like `chunkText`.
+pub fn chunkIds(
+    allocator: std.mem.Allocator,
+    ids: []const TokenId,
+    offsets: ?[]const Span,
+    window: u32,
+    stride: u32,
+) Error!ChunkResult {
+    if (window == 0) return error.InvalidMaxTokens;
+    if (stride == 0) return error.InvalidStride;
+    if (offsets) |off| std.debug.assert(off.len == ids.len);
+
+    var arena: std.heap.ArenaAllocator = .init(allocator);
+    errdefer arena.deinit();
+    const aa = arena.allocator();
+
+    if (ids.len == 0) {
+        return .{ .chunks = try aa.alloc(Chunk, 0), .arena = arena };
+    }
+
+    // One slab copy; every chunk's `ids` is a subslice of it.
+    const slab = try aa.alloc(TokenId, ids.len);
+    @memcpy(slab, ids);
+
+    const n_tokens: u32 = @intCast(ids.len);
+    const cap: usize = (@as(usize, n_tokens) / stride) + 2;
+
+    var chunks: std.ArrayList(Chunk) = .empty;
+    defer chunks.deinit(aa);
+    try chunks.ensureTotalCapacity(aa, cap);
+
+    var start: u32 = 0;
+    while (start < n_tokens) {
+        const end: u32 = @min(start + window, n_tokens);
+
+        const byte_start: u32 = if (offsets) |off| off[start].start else 0;
+        const byte_end: u32 = if (offsets) |off| off[end - 1].end else 0;
+
+        try chunks.append(aa, .{
+            .ids = slab[start..end],
+            .byte_start = byte_start,
+            .byte_end = byte_end,
+            .token_start = start,
+            .token_end = end,
+        });
+
+        if (end >= n_tokens) break;
+        start += stride;
+    }
+
+    const out_chunks = try aa.dupe(Chunk, chunks.items);
+    return .{ .chunks = out_chunks, .arena = arena };
 }
 
 /// Generic LEFT-snap: scan candidate chunk-end tokens in (start, hard_end]
@@ -1667,6 +1735,100 @@ test "chunk: overlapping stride correctness" {
         const a = res.chunks[i].ids;
         const b = res.chunks[i + 1].ids;
         try testing.expectEqualSlices(TokenId, a[a.len - 2 ..], b[0..2]);
+    }
+}
+
+test "chunkIds: non-overlapping windows over pre-encoded ids" {
+    const ids = [_]TokenId{ 10, 11, 12, 13, 14, 15, 16, 17, 18, 19 };
+    var res = try chunkIds(testing.allocator, &ids, null, 4, 4);
+    defer res.deinit();
+
+    try testing.expectEqual(@as(usize, 3), res.chunks.len);
+    try testing.expectEqualSlices(TokenId, &.{ 10, 11, 12, 13 }, res.chunks[0].ids);
+    try testing.expectEqualSlices(TokenId, &.{ 14, 15, 16, 17 }, res.chunks[1].ids);
+    try testing.expectEqualSlices(TokenId, &.{ 18, 19 }, res.chunks[2].ids);
+    // token ranges exact; byte ranges 0 with null offsets.
+    try testing.expectEqual(@as(u32, 0), res.chunks[0].token_start);
+    try testing.expectEqual(@as(u32, 4), res.chunks[0].token_end);
+    try testing.expectEqual(@as(u32, 8), res.chunks[2].token_start);
+    try testing.expectEqual(@as(u32, 10), res.chunks[2].token_end);
+    try testing.expectEqual(@as(u32, 0), res.chunks[0].byte_end);
+}
+
+test "chunkIds: overlapping windows (window=4, stride=2)" {
+    const ids = [_]TokenId{ 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 };
+    var res = try chunkIds(testing.allocator, &ids, null, 4, 2);
+    defer res.deinit();
+
+    // Windows: [0..4], [2..6], [4..8], [6..10].
+    try testing.expectEqual(@as(usize, 4), res.chunks.len);
+    try testing.expectEqual(@as(u32, 0), res.chunks[0].token_start);
+    try testing.expectEqual(@as(u32, 2), res.chunks[1].token_start);
+    try testing.expectEqual(@as(u32, 6), res.chunks[3].token_start);
+    try testing.expectEqual(@as(u32, 10), res.chunks[3].token_end);
+    // Overlap: chunk[i] last 2 ids == chunk[i+1] first 2.
+    var i: usize = 0;
+    while (i + 1 < res.chunks.len) : (i += 1) {
+        const a = res.chunks[i].ids;
+        const b = res.chunks[i + 1].ids;
+        try testing.expectEqualSlices(TokenId, a[a.len - 2 ..], b[0..2]);
+    }
+}
+
+test "chunkIds: offsets supply byte ranges" {
+    const ids = [_]TokenId{ 100, 101, 102, 103 };
+    // Pretend each token is 2 bytes wide in the source.
+    const offsets = [_]Span{
+        .{ .start = 0, .end = 2 },
+        .{ .start = 2, .end = 4 },
+        .{ .start = 4, .end = 6 },
+        .{ .start = 6, .end = 8 },
+    };
+    var res = try chunkIds(testing.allocator, &ids, &offsets, 2, 2);
+    defer res.deinit();
+
+    try testing.expectEqual(@as(usize, 2), res.chunks.len);
+    try testing.expectEqual(@as(u32, 0), res.chunks[0].byte_start);
+    try testing.expectEqual(@as(u32, 4), res.chunks[0].byte_end);
+    try testing.expectEqual(@as(u32, 4), res.chunks[1].byte_start);
+    try testing.expectEqual(@as(u32, 8), res.chunks[1].byte_end);
+}
+
+test "chunkIds: edge cases (empty, bad args)" {
+    // Empty ids -> zero chunks.
+    var res = try chunkIds(testing.allocator, &.{}, null, 4, 2);
+    res.deinit();
+
+    const ids = [_]TokenId{ 1, 2, 3 };
+    try testing.expectError(error.InvalidMaxTokens, chunkIds(testing.allocator, &ids, null, 0, 1));
+    try testing.expectError(error.InvalidStride, chunkIds(testing.allocator, &ids, null, 4, 0));
+}
+
+test "chunkIds: agrees with chunkText token windows (byte_id)" {
+    // Late-chunking invariant: encoding once and windowing the ids must
+    // match chunkText's .token-boundary windows over the same input.
+    var v = Vocab.empty(testing.allocator);
+    defer v.deinit();
+    const pipe = bytePipeline(&v);
+
+    var enc = try pipe.encodeWithOffsets(testing.allocator, "abcdefghij");
+    defer enc.deinit(testing.allocator);
+
+    var via_ids = try chunkIds(testing.allocator, enc.ids, enc.offsets, 4, 2);
+    defer via_ids.deinit();
+    var via_text = try chunkText(testing.allocator, pipe, "abcdefghij", .{
+        .max_tokens = 4,
+        .overlap_tokens = 2,
+    });
+    defer via_text.deinit();
+
+    try testing.expectEqual(via_text.chunks.len, via_ids.chunks.len);
+    for (via_text.chunks, via_ids.chunks) |t, d| {
+        try testing.expectEqual(t.token_start, d.token_start);
+        try testing.expectEqual(t.token_end, d.token_end);
+        try testing.expectEqual(t.byte_start, d.byte_start);
+        try testing.expectEqual(t.byte_end, d.byte_end);
+        try testing.expectEqualSlices(TokenId, t.ids, d.ids);
     }
 }
 

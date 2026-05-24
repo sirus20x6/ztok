@@ -295,6 +295,52 @@ ztok_status ztok_ngram_hash_batch(
 /* Free a uint64_t buffer returned by ztok_ngram_hash_batch. */
 void ztok_u64s_free(uint64_t* hashes);
 
+/* --- chunking ----------------------------------------------------- */
+
+/* One token-window chunk produced by ztok_chunk. `ids` points at a
+ * ztok-allocated buffer of `ids_len` token ids (NULL when ids_len==0).
+ * `byte_start`/`byte_end` are the half-open byte range this chunk covers
+ * in the ORIGINAL input; `token_start`/`token_end` the half-open
+ * token-index range in the full encoding. */
+typedef struct {
+    ztok_token_id* ids;
+    size_t ids_len;
+    uint32_t byte_start;
+    uint32_t byte_end;
+    uint32_t token_start;
+    uint32_t token_end;
+} ztok_chunk_rec;
+
+/* Boundary mode for ztok_chunk (mirrors chunk.Boundary). */
+typedef enum {
+    ZTOK_CHUNK_BOUNDARY_TOKEN     = 0, /* pure token-count windows */
+    ZTOK_CHUNK_BOUNDARY_CODEPOINT = 1, /* snap to UTF-8 codepoint boundary */
+    ZTOK_CHUNK_BOUNDARY_WORD      = 2, /* snap to whitespace word boundary */
+    ZTOK_CHUNK_BOUNDARY_WORD_DICT = 3, /* dict word boundary (CJK/Thai...) */
+    ZTOK_CHUNK_BOUNDARY_SENTENCE  = 4, /* snap to sentence boundary */
+    ZTOK_CHUNK_BOUNDARY_PARAGRAPH = 5, /* snap to \n\n */
+} ztok_chunk_boundary;
+
+/* Split `text` into windows of at most `max_tokens` tokens with `overlap`
+ * tokens shared between neighbors (stride = max_tokens - overlap).
+ * `out_chunks` is a caller-owned buffer of `out_cap` records. On success
+ * writes one record per chunk and sets *out_len to the chunk count. If
+ * `out_chunks` is NULL or too small, sets *out_len to the required count
+ * and returns ZTOK_BUFFER_TOO_SMALL without writing (no ids allocated).
+ * Empty input yields 0 chunks and ZTOK_OK. Returns ZTOK_ERR_INVALID_INPUT
+ * if max_tokens==0, overlap>=max_tokens, or boundary is out of range.
+ * Each written record's `ids` must be released with ztok_chunks_free. */
+ztok_status ztok_chunk(
+    const ztok_pipeline* pipeline,
+    const char* text, size_t text_len,
+    uint32_t max_tokens, uint32_t overlap, uint32_t boundary,
+    ztok_chunk_rec* out_chunks, size_t out_cap, size_t* out_len
+);
+
+/* Free the `ids` buffers of `n` chunk records written by ztok_chunk. The
+ * `chunks` array itself is caller-owned and is not freed. */
+void ztok_chunks_free(ztok_chunk_rec* chunks, size_t n);
+
 /* --- auto-detect -------------------------------------------------- */
 
 /* Best-effort vocab-format sniffer. Reads the first 256 bytes of `path`

@@ -4,7 +4,7 @@
 //!   ztok encode    --model PATH [--cl100k] [TEXT]
 //!   ztok decode    --model PATH ID...
 //!   ztok info      --model PATH
-//!   ztok chunk     --model PATH [--cl100k] --max-tokens N [--overlap N] [--boundary MODE] [--format jsonl|text] [TEXT]
+//!   ztok chunk     --model PATH [--cl100k] --max-tokens N [--overlap N] [--window N] [--stride M] [--boundary MODE] [--format jsonl|text] [TEXT]
 //!   ztok validate  --model PATH [--cl100k] [--checks CHECK1,CHECK2,...] [--format text|json] [--fixtures PATH]
 //!   ztok roundtrip --model PATH [--cl100k] [--optimal] [--summary] [INPUT_FILE|--stdin]
 //!   ztok diff      --a PATH --b PATH [--cl100k] [--format text|json] [INPUT_FILE|--stdin]
@@ -128,6 +128,7 @@ fn printUsage(out: *std.Io.Writer) !void {
         \\                 [--doc-mode lines|whole] [--add-bos --bos-id N]
         \\                 [--add-eos --eos-id N] [--pad-last --pad-id N]
         \\  ztok chunk     --model PATH [--cl100k] --max-tokens N [--overlap N]
+        \\                 [--window N] [--stride M]  (late-chunking aliases)
         \\                 [--boundary token|codepoint|word|sentence|paragraph]
         \\                 [--format jsonl|text] [TEXT]
         \\  ztok validate  --model PATH [--cl100k] [--checks CHECK1,CHECK2,...]
@@ -204,6 +205,8 @@ const Args = struct {
     threads: ?u32 = null,
     max_tokens: ?u32 = null,
     overlap: ?u32 = null,
+    window: ?u32 = null,
+    stride: ?u32 = null,
     boundary: ?[]const u8 = null,
     format: ?[]const u8 = null,
     checks: ?[]const u8 = null,
@@ -320,6 +323,14 @@ const Args = struct {
             } else if (std.mem.eql(u8, tok, "--overlap")) {
                 if (i + 1 >= raw.len) return error.MissingValue;
                 a.overlap = try std.fmt.parseInt(u32, raw[i + 1], 10);
+                i += 1;
+            } else if (std.mem.eql(u8, tok, "--window")) {
+                if (i + 1 >= raw.len) return error.MissingValue;
+                a.window = try std.fmt.parseInt(u32, raw[i + 1], 10);
+                i += 1;
+            } else if (std.mem.eql(u8, tok, "--stride")) {
+                if (i + 1 >= raw.len) return error.MissingValue;
+                a.stride = try std.fmt.parseInt(u32, raw[i + 1], 10);
                 i += 1;
             } else if (std.mem.eql(u8, tok, "--boundary")) {
                 if (i + 1 >= raw.len) return error.MissingValue;
@@ -1296,11 +1307,23 @@ fn cmdChunk(gpa: std.mem.Allocator, io: std.Io, raw: []const []const u8, out: *s
         try out.writeAll("chunk: --model PATH required\n");
         return;
     };
-    const max_tokens = args.max_tokens orelse {
-        try out.writeAll("chunk: --max-tokens N required\n");
+    // Late-chunking aliases: --window N is the window size (== --max-tokens),
+    // --stride M the advance per step. overlap = window - stride. These map
+    // onto the same chunkText window machinery; --window wins if both given.
+    const max_tokens = args.window orelse args.max_tokens orelse {
+        try out.writeAll("chunk: --max-tokens N (or --window N) required\n");
         return;
     };
-    const overlap = args.overlap orelse 0;
+    const overlap = blk: {
+        if (args.stride) |s| {
+            if (s == 0 or s > max_tokens) {
+                try out.print("chunk: --stride must be in 1..{d} (the window size)\n", .{max_tokens});
+                return;
+            }
+            break :blk max_tokens - s;
+        }
+        break :blk args.overlap orelse 0;
+    };
     const boundary: ztok.chunk.Boundary = if (args.boundary) |b| (parseBoundary(b) orelse {
         try out.print("chunk: unknown boundary mode '{s}'\n", .{b});
         return;

@@ -39,6 +39,7 @@ const sp_model = @import("sp_model.zig");
 const auto_detect = @import("auto_detect.zig");
 const StreamEncoder = @import("stream.zig").StreamEncoder;
 const ngram = @import("ngram.zig");
+const chunk = @import("chunk.zig");
 
 // c_allocator (libc malloc) is universally safe across dlopen/.so
 // contexts. smp_allocator's threadlocal `thread_index` plus its global
@@ -1184,6 +1185,118 @@ export fn ztok_ngram_hash_batch(
 
 export fn ztok_u64s_free(hashes: ?[*]u64) void {
     if (hashes) |p| freeU64Buf(p);
+}
+
+// --- chunking --------------------------------------------------------
+//
+// Expose chunk.chunkText to C: split text into overlapping token
+// windows for embedding / late-chunking pipelines. Each output record
+// carries the chunk's token ids plus its byte- and token-index ranges
+// in the original input. `ids` points at a ztok-allocated,
+// header-prefixed buffer (parallel to ztok_ids_free's layout); free the
+// whole array — and every record's `ids` — with ztok_chunks_free.
+//
+// boundary mirrors chunk.Boundary: 0=token, 1=codepoint, 2=word,
+// 3=word_dict, 4=sentence, 5=paragraph.
+const CChunk = extern struct {
+    ids: ?[*]TokenId,
+    ids_len: usize,
+    byte_start: u32,
+    byte_end: u32,
+    token_start: u32,
+    token_end: u32,
+};
+
+fn boundaryFromKind(k: u32) ?chunk.Boundary {
+    return switch (k) {
+        0 => .token,
+        1 => .codepoint,
+        2 => .word,
+        3 => .word_dict,
+        4 => .sentence,
+        5 => .paragraph,
+        else => null,
+    };
+}
+
+// Chunk `text` into windows of at most `max_tokens` tokens with
+// `overlap` tokens shared between neighbors. `out_chunks` is a
+// caller-owned buffer of `out_cap` records. On success writes one
+// record per chunk and sets *out_len to the chunk count. If `out_chunks`
+// is null or too small, sets *out_len to the required count and returns
+// BUFFER_TOO_SMALL (nothing is written, no ids allocated). Empty input
+// (or a zero-token encoding) yields zero chunks and ZTOK_OK.
+export fn ztok_chunk(
+    p: ?*const Pipeline,
+    text: [*]const u8,
+    text_len: usize,
+    max_tokens: u32,
+    overlap: u32,
+    boundary: u32,
+    out_chunks: ?[*]CChunk,
+    out_cap: usize,
+    out_len: ?*usize,
+) c_int {
+    const pp = p orelse return ZTOK_ERR_INVALID_INPUT;
+    const olp = out_len orelse return ZTOK_ERR_INVALID_INPUT;
+    const bnd = boundaryFromKind(boundary) orelse return ZTOK_ERR_INVALID_INPUT;
+    if (max_tokens == 0 or overlap >= max_tokens) return ZTOK_ERR_INVALID_INPUT;
+    const h = handleFromConstPtr(pp);
+
+    var result = chunk.chunkText(gpa, h.pipeline, text[0..text_len], .{
+        .max_tokens = max_tokens,
+        .overlap_tokens = overlap,
+        .boundary = bnd,
+    }) catch |e| switch (e) {
+        error.OverlapTooLarge, error.InvalidMaxTokens, error.InvalidStride => return ZTOK_ERR_INVALID_INPUT,
+        else => return mapErr(e),
+    };
+    defer result.deinit();
+
+    const n = result.chunks.len;
+    olp.* = n;
+    if (n == 0) return ZTOK_OK;
+
+    const out = out_chunks orelse return ZTOK_ERR_BUFFER_TOO_SMALL;
+    if (out_cap < n) return ZTOK_ERR_BUFFER_TOO_SMALL;
+
+    // Copy each chunk's ids into its own header-prefixed buffer. On any
+    // OOM, roll back every buffer allocated so far and clear all slots.
+    for (result.chunks, 0..) |ch, i| {
+        var buf: ?[*]TokenId = null;
+        if (ch.ids.len > 0) {
+            buf = allocIdBuf(ch.ids.len) orelse {
+                for (out[0..i]) |*rec| if (rec.ids) |q| freeIdBuf(q);
+                for (out[0..n]) |*rec| {
+                    rec.ids = null;
+                    rec.ids_len = 0;
+                }
+                return ZTOK_ERR_OUT_OF_MEMORY;
+            };
+            @memcpy(buf.?[0..ch.ids.len], ch.ids);
+        }
+        out[i] = .{
+            .ids = buf,
+            .ids_len = ch.ids.len,
+            .byte_start = ch.byte_start,
+            .byte_end = ch.byte_end,
+            .token_start = ch.token_start,
+            .token_end = ch.token_end,
+        };
+    }
+    return ZTOK_OK;
+}
+
+// Free an array of `n` chunk records written by ztok_chunk, releasing
+// every record's `ids` buffer. The `chunks` array itself is caller-owned
+// (we never allocated it), so only the id buffers are freed.
+export fn ztok_chunks_free(chunks: ?[*]CChunk, n: usize) void {
+    const c = chunks orelse return;
+    for (c[0..n]) |*rec| {
+        if (rec.ids) |p| freeIdBuf(p);
+        rec.ids = null;
+        rec.ids_len = 0;
+    }
 }
 
 // --- fingerprint -----------------------------------------------------
