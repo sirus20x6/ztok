@@ -243,6 +243,42 @@ ztok_status ztok_encode_batch_pooled(
 
 void ztok_ids_free(ztok_token_id* ids);
 
+/* --- Engram n-gram hashing ---------------------------------------- */
+
+/* Deterministic multi-head token-n-gram hashing for Engram-style
+ * conditional-memory addressing. Operates on raw token ids — no
+ * pipeline handle needed. Output is row-major [position][head]: the
+ * `heads` hashes for window position 0 come first, then position 1, etc.
+ * Raw u64 hashes are emitted; mask each to your table width
+ * (hash & ((1<<bits)-1)). The number of window positions for an
+ * `n_ids`-long stream is (n_ids - n + 1), or 0 if shorter than n. */
+
+/* Hash every length-`n` window of `ids` under `heads` hash functions.
+ * `out` is a caller-owned buffer of `out_cap` uint64_t entries. On
+ * success writes positions*heads hashes and sets *out_len to that count.
+ * If `out` is NULL or too small, sets *out_len to the required count and
+ * returns ZTOK_BUFFER_TOO_SMALL without writing. A stream shorter than
+ * one window (or n/heads == 0) needs 0 entries and returns ZTOK_OK. */
+ztok_status ztok_ngram_hash(
+    const ztok_token_id* ids, size_t n_ids,
+    uint32_t n, uint32_t heads,
+    uint64_t* out, size_t out_cap, size_t* out_len
+);
+
+/* Hash `n_docs` id streams in parallel across `pool`. Each out_hashes[i]
+ * is set to a ztok-allocated uint64_t buffer (free with ztok_u64s_free)
+ * holding the row-major hashes for doc i, with out_lens[i] its u64
+ * count. A stream shorter than one window yields a NULL buffer and 0. */
+ztok_status ztok_ngram_hash_batch(
+    ztok_batch_pool* pool,
+    const ztok_token_id* const* id_arrays, const size_t* id_lens, size_t n_docs,
+    uint32_t n, uint32_t heads,
+    uint64_t** out_hashes, size_t* out_lens
+);
+
+/* Free a uint64_t buffer returned by ztok_ngram_hash_batch. */
+void ztok_u64s_free(uint64_t* hashes);
+
 /* --- auto-detect -------------------------------------------------- */
 
 /* Best-effort vocab-format sniffer. Reads the first 256 bytes of `path`

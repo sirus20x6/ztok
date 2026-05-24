@@ -22,6 +22,7 @@ pub const pipeline = @import("pipeline.zig");
 pub const fingerprint = @import("fingerprint.zig");
 pub const thread_pool = @import("thread_pool.zig");
 pub const trace = @import("trace.zig");
+pub const ngram = @import("ngram.zig");
 
 // Models
 pub const bpe = @import("bpe.zig");
@@ -145,6 +146,9 @@ pub const Monster = monster.Monster;
 pub const HFTokenizer = hf_json.HFTokenizer;
 pub const SpModel = sp_model.SpModel;
 pub const Constraint = constrained.Constraint;
+pub const hashNGrams = ngram.hashNGrams;
+pub const hashNGramsLen = ngram.hashNGramsLen;
+pub const hashNGramsBatch = ngram.hashNGramsBatch;
 
 // Tekken multimodal (text + image + audio) public API.
 pub const TekkenModel = tekken.TekkenModel;
@@ -163,6 +167,7 @@ test {
     _ = model;
     _ = decoder;
     _ = thread_pool;
+    _ = ngram;
     _ = pipeline;
     _ = fingerprint;
     _ = trace;

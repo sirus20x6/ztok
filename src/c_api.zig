@@ -37,6 +37,7 @@ const monster_io = @import("monster_io.zig");
 const sp_model = @import("sp_model.zig");
 const auto_detect = @import("auto_detect.zig");
 const StreamEncoder = @import("stream.zig").StreamEncoder;
+const ngram = @import("ngram.zig");
 
 // c_allocator (libc malloc) is universally safe across dlopen/.so
 // contexts. smp_allocator's threadlocal `thread_index` plus its global
@@ -975,6 +976,168 @@ export fn ztok_ids_free(ids: ?[*]TokenId) void {
 
 export fn ztok_version() [*:0]const u8 {
     return VERSION;
+}
+
+// --- Engram n-gram hashing ------------------------------------------
+//
+// Deterministic multi-head token-n-gram hashing (see ngram.zig). These
+// operate on raw token ids and need no Pipeline handle. Output is
+// row-major [position][head] raw u64 hashes; the caller masks each hash
+// to its own table width.
+
+// Hash every length-`n` window of `ids` under `heads` hash functions.
+// `out` is a caller-owned buffer of `out_cap` u64 entries. On success
+// writes positions*heads hashes and sets *out_len to that count. If
+// `out` is null or too small, sets *out_len to the required count and
+// returns BUFFER_TOO_SMALL (nothing is written). When the stream is
+// shorter than one window (or n/heads is 0) the required count is 0 and
+// the call succeeds writing nothing.
+export fn ztok_ngram_hash(
+    ids: ?[*]const TokenId,
+    n_ids: usize,
+    n: u32,
+    heads: u32,
+    out: ?[*]u64,
+    out_cap: usize,
+    out_len: ?*usize,
+) c_int {
+    const olp = out_len orelse return ZTOK_ERR_INVALID_INPUT;
+    if (n_ids > 0 and ids == null) return ZTOK_ERR_INVALID_INPUT;
+
+    const need = ngram.hashNGramsOutLen(n_ids, n, heads);
+    olp.* = need;
+    if (need == 0) return ZTOK_OK;
+
+    const buf = out orelse return ZTOK_ERR_BUFFER_TOO_SMALL;
+    if (out_cap < need) return ZTOK_ERR_BUFFER_TOO_SMALL;
+
+    _ = ngram.hashNGrams(ids.?[0..n_ids], n, heads, buf[0..out_cap]);
+    return ZTOK_OK;
+}
+
+// u64 buffers returned by ztok_ngram_hash_batch are prefixed with a
+// length header (parallel to the TokenId Header above) so the matching
+// free can recover the allocation size.
+const U64Header = extern struct { byte_len: usize };
+const u64_header_size = std.mem.alignForward(usize, @sizeOf(U64Header), @alignOf(u64));
+const u64_buf_align: std.mem.Alignment = .fromByteUnits(@max(@alignOf(U64Header), @alignOf(u64)));
+
+fn u64PayloadFromHeader(h: *U64Header) [*]u64 {
+    const raw: [*]u8 = @ptrCast(h);
+    return @ptrCast(@alignCast(raw + u64_header_size));
+}
+
+fn u64HeaderFromPayload(p: [*]u64) *U64Header {
+    const raw: [*]u8 = @ptrCast(p);
+    return @ptrCast(@alignCast(raw - u64_header_size));
+}
+
+fn allocU64Buf(n: usize) ?[*]u64 {
+    if (n == 0) return null;
+    const total_bytes = u64_header_size + n * @sizeOf(u64);
+    const raw = gpa.alignedAlloc(u8, u64_buf_align, total_bytes) catch return null;
+    const hdr: *U64Header = @ptrCast(@alignCast(raw.ptr));
+    hdr.byte_len = total_bytes;
+    return u64PayloadFromHeader(hdr);
+}
+
+fn freeU64Buf(p: [*]u64) void {
+    const hdr = u64HeaderFromPayload(p);
+    const raw_ptr: [*]u8 = @ptrCast(hdr);
+    const aligned: [*]align(u64_buf_align.toByteUnits()) u8 = @alignCast(raw_ptr);
+    gpa.free(aligned[0..hdr.byte_len]);
+}
+
+// Worker context for the parallel n-gram hash fan-out: each worker
+// hashes one id stream into its own freshly allocated, header-prefixed
+// u64 buffer.
+const NGramBatchCtx = struct {
+    id_arrays: [*]const [*]const TokenId,
+    id_lens: [*]const usize,
+    out_hashes: [*]?[*]u64,
+    out_lens: [*]usize,
+    n: u32,
+    heads: u32,
+    errored: std.atomic.Value(u32),
+
+    pub fn run(c: *NGramBatchCtx, idx: usize, widx: usize) void {
+        _ = widx;
+        const out_len = ngram.hashNGramsOutLen(c.id_lens[idx], c.n, c.heads);
+        if (out_len == 0) {
+            c.out_hashes[idx] = null;
+            c.out_lens[idx] = 0;
+            return;
+        }
+        const buf = allocU64Buf(out_len) orelse {
+            _ = c.errored.fetchAdd(1, .acq_rel);
+            c.out_hashes[idx] = null;
+            c.out_lens[idx] = 0;
+            return;
+        };
+        _ = ngram.hashNGrams(c.id_arrays[idx][0..c.id_lens[idx]], c.n, c.heads, buf[0..out_len]);
+        c.out_hashes[idx] = buf;
+        c.out_lens[idx] = out_len;
+    }
+};
+
+// Hash `n_docs` id streams in parallel across `pool`. Each `out_hashes[i]`
+// is set to a ztok-allocated u64 buffer (free with ztok_u64s_free) holding
+// the row-major hashes for doc i, and `out_lens[i]` to its u64 count. A
+// stream shorter than one window yields a null buffer and length 0. On
+// failure every buffer allocated so far is freed and the slots cleared.
+export fn ztok_ngram_hash_batch(
+    pool_handle: ?*BatchPoolHandle,
+    id_arrays: ?[*]const [*]const TokenId,
+    id_lens: ?[*]const usize,
+    n_docs: usize,
+    n: u32,
+    heads: u32,
+    out_hashes: ?[*]?[*]u64,
+    out_lens: ?[*]usize,
+) c_int {
+    const ph = pool_handle orelse return ZTOK_ERR_INVALID_INPUT;
+    const arrays = id_arrays orelse return ZTOK_ERR_INVALID_INPUT;
+    const lens = id_lens orelse return ZTOK_ERR_INVALID_INPUT;
+    const oh = out_hashes orelse return ZTOK_ERR_INVALID_INPUT;
+    const ol = out_lens orelse return ZTOK_ERR_INVALID_INPUT;
+    if (n_docs == 0) return ZTOK_OK;
+
+    // Clean initial state so an early-exit worker or an OOM rollback
+    // leaves well-defined slots.
+    for (0..n_docs) |i| {
+        oh[i] = null;
+        ol[i] = 0;
+    }
+
+    var ctx: NGramBatchCtx = .{
+        .id_arrays = arrays,
+        .id_lens = lens,
+        .out_hashes = oh,
+        .out_lens = ol,
+        .n = n,
+        .heads = heads,
+        .errored = .init(0),
+    };
+
+    ph.pool.runBatch(NGramBatchCtx, &ctx, n_docs) catch |e| {
+        for (oh[0..n_docs]) |maybe| if (maybe) |q| freeU64Buf(q);
+        for (oh[0..n_docs]) |*slot| slot.* = null;
+        for (ol[0..n_docs]) |*slot| slot.* = 0;
+        return mapErr(e);
+    };
+
+    if (ctx.errored.load(.acquire) != 0) {
+        for (oh[0..n_docs]) |maybe| if (maybe) |q| freeU64Buf(q);
+        for (oh[0..n_docs]) |*slot| slot.* = null;
+        for (ol[0..n_docs]) |*slot| slot.* = 0;
+        return ZTOK_ERR_OUT_OF_MEMORY;
+    }
+
+    return ZTOK_OK;
+}
+
+export fn ztok_u64s_free(hashes: ?[*]u64) void {
+    if (hashes) |p| freeU64Buf(p);
 }
 
 // --- fingerprint -----------------------------------------------------
