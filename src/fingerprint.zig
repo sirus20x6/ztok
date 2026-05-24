@@ -36,6 +36,7 @@ fn modelKindTag(model: Model) u8 {
         .unigram => 2,
         .wordpiece => 3,
         .monster => 4,
+        .rwkv_world => 5,
     };
 }
 

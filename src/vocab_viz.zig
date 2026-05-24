@@ -19,6 +19,7 @@ const Bpe = @import("bpe.zig").Bpe;
 const Unigram = @import("unigram.zig").Unigram;
 const WordPiece = @import("wordpiece.zig").WordPiece;
 const Monster = @import("monster.zig").Monster;
+const RwkvWorld = @import("rwkv_world.zig").RwkvWorld;
 const Pipeline = @import("pipeline.zig").Pipeline;
 const Vocab = @import("vocab.zig").Vocab;
 const added_tokens_mod = @import("added_tokens.zig");
@@ -31,6 +32,7 @@ pub const ModelRef = union(enum) {
     unigram: *const Unigram,
     wordpiece: *const WordPiece,
     monster: *const Monster,
+    rwkv_world: *const RwkvWorld,
 
     pub fn count(self: ModelRef) u32 {
         return switch (self) {
@@ -38,6 +40,7 @@ pub const ModelRef = union(enum) {
             .unigram => |u| u.count,
             .wordpiece => |w| w.count,
             .monster => |m| m.count,
+            .rwkv_world => |r| r.count,
         };
     }
 
@@ -47,6 +50,7 @@ pub const ModelRef = union(enum) {
             .unigram => |u| u.bytes[u.offsets[id]..u.offsets[id + 1]],
             .wordpiece => |w| w.bytes[w.offsets[id]..w.offsets[id + 1]],
             .monster => |m| m.bytes[m.offsets[id]..m.offsets[id + 1]],
+            .rwkv_world => |r| r.bytes[r.offsets[id]..r.offsets[id + 1]],
         };
     }
 
@@ -56,6 +60,7 @@ pub const ModelRef = union(enum) {
             .unigram => "unigram",
             .wordpiece => "wordpiece",
             .monster => "monster",
+            .rwkv_world => "rwkv_world",
         };
     }
 };
@@ -184,6 +189,7 @@ fn modelCount(pipeline: *const Pipeline) u32 {
         .unigram => |u| u.count,
         .wordpiece => |w| w.count,
         .monster => |m| m.count,
+        .rwkv_world => |r| r.count,
     };
 }
 

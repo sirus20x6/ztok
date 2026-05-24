@@ -1754,6 +1754,7 @@ fn cmdServe(gpa: std.mem.Allocator, io: std.Io, raw: []const []const u8, out: *s
         .unigram => .unigram,
         .wordpiece => .wordpiece,
         .monster => .monster,
+        .rwkv_world => .rwkv_world,
     };
 
     const host = args.host orelse ztok.cli_serve.default_host;
@@ -1946,6 +1947,7 @@ fn cmdGrpcServe(gpa: std.mem.Allocator, io: std.Io, raw: []const []const u8, out
         .unigram => .unigram,
         .wordpiece => .wordpiece,
         .monster => .monster,
+        .rwkv_world => .rwkv_world,
     };
 
     const host = args.host orelse ztok.cli_grpc.default_host;
@@ -2143,6 +2145,7 @@ fn cmdVisualize(gpa: std.mem.Allocator, io: std.Io, raw: []const []const u8, out
         .unigram => |*u| .{ .unigram = u },
         .wordpiece => |*w| .{ .wordpiece = w },
         .monster => |*m| .{ .monster = m },
+        .rwkv_world => |*r| .{ .rwkv_world = r },
     };
 
     // Determine output path: `--out` wins, else `<basename>-viz.html` in cwd.
@@ -2485,6 +2488,10 @@ fn cmdMergeVocab(gpa: std.mem.Allocator, io: std.Io, raw: []const []const u8, ou
         try out.print("merge-vocab: monster vocab merge is not supported.\n", .{});
         return ztok.vocab_merge.Error.IncompatibleModelKind;
     }
+    if (a_kind == .rwkv_world) {
+        try out.print("merge-vocab: rwkv_world vocab merge is not supported (fixed byte trie).\n", .{});
+        return ztok.vocab_merge.Error.IncompatibleModelKind;
+    }
 
     try out.print(
         "merge-vocab: a={s} ({s}, {d} tokens, {s}), b={s} ({d} tokens), on-conflict={s}, prefix-b='{s}'\n",
@@ -2608,9 +2615,9 @@ fn cmdMergeVocab(gpa: std.mem.Allocator, io: std.Io, raw: []const []const u8, ou
                 output_path, res.merged_size, res.conflicts_count,
             });
         },
-        .monster, .byte_id => {
-            // monster guarded above; byte_id is a synthetic diff-only
-            // kind that loadPipelineAutoDetect doesn't return.
+        .monster, .rwkv_world, .byte_id => {
+            // monster + rwkv_world guarded above; byte_id is a synthetic
+            // diff-only kind that loadPipelineAutoDetect doesn't return.
             unreachable;
         },
     }
@@ -2638,6 +2645,7 @@ const OwnedModel = union(enum) {
     unigram: ztok.Unigram,
     wordpiece: ztok.WordPiece,
     monster: ztok.Monster,
+    rwkv_world: ztok.RwkvWorld,
 
     fn deinit(self: *OwnedModel) void {
         switch (self.*) {
@@ -2645,6 +2653,7 @@ const OwnedModel = union(enum) {
             .unigram => |*u| u.deinit(),
             .wordpiece => |*w| w.deinit(),
             .monster => |*m| m.deinit(),
+            .rwkv_world => |*r| r.deinit(),
         }
     }
 
@@ -2654,6 +2663,7 @@ const OwnedModel = union(enum) {
             .unigram => |*u| .{ .unigram = u },
             .wordpiece => |*w| .{ .wordpiece = w },
             .monster => |*m| .{ .monster = m },
+            .rwkv_world => |*r| .{ .rwkv_world = r },
         };
     }
 
@@ -2663,6 +2673,7 @@ const OwnedModel = union(enum) {
             .unigram => |*u| .{ .unigram = u },
             .wordpiece => |*w| .{ .wordpiece = w },
             .monster => |*m| .{ .monster = m },
+            .rwkv_world => |*r| .{ .rwkv_world = r },
         };
     }
 
@@ -2672,6 +2683,7 @@ const OwnedModel = union(enum) {
             .unigram => .unigram,
             .wordpiece => .wordpiece,
             .monster => .monster,
+            .rwkv_world => .rwkv_world,
         };
     }
 
@@ -2681,6 +2693,7 @@ const OwnedModel = union(enum) {
             .unigram => |*u| u.count,
             .wordpiece => |*w| w.count,
             .monster => |*m| m.count,
+            .rwkv_world => |*r| r.count,
         };
     }
 };
@@ -2902,6 +2915,7 @@ fn loadPipelineAutoDetect(gpa: std.mem.Allocator, io: std.Io, path: []const u8) 
             const loaded = try ztok.monster_io.readFileMeta(gpa, path);
             return .{ .monster = loaded.monster };
         },
+        .rwkv => return .{ .rwkv_world = try ztok.RwkvWorld.loadFromFile(gpa, path) },
         .tekken => {
             // Tekken's BPE is shaped exactly like a tiktoken vocab once
             // the special-token id shift is applied (specials get the

@@ -15,6 +15,11 @@ pub const Format = enum {
     /// (set on v7+) or by the absence of HF's `model` object combined
     /// with the presence of `vocab` + `special_tokens` arrays.
     tekken,
+    /// RWKV "World" vocab (`rwkv_vocab_v20230424.txt`): one entry per
+    /// line, `<id> <python-repr> <byte-len>`, where the middle field is a
+    /// Python `str`/`bytes` literal. Distinguished from tiktoken (`<b64>
+    /// <rank>`) by the quoted repr in the middle column.
+    rwkv,
     unknown,
 };
 
@@ -56,6 +61,36 @@ fn looksLikeTiktokenLine(bytes: []const u8) bool {
     if (i == right_start) return false;
     // Must end with newline, CR, or EOF (within the peek window).
     if (i < bytes.len and bytes[i] != '\n' and bytes[i] != '\r') return false;
+    return true;
+}
+
+/// RWKV World vocab line: `<id> <python-repr> <byte-len>`, e.g.
+/// `0 'a' 1` or `127 b'\x7f' 1`. We require leading id digits, a space,
+/// a repr that opens with a quote (optionally `b`-prefixed), and a
+/// trailing space + length digits — enough to separate it from a
+/// tiktoken `<base64> <rank>` line (no quote, only two columns).
+fn looksLikeRwkvLine(bytes: []const u8) bool {
+    var i: usize = 0;
+    const id_start = i;
+    while (i < bytes.len and isDigit(bytes[i])) : (i += 1) {}
+    if (i == id_start) return false; // need a leading numeric id
+    if (i >= bytes.len or bytes[i] != ' ') return false;
+    i += 1;
+
+    // The repr must open with a quote, optionally `b`/`B`-prefixed.
+    var j = i;
+    if (j < bytes.len and (bytes[j] == 'b' or bytes[j] == 'B')) j += 1;
+    if (j >= bytes.len) return false;
+    if (bytes[j] != '\'' and bytes[j] != '"') return false;
+
+    // Isolate the line and require a trailing ` <digits>` length column.
+    var end = i;
+    while (end < bytes.len and bytes[end] != '\n' and bytes[end] != '\r') : (end += 1) {}
+    const line = bytes[0..end];
+    var k = line.len;
+    while (k > 0 and isDigit(line[k - 1])) k -= 1;
+    if (k == line.len) return false; // no trailing digits
+    if (k == 0 or line[k - 1] != ' ') return false;
     return true;
 }
 
@@ -103,6 +138,11 @@ pub fn detect(bytes: []const u8) Format {
         if (looksLikeTekkenJson(bytes[i..])) return .tekken;
         return .hf_json;
     }
+
+    // RWKV World vocab: a quoted repr in the middle column. Checked
+    // before tiktoken — both are line-based text, but the quote makes
+    // RWKV unambiguous and tiktoken's two-column shape never matches.
+    if (looksLikeRwkvLine(bytes[i..])) return .rwkv;
 
     // Try tiktoken on the first non-blank line.
     if (looksLikeTiktokenLine(bytes[i..])) return .tiktoken;
@@ -202,6 +242,19 @@ test "detect tiktoken with leading blank line" {
 
 test "detect unknown random bytes" {
     try testing.expectEqual(Format.unknown, detect("random text"));
+}
+
+test "detect rwkv world vocab" {
+    try testing.expectEqual(Format.rwkv, detect("0 'a' 1\n1 'b' 1\n"));
+    // bytes-literal form with an escaped hex byte
+    try testing.expectEqual(Format.rwkv, detect("127 b'\\x7f' 1\n"));
+    // leading blank line tolerated
+    try testing.expectEqual(Format.rwkv, detect("\n0 'a' 1\n"));
+}
+
+test "rwkv sniff does not swallow tiktoken" {
+    // tiktoken has no quoted middle column -> still tiktoken.
+    try testing.expectEqual(Format.tiktoken, detect("aGVsbG8= 0\n"));
 }
 
 test "detectWithExtension falls back to extension" {

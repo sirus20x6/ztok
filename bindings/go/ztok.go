@@ -219,12 +219,22 @@ func OpenMonster(path string, cfg *Config) (*Pipeline, error) {
 		cfg, PretokIdentity, DecoderConcat)
 }
 
+// OpenRWKVWorld loads an RWKV "World" vocab (rwkv_vocab_v20230424.txt)
+// into a greedy longest-match byte-trie pipeline. The World scheme is
+// byte-lossless (every byte 0..255 is a token), so it runs with an
+// identity pre-tokenizer and concat decoder.
+func OpenRWKVWorld(path string, cfg *Config) (*Pipeline, error) {
+	return openFromFile(path, "ztok_pipeline_new_rwkv_from_file",
+		cfg, PretokIdentity, DecoderConcat)
+}
+
 // Open auto-detects `path`'s format and dispatches to the right loader.
 //
 //   - .tiktoken            → OpenTiktoken with CL100K=true
 //   - tokenizer.json       → OpenHFJSON
 //   - .model               → OpenSentencePiece (UnkID=0)
 //   - .ztm                 → OpenMonster
+//   - rwkv vocab .txt      → OpenRWKVWorld
 //
 // For WordPiece (which lives inside tokenizer.json but needs a specific
 // UnkID), call OpenWordPiece directly.
@@ -239,6 +249,8 @@ func Open(path string) (*Pipeline, error) {
 		return OpenSentencePiece(path, nil)
 	case FormatZTM:
 		return OpenMonster(path, nil)
+	case FormatRWKV:
+		return OpenRWKVWorld(path, nil)
 	default:
 		return nil, &InvalidInputError{&StatusError{
 			Status: int(cStatusInvalidInput),
@@ -264,6 +276,8 @@ func openFromFile(path, fnName string, cfg *Config, defaultPre, defaultDecoder u
 		h = unsafe.Pointer(C.ztok_pipeline_new_bpe_from_hf_json(cpath, &c, &status))
 	case "ztok_pipeline_new_monster_from_file":
 		h = unsafe.Pointer(C.ztok_pipeline_new_monster_from_file(cpath, &c, &status))
+	case "ztok_pipeline_new_rwkv_from_file":
+		h = unsafe.Pointer(C.ztok_pipeline_new_rwkv_from_file(cpath, &c, &status))
 	default:
 		return nil, &InternalError{&StatusError{Status: -1, Op: "unknown loader: " + fnName}}
 	}

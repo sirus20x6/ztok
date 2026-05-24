@@ -33,6 +33,7 @@ pub const bpe_heap = @import("bpe_heap.zig");
 pub const unigram = @import("unigram.zig");
 pub const wordpiece = @import("wordpiece.zig");
 pub const monster = @import("monster.zig");
+pub const rwkv_world = @import("rwkv_world.zig");
 
 // Training
 pub const train_bpe = @import("train_bpe.zig");
@@ -143,6 +144,7 @@ pub const Bpe = bpe.Bpe;
 pub const Unigram = unigram.Unigram;
 pub const WordPiece = wordpiece.WordPiece;
 pub const Monster = monster.Monster;
+pub const RwkvWorld = rwkv_world.RwkvWorld;
 pub const HFTokenizer = hf_json.HFTokenizer;
 pub const SpModel = sp_model.SpModel;
 pub const Constraint = constrained.Constraint;
@@ -179,6 +181,7 @@ test {
     _ = unigram;
     _ = wordpiece;
     _ = monster;
+    _ = rwkv_world;
     _ = train_bpe;
     _ = train_unigram;
     _ = train_wordpiece;

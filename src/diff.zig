@@ -267,7 +267,7 @@ pub const DivergenceBuckets = struct {
     large: u32 = 0, // >10 (includes capped-out)
 };
 
-pub const ModelKind = enum { bpe, unigram, wordpiece, monster, byte_id };
+pub const ModelKind = enum { bpe, unigram, wordpiece, monster, byte_id, rwkv_world };
 
 pub const VocabMeta = struct {
     path: []const u8,
@@ -374,6 +374,7 @@ fn idToBytes(
         .unigram => |u| u.count,
         .wordpiece => |w| w.count,
         .monster => |m| m.count,
+        .rwkv_world => |r| r.count,
     };
     if (id >= size) return std.fmt.allocPrint(allocator, "<id {d}>", .{id});
     const bytes = model.idBytes(id, vocab, &scratch);
@@ -540,6 +541,7 @@ fn modelKindName(k: ModelKind) []const u8 {
         .wordpiece => "wordpiece",
         .monster => "monster",
         .byte_id => "byte_id",
+        .rwkv_world => "rwkv_world",
     };
 }
 

@@ -85,7 +85,7 @@ const send_buf_size: usize = 16384;
 /// ~470 KiB worst-case footprint.
 pub const rate_limit_max_clients: usize = 10_000;
 
-pub const ModelKind = enum { bpe, unigram, wordpiece, monster, byte_id };
+pub const ModelKind = enum { bpe, unigram, wordpiece, monster, byte_id, rwkv_world };
 
 pub const Options = struct {
     host: []const u8 = default_host,

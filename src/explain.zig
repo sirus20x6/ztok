@@ -43,6 +43,7 @@ pub const ModelKind = enum {
     unigram,
     wordpiece,
     monster,
+    rwkv_world,
 
     pub fn name(self: ModelKind) []const u8 {
         return switch (self) {
@@ -50,6 +51,7 @@ pub const ModelKind = enum {
             .unigram => "unigram",
             .wordpiece => "wordpiece",
             .monster => "monster",
+            .rwkv_world => "rwkv_world",
         };
     }
 
@@ -61,6 +63,7 @@ pub const ModelKind = enum {
             .unigram => "unigram LM: Viterbi over piece scores picks the max-likelihood segmentation",
             .wordpiece => "wordpiece: longest-match-first over the vocab, falling back to [UNK]",
             .monster => "TokenMonster: 2-branch ungreedy lookahead picks the branch with the better score",
+            .rwkv_world => "RWKV World: greedy longest-match over a byte trie; every byte is a token so there is no fallback",
         };
     }
 };
@@ -73,6 +76,7 @@ pub fn modelKindOf(m: Model) ModelKind {
         .unigram => .unigram,
         .wordpiece => .wordpiece,
         .monster => .monster,
+        .rwkv_world => .rwkv_world,
     };
 }
 

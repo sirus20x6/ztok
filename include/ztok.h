@@ -76,6 +76,11 @@ typedef enum {
      * top-level `config.pattern` regex. Distinguished from HF
      * tokenizer.json by the `"type": "Tekkenizer"` marker. */
     ZTOK_FORMAT_TEKKEN = 5,
+    /* RWKV "World" vocab (`rwkv_vocab_v20230424.txt`): line-oriented
+     * `<id> <python-repr> <byte-len>` entries driving a greedy
+     * longest-match byte trie. Sniffed by the leading id + quoted/`b`-
+     * quoted middle column + trailing length. */
+    ZTOK_FORMAT_RWKV = 6,
 } ztok_format;
 
 typedef struct {
@@ -124,6 +129,17 @@ ztok_pipeline* ztok_pipeline_new_unigram_from_sp_model(
 /* Monster loader. Reads the ztok-native .ztm binary format (magic
  * "ZTM\x01", little-endian); see src/monster_io.zig for the layout. */
 ztok_pipeline* ztok_pipeline_new_monster_from_file(
+    const char* path,
+    const ztok_pipeline_config* cfg_or_null,
+    ztok_status* out_status
+);
+
+/* RWKV "World" loader. Reads a `rwkv_vocab_v20230424.txt`-style file
+ * (`<id> <python-repr> <byte-len>` per line) into a greedy longest-match
+ * byte trie. The pipeline runs identity normalizer + identity
+ * pre-tokenizer + concat decoder, matching the byte-lossless World
+ * scheme (every byte 0..255 is a token, so encode never fails). */
+ztok_pipeline* ztok_pipeline_new_rwkv_from_file(
     const char* path,
     const ztok_pipeline_config* cfg_or_null,
     ztok_status* out_status

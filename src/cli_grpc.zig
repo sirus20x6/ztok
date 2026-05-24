@@ -38,7 +38,7 @@ const send_buf_size: usize = 16384;
 
 pub const content_type_grpc_web_proto: []const u8 = "application/grpc-web+proto";
 
-pub const ModelKind = enum { bpe, unigram, wordpiece, monster, byte_id };
+pub const ModelKind = enum { bpe, unigram, wordpiece, monster, byte_id, rwkv_world };
 
 pub const Options = struct {
     host: []const u8 = default_host,

@@ -33,6 +33,7 @@ const Bpe = @import("bpe.zig").Bpe;
 const Unigram = @import("unigram.zig").Unigram;
 const WordPiece = @import("wordpiece.zig").WordPiece;
 const Monster = @import("monster.zig").Monster;
+const RwkvWorld = @import("rwkv_world.zig").RwkvWorld;
 const monster_io = @import("monster_io.zig");
 const sp_model = @import("sp_model.zig");
 const auto_detect = @import("auto_detect.zig");
@@ -76,7 +77,7 @@ const Config = extern struct {
 
 // --- handle ----------------------------------------------------------
 
-const HandleKind = enum(u8) { byte_id, bpe, unigram, wordpiece, monster };
+const HandleKind = enum(u8) { byte_id, bpe, unigram, wordpiece, monster, rwkv_world };
 
 const ModelStorage = union(HandleKind) {
     byte_id: void,
@@ -84,6 +85,7 @@ const ModelStorage = union(HandleKind) {
     unigram: Unigram,
     wordpiece: WordPiece,
     monster: Monster,
+    rwkv_world: RwkvWorld,
 };
 
 // Wraps the Pipeline plus the heap-owned model+vocab. The Pipeline's
@@ -215,6 +217,7 @@ fn modelFromStorage(s: *ModelStorage) Model {
         .unigram => .{ .unigram = &s.unigram },
         .wordpiece => .{ .wordpiece = &s.wordpiece },
         .monster => .{ .monster = &s.monster },
+        .rwkv_world => .{ .rwkv_world = &s.rwkv_world },
     };
 }
 
@@ -225,6 +228,7 @@ fn freeHandle(h: *PipelineHandle) void {
         .unigram => |*u| u.deinit(),
         .wordpiece => |*w| w.deinit(),
         .monster => |*m| m.deinit(),
+        .rwkv_world => |*r| r.deinit(),
     }
     h.vocab.deinit();
     gpa.destroy(h);
@@ -511,6 +515,48 @@ export fn ztok_pipeline_new_monster_from_file(
 
     const h = newHandle(.monster, n, pt, d, Vocab.empty(gpa), .{ .monster = m }) catch |e| {
         m.deinit();
+        setStatus(out_status, mapErr(e));
+        return null;
+    };
+    setStatus(out_status, ZTOK_OK);
+    return ptrFromHandle(h);
+}
+
+// RWKV "World" tokenizer from a `rwkv_vocab_v20230424.txt`-style file.
+// Defaults: identity normalizer, identity pre-tokenizer (greedy match
+// runs over the whole input), concat decoder. Caller overrides via cfg.
+export fn ztok_pipeline_new_rwkv_from_file(
+    path_c: ?[*:0]const u8,
+    cfg_or_null: ?*const Config,
+    out_status: ?*c_int,
+) ?*Pipeline {
+    const path_z = path_c orelse {
+        setStatus(out_status, ZTOK_ERR_INVALID_INPUT);
+        return null;
+    };
+    const path = std.mem.span(path_z);
+
+    const cfg = effectiveConfig(cfg_or_null, 0);
+    const n = normalizerFromKind(cfg.normalizer) orelse {
+        setStatus(out_status, ZTOK_ERR_INVALID_INPUT);
+        return null;
+    };
+    const pt = pretokFromKind(cfg.pre_tokenizer) orelse {
+        setStatus(out_status, ZTOK_ERR_INVALID_INPUT);
+        return null;
+    };
+    const d = decoderFromKind(cfg.decoder) orelse {
+        setStatus(out_status, ZTOK_ERR_INVALID_INPUT);
+        return null;
+    };
+
+    var r = RwkvWorld.loadFromFile(gpa, path) catch |e| {
+        setStatus(out_status, mapErr(e));
+        return null;
+    };
+
+    const h = newHandle(.rwkv_world, n, pt, d, Vocab.empty(gpa), .{ .rwkv_world = r }) catch |e| {
+        r.deinit();
         setStatus(out_status, mapErr(e));
         return null;
     };
@@ -1176,6 +1222,7 @@ const ZTOK_FORMAT_HF_JSON: c_uint = 2;
 const ZTOK_FORMAT_SP_MODEL: c_uint = 3;
 const ZTOK_FORMAT_ZTM: c_uint = 4;
 const ZTOK_FORMAT_TEKKEN: c_uint = 5;
+const ZTOK_FORMAT_RWKV: c_uint = 6;
 
 fn formatToC(f: auto_detect.Format) c_uint {
     return switch (f) {
@@ -1185,6 +1232,7 @@ fn formatToC(f: auto_detect.Format) c_uint {
         .sentencepiece => ZTOK_FORMAT_SP_MODEL,
         .ztm => ZTOK_FORMAT_ZTM,
         .tekken => ZTOK_FORMAT_TEKKEN,
+        .rwkv => ZTOK_FORMAT_RWKV,
     };
 }
 

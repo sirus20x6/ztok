@@ -16,6 +16,7 @@ const Bpe = @import("bpe.zig").Bpe;
 const Unigram = @import("unigram.zig").Unigram;
 const WordPiece = @import("wordpiece.zig").WordPiece;
 const Monster = @import("monster.zig").Monster;
+const RwkvWorld = @import("rwkv_world.zig").RwkvWorld;
 const trace_mod = @import("trace.zig");
 
 pub const Model = union(enum) {
@@ -24,6 +25,7 @@ pub const Model = union(enum) {
     unigram: *const Unigram,
     wordpiece: *const WordPiece,
     monster: *const Monster,
+    rwkv_world: *const RwkvWorld,
 
     pub fn encode(
         self: Model,
@@ -44,6 +46,9 @@ pub const Model = union(enum) {
             .unigram => |u| try u.encodeChunk(scratch, chunk, out),
             .wordpiece => |w| w.encodeWord(chunk, out),
             .monster => |m| try m.encodeChunk(scratch, chunk, out),
+            // RWKV World: greedy longest-match over the whole chunk; no
+            // scratch needed.
+            .rwkv_world => |r| try r.encodeChunk(chunk, out),
         };
     }
 
@@ -73,12 +78,16 @@ pub const Model = union(enum) {
             .unigram => |u| try u.encodeChunkTrace(scratch, chunk, out, trace.?),
             .wordpiece => |w| w.encodeWord(chunk, out),
             .monster => |m| try m.encodeChunkTrace(scratch, chunk, out, trace.?),
+            // RWKV World has no per-decision trace records; encode plainly.
+            .rwkv_world => |r| try r.encodeChunk(chunk, out),
         };
     }
 
     pub fn maxTokensFor(self: Model, n: usize) usize {
         return switch (self) {
-            .byte_id, .bpe, .unigram => n,
+            // RWKV World emits at most one id per input byte (every byte
+            // is itself a token), so `n` is the exact upper bound.
+            .byte_id, .bpe, .unigram, .rwkv_world => n,
             // Monster's lilbuf path (a) can emit two ids (DEL + matched
             // piece) per input byte in the worst case — see
             // `monster.zig` lilbuf docs. Size for the worst case.
@@ -118,6 +127,7 @@ pub const Model = union(enum) {
             .unigram => |u| try u.encodeChunkWithOffsets(scratch, chunk, chunk_offset, out_ids, out_offsets),
             .wordpiece => |w| w.encodeWordWithOffsets(chunk, chunk_offset, out_ids, out_offsets),
             .monster => |m| try m.encodeChunkWithOffsets(scratch, chunk, chunk_offset, out_ids, out_offsets),
+            .rwkv_world => |r| try r.encodeChunkWithOffsets(chunk, chunk_offset, out_ids, out_offsets),
         };
     }
 
@@ -151,6 +161,7 @@ pub const Model = union(enum) {
             .unigram => |u| try u.encodeChunkWithOffsetsTrace(scratch, chunk, chunk_offset, out_ids, out_offsets, trace.?),
             .wordpiece => |w| w.encodeWordWithOffsets(chunk, chunk_offset, out_ids, out_offsets),
             .monster => |m| try m.encodeChunkWithOffsetsTrace(scratch, chunk, chunk_offset, out_ids, out_offsets, trace.?),
+            .rwkv_world => |r| try r.encodeChunkWithOffsets(chunk, chunk_offset, out_ids, out_offsets),
         };
     }
 
@@ -165,6 +176,7 @@ pub const Model = union(enum) {
             .unigram => |u| u.idBytes(id),
             .wordpiece => |w| w.idBytes(id),
             .monster => |m| m.idBytes(id),
+            .rwkv_world => |r| r.idBytes(id),
         };
     }
 };
@@ -198,6 +210,23 @@ test "wordpiece variant dispatch" {
     var buf: [16]TokenId = undefined;
     const ids = try m.encode(std.testing.allocator, "unaffable", &buf);
     try std.testing.expectEqualSlices(TokenId, &.{ 1, 2, 3 }, ids);
+}
+
+test "rwkv_world variant dispatch" {
+    const entries = [_]RwkvWorld.Entry{
+        .{ .id = 0, .bytes = "a" },
+        .{ .id = 1, .bytes = "b" },
+        .{ .id = 2, .bytes = "ab" },
+        .{ .id = 3, .bytes = "abc" },
+        .{ .id = 4, .bytes = "c" },
+    };
+    var r = try RwkvWorld.init(std.testing.allocator, &entries);
+    defer r.deinit();
+
+    const m: Model = .{ .rwkv_world = &r };
+    var buf: [4]TokenId = undefined;
+    const ids = try m.encode(std.testing.allocator, "abc", &buf);
+    try std.testing.expectEqualSlices(TokenId, &.{3}, ids); // greedy longest
 }
 
 test "unigram variant dispatch" {

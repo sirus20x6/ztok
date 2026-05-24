@@ -110,6 +110,7 @@ fn modelVocabSize(model: Model) u32 {
         .unigram => |u| u.count,
         .wordpiece => |w| w.count,
         .monster => |m| m.count,
+        .rwkv_world => |r| r.count,
     };
 }
 

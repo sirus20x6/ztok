@@ -64,6 +64,7 @@ const Bpe = @import("bpe.zig").Bpe;
 const Unigram = @import("unigram.zig").Unigram;
 const WordPiece = @import("wordpiece.zig").WordPiece;
 const Monster = @import("monster.zig").Monster;
+const RwkvWorld = @import("rwkv_world.zig").RwkvWorld;
 const Pipeline = @import("pipeline.zig").Pipeline;
 const Vocab = @import("vocab.zig").Vocab;
 const Model = @import("model.zig").Model;
@@ -527,6 +528,7 @@ const OwnedModel = union(enum) {
     unigram: Unigram,
     wordpiece: WordPiece,
     monster: Monster,
+    rwkv_world: RwkvWorld,
 
     fn deinit(self: *OwnedModel) void {
         switch (self.*) {
@@ -534,6 +536,7 @@ const OwnedModel = union(enum) {
             .unigram => |*u| u.deinit(),
             .wordpiece => |*w| w.deinit(),
             .monster => |*m| m.deinit(),
+            .rwkv_world => |*r| r.deinit(),
         }
     }
 
@@ -543,6 +546,7 @@ const OwnedModel = union(enum) {
             .unigram => |*u| .{ .unigram = u },
             .wordpiece => |*w| .{ .wordpiece = w },
             .monster => |*m| .{ .monster = m },
+            .rwkv_world => |*r| .{ .rwkv_world = r },
         };
     }
 
@@ -552,6 +556,7 @@ const OwnedModel = union(enum) {
             .unigram => |*u| u.count,
             .wordpiece => |*w| w.count,
             .monster => |*m| m.count,
+            .rwkv_world => |*r| r.count,
         };
     }
 };
@@ -587,6 +592,7 @@ fn loadModel(allocator: std.mem.Allocator, sc: Scenario, path: []const u8) !Owne
             const loaded = try monster_io.readFileMeta(allocator, path);
             return .{ .monster = loaded.monster };
         },
+        .rwkv => return .{ .rwkv_world = try RwkvWorld.loadFromFile(allocator, path) },
         .tekken => {
             // Tekken loader returns a wrapper that owns a Bpe + special
             // tokens + pattern string. The bench harness only needs the

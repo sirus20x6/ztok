@@ -13,6 +13,7 @@ const Bpe = @import("bpe.zig").Bpe;
 const Unigram = @import("unigram.zig").Unigram;
 const WordPiece = @import("wordpiece.zig").WordPiece;
 const Monster = @import("monster.zig").Monster;
+const RwkvWorld = @import("rwkv_world.zig").RwkvWorld;
 const Pipeline = @import("pipeline.zig").Pipeline;
 const Vocab = @import("vocab.zig").Vocab;
 const doctor = @import("doctor.zig");
@@ -23,13 +24,14 @@ pub const Format = enum { text, json };
 /// Kept thin — owners hold the concrete value and pass a pointer; the
 /// CLI's `runValidateAny` and `runRoundtrip` peek the kind and call the
 /// right validator. `vocab_size` is forwarded for human-readable output.
-pub const ModelKind = enum { bpe, unigram, wordpiece, monster };
+pub const ModelKind = enum { bpe, unigram, wordpiece, monster, rwkv_world };
 
 pub const LoadedModel = union(ModelKind) {
     bpe: *const Bpe,
     unigram: *const Unigram,
     wordpiece: *const WordPiece,
     monster: *const Monster,
+    rwkv_world: *const RwkvWorld,
 
     pub fn vocabSize(self: LoadedModel) u32 {
         return switch (self) {
@@ -37,6 +39,7 @@ pub const LoadedModel = union(ModelKind) {
             .unigram => |u| u.count,
             .wordpiece => |w| w.count,
             .monster => |m| m.count,
+            .rwkv_world => |r| r.count,
         };
     }
 };
@@ -213,6 +216,7 @@ pub fn runValidateAny(
             .unigram => |u| .{ .unigram = u },
             .wordpiece => |w| .{ .wordpiece = w },
             .monster => |m| .{ .monster = m },
+            .rwkv_world => |r| .{ .rwkv_world = r },
         };
         owned_pipe = .{
             .normalizer = .identity,
@@ -229,6 +233,7 @@ pub fn runValidateAny(
         .unigram => |u| try doctor.checkUnigram(allocator, u, pipe_eff.?, &.{}, opts.fixtures, opts.checks),
         .wordpiece => |w| try doctor.checkWordPiece(allocator, w, pipe_eff.?, &.{}, opts.fixtures, opts.checks),
         .monster => |m| try doctor.checkMonster(allocator, m, pipe_eff.?, &.{}, opts.fixtures, opts.checks),
+        .rwkv_world => |r| try doctor.checkRwkvWorld(allocator, r, pipe_eff.?, &.{}, opts.fixtures, opts.checks),
     };
     defer report.deinit();
 
@@ -428,6 +433,7 @@ fn writeJson(
         .unigram => "unigram",
         .wordpiece => "wordpiece",
         .monster => "monster",
+        .rwkv_world => "rwkv_world",
     };
     try out.writeAll("{\"model_kind\":");
     try writeJsonString(out, kind_str);

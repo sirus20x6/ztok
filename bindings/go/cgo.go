@@ -89,6 +89,7 @@ const (
 	FormatHFJSON        Format = C.ZTOK_FORMAT_HF_JSON
 	FormatSentencePiece Format = C.ZTOK_FORMAT_SP_MODEL
 	FormatZTM           Format = C.ZTOK_FORMAT_ZTM
+	FormatRWKV          Format = C.ZTOK_FORMAT_RWKV
 )
 
 // String renders a Format as the lower-snake string the other bindings
@@ -103,6 +104,8 @@ func (f Format) String() string {
 		return "sentencepiece"
 	case FormatZTM:
 		return "ztm"
+	case FormatRWKV:
+		return "rwkv"
 	default:
 		return "unknown"
 	}

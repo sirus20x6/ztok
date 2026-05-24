@@ -5,6 +5,7 @@ const Bpe = @import("bpe.zig").Bpe;
 const Unigram = @import("unigram.zig").Unigram;
 const WordPiece = @import("wordpiece.zig").WordPiece;
 const Monster = @import("monster.zig").Monster;
+const RwkvWorld = @import("rwkv_world.zig").RwkvWorld;
 const AddedToken = @import("added_tokens.zig").AddedToken;
 const Vocab = @import("vocab.zig").Vocab;
 
@@ -551,6 +552,50 @@ pub fn checkMonster(
     return .{ .allocator = allocator, .issues = out };
 }
 
+/// RWKV "World" greedy-match byte tokenizer. It has no model-specific
+/// invariants (every byte 0..255 is a token, so coverage is structural
+/// and matching is unambiguous longest-wins) — only the model-agnostic
+/// checks apply.
+pub fn checkRwkvWorld(
+    allocator: std.mem.Allocator,
+    r: *const RwkvWorld,
+    pipe: *const Pipeline,
+    added_tokens: []const AddedToken,
+    roundtrip_fixtures: ?[]const []const u8,
+    checks: Checks,
+) !Report {
+    var issues: std.ArrayList(Issue) = .empty;
+    errdefer {
+        for (issues.items) |*it| {
+            allocator.free(it.message);
+            if (it.ids.len > 0) allocator.free(it.ids);
+        }
+        issues.deinit(allocator);
+    }
+
+    if (checks.duplicate_decodings) try runDuplicateDecodingsGeneric(
+        allocator,
+        r.count,
+        RwkvWorldAdapter{ .r = r },
+        &issues,
+    );
+
+    if (checks.roundtrip) {
+        const fixtures = roundtrip_fixtures orelse &default_fixtures;
+        try runRoundtrip(allocator, pipe, "roundtrip", fixtures, &issues);
+    }
+    if (checks.whitespace) try runWhitespace(allocator, pipe, &issues);
+    if (checks.special_shadowing) try runSpecialShadowingGeneric(
+        allocator,
+        RwkvWorldAdapter{ .r = r },
+        added_tokens,
+        &issues,
+    );
+
+    const out = try issues.toOwnedSlice(allocator);
+    return .{ .allocator = allocator, .issues = out };
+}
+
 // --- generic adapters: a tiny "IdBytes view" interface so the model-
 //     agnostic checks can run on any of the four kinds.
 
@@ -581,6 +626,16 @@ const MonsterAdapter = struct {
     }
     fn count(self: MonsterAdapter) u32 {
         return self.m.count;
+    }
+};
+
+const RwkvWorldAdapter = struct {
+    r: *const RwkvWorld,
+    fn idBytes(self: RwkvWorldAdapter, id: TokenId) []const u8 {
+        return self.r.idBytes(id);
+    }
+    fn count(self: RwkvWorldAdapter) u32 {
+        return self.r.count;
     }
 };
 

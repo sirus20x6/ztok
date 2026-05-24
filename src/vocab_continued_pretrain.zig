@@ -441,7 +441,7 @@ pub fn writeAdaptedBpe(
         .tiktoken => try writeTiktoken(allocator, adapted, path),
         .hf_json => try hf_writer.writeBpeFile(allocator, adapted, path, .{}),
         .sentencepiece => try sp_writer.writeBpeFile(allocator, adapted, path, .{}),
-        .tekken, .ztm, .unknown => return Error.UnsupportedFormat,
+        .tekken, .ztm, .rwkv, .unknown => return Error.UnsupportedFormat,
     }
 }
 
