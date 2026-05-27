@@ -535,7 +535,19 @@ fn projectVersion(b: *std.Build) []const u8 {
 /// the system search path. The same approach gives pkg-config the
 /// `prefix=` line it needs.
 fn emitConsumerConfigs(b: *std.Build) void {
-    const prefix = b.install_path; // resolved by the harness before this fn runs
+    // `b.install_path` echoes `-p`/`--prefix` verbatim, so a relative
+    // prefix (`zig build -p prefix`) would bake `prefix=prefix` into
+    // ztok.pc — yielding relative `-Lprefix/lib -Iprefix/include` that
+    // only resolve when the compiler runs from the one directory holding
+    // `prefix/`. pkg-config consumers (cgo via PKG_CONFIG_PATH, CMake)
+    // invoke from elsewhere and break. Absolutize against the build
+    // runner's cwd, which is what `-p` is itself relative to.
+    const prefix = if (std.fs.path.isAbsolute(b.install_path))
+        b.install_path
+    else
+        // Resolve against the build root (which is absolute) — the same
+        // mechanism std uses to absolutize the default `zig-out` prefix.
+        b.build_root.join(b.allocator, &.{b.install_path}) catch @panic("emitConsumerConfigs: resolve prefix failed");
     const lib_dir = b.fmt("{s}/lib", .{prefix});
     const include_dir = b.fmt("{s}/include", .{prefix});
     const version = projectVersion(b);
