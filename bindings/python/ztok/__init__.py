@@ -25,12 +25,28 @@ from __future__ import annotations
 import ctypes
 import os
 import weakref
-from ctypes import POINTER, c_char, c_char_p, c_int, c_size_t, c_uint32, c_void_p
+from ctypes import (
+    POINTER,
+    c_char,
+    c_char_p,
+    c_int,
+    c_size_t,
+    c_uint32,
+    c_uint64,
+    c_void_p,
+)
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable, Iterator, List, Optional, Sequence, Union
 
 from . import _ffi
 from ._ffi import (
+    CHUNK_BOUNDARY_CODEPOINT,
+    CHUNK_BOUNDARY_PARAGRAPH,
+    CHUNK_BOUNDARY_SENTENCE,
+    CHUNK_BOUNDARY_TOKEN,
+    CHUNK_BOUNDARY_WORD,
+    CHUNK_BOUNDARY_WORD_DICT,
     DECODER_BYTE_LEVEL,
     DECODER_CONCAT,
     DECODER_WORDPIECE,
@@ -59,6 +75,7 @@ from ._ffi import (
     ZTOK_ERR_INVALID_INPUT,
     ZTOK_ERR_OUT_OF_MEMORY,
     ZTOK_OK,
+    ZtokChunkRec,
     ZtokOverlayChannel,
     ZtokPipelineConfig,
 )
@@ -235,6 +252,23 @@ def _detect_format(path: Union[str, os.PathLike]) -> str:
     return _ffi.ztok_auto_detect(_get_lib(), os.fspath(path))
 
 
+@dataclass(frozen=True)
+class Chunk:
+    """One token window produced by :meth:`Pipeline.chunk`.
+
+    ``ids`` are the token ids in this chunk. ``byte_start``/``byte_end``
+    is the half-open byte range the chunk covers in the ORIGINAL input;
+    ``token_start``/``token_end`` the half-open token-index range in the
+    full encoding.
+    """
+
+    ids: List[int]
+    byte_start: int
+    byte_end: int
+    token_start: int
+    token_end: int
+
+
 class Pipeline:
     """A loaded tokenizer pipeline.
 
@@ -373,6 +407,29 @@ class Pipeline:
         )
 
     @classmethod
+    def from_rwkv(
+        cls,
+        path: Union[str, os.PathLike],
+        *,
+        normalizer: int = NORMALIZER_IDENTITY,
+        decoder: int = DECODER_CONCAT,
+    ) -> "Pipeline":
+        """Load an RWKV "World" vocab (``rwkv_vocab_v20230424.txt``).
+
+        The model is a greedy longest-match byte trie that runs over the
+        whole input as a single span — there is no pre-tokenizer, so the
+        ``pre_tokenizer`` slot is fixed to identity.
+        """
+
+        return cls._from_file_with_cfg(
+            "ztok_pipeline_new_rwkv_from_file",
+            path,
+            normalizer=normalizer,
+            pre_tokenizer=PRETOK_IDENTITY,
+            decoder=decoder,
+        )
+
+    @classmethod
     def from_path(
         cls,
         path: Union[str, os.PathLike],
@@ -398,6 +455,8 @@ class Pipeline:
             return cls.from_sentencepiece(path, unk_id=unk_id, normalizer=normalizer)
         if fmt == "ztm":
             return cls.from_monster(path, normalizer=normalizer)
+        if fmt == "rwkv":
+            return cls.from_rwkv(path, normalizer=normalizer)
         raise ZtokInvalidInputError(
             f"could not auto-detect tokenizer format for {path!r}; "
             "use a specific from_* constructor instead"
@@ -766,20 +825,234 @@ class Pipeline:
                 if out_ids[i]:
                     lib.ztok_ids_free(out_ids[i])
 
+    # --- chunking -------------------------------------------------------
+
+    def chunk(
+        self,
+        text: Union[str, bytes],
+        max_tokens: int,
+        *,
+        overlap: int = 0,
+        boundary: int = CHUNK_BOUNDARY_TOKEN,
+    ) -> List[Chunk]:
+        """Split ``text`` into overlapping token windows (late chunking).
+
+        Each window holds at most ``max_tokens`` ids with ``overlap`` ids
+        shared between neighbors (stride = ``max_tokens - overlap``).
+        ``boundary`` is one of the ``CHUNK_BOUNDARY_*`` constants. Returns
+        an empty list for empty input. The C-owned id buffers are copied
+        into Python lists and freed before returning.
+        """
+
+        if max_tokens <= 0 or overlap >= max_tokens:
+            raise ZtokInvalidInputError(
+                "chunk: max_tokens must be > 0 and overlap < max_tokens"
+            )
+
+        lib = _get_lib()
+        handle = self._raw()
+        data = text.encode("utf-8") if isinstance(text, str) else bytes(text)
+        if not data:
+            return []
+
+        # Sizing pass: out_chunks = NULL -> *out_len = chunk count.
+        out_len = c_size_t(0)
+        rc = lib.ztok_chunk(
+            handle,
+            data,
+            c_size_t(len(data)),
+            c_uint32(max_tokens),
+            c_uint32(overlap),
+            c_uint32(boundary),
+            None,
+            c_size_t(0),
+            ctypes.byref(out_len),
+        )
+        if rc not in (ZTOK_OK, ZTOK_ERR_BUFFER_TOO_SMALL):
+            _raise_for_status(rc, "ztok_chunk (sizing)")
+        count = out_len.value
+        if count == 0:
+            return []
+
+        # Fill pass.
+        recs = (ZtokChunkRec * count)()
+        out_len = c_size_t(0)
+        rc = lib.ztok_chunk(
+            handle,
+            data,
+            c_size_t(len(data)),
+            c_uint32(max_tokens),
+            c_uint32(overlap),
+            c_uint32(boundary),
+            recs,
+            c_size_t(count),
+            ctypes.byref(out_len),
+        )
+        try:
+            _raise_for_status(rc, "ztok_chunk")
+            got = out_len.value
+            chunks: List[Chunk] = []
+            for i in range(got):
+                r = recs[i]
+                ids: List[int] = []
+                if r.ids and r.ids_len:
+                    arr = ctypes.cast(
+                        r.ids, POINTER(TokenId * r.ids_len)
+                    ).contents
+                    ids = list(arr)
+                chunks.append(
+                    Chunk(
+                        ids=ids,
+                        byte_start=r.byte_start,
+                        byte_end=r.byte_end,
+                        token_start=r.token_start,
+                        token_end=r.token_end,
+                    )
+                )
+            return chunks
+        finally:
+            # Release each record's ztok-allocated id buffer. The recs
+            # array itself is Python-owned.
+            lib.ztok_chunks_free(recs, c_size_t(out_len.value))
+
 
 def _Pipeline_free(lib: ctypes.CDLL, handle: int) -> None:
     lib.ztok_pipeline_free(handle)
 
 
+# --- Engram n-gram hashing -----------------------------------------------
+
+
+def ngram_hash(ids: Sequence[int], n: int, heads: int) -> List[int]:
+    """Hash every length-``n`` window of ``ids`` under ``heads`` hash
+    functions.
+
+    Returns the row-major ``[position][head]`` uint64 hashes
+    (positions = ``len(ids) - n + 1``, or 0 if the stream is shorter than
+    one window). Mask each hash to your table width
+    (``hash & ((1 << bits) - 1)``). Deterministic: identical ids always
+    yield identical hashes. Operates on raw ids — no Pipeline needed.
+    """
+
+    if n <= 0 or heads <= 0:
+        return []
+    n_ids = len(ids)
+    if n_ids < n:
+        return []
+    positions = n_ids - n + 1
+    want = positions * heads
+    if want == 0:
+        return []
+
+    lib = _get_lib()
+    id_buf = (TokenId * n_ids)(*ids)
+    cap = want
+    for _ in range(2):
+        out = (c_uint64 * cap)()
+        out_len = c_size_t(0)
+        rc = lib.ztok_ngram_hash(
+            ctypes.cast(id_buf, TokenIdPtr),
+            c_size_t(n_ids),
+            c_uint32(n),
+            c_uint32(heads),
+            ctypes.cast(out, POINTER(c_uint64)),
+            c_size_t(cap),
+            ctypes.byref(out_len),
+        )
+        if rc == ZTOK_OK:
+            return list(out[: out_len.value])
+        if rc == ZTOK_ERR_BUFFER_TOO_SMALL:
+            cap = out_len.value
+            if cap == 0:
+                return []
+            continue
+        _raise_for_status(rc, "ztok_ngram_hash")
+    raise ZtokInternalError("ztok_ngram_hash reported BUFFER_TOO_SMALL twice")
+
+
+def ngram_hash_batch(
+    pool: BatchPool,
+    streams: Sequence[Sequence[int]],
+    n: int,
+    heads: int,
+) -> List[List[int]]:
+    """Hash many id streams in parallel across ``pool``.
+
+    ``results[i]`` holds the row-major hashes for ``streams[i]`` (empty
+    for a stream shorter than one window). Equivalent to calling
+    :func:`ngram_hash` on each stream, fanned out across the pool.
+    """
+
+    lib = _get_lib()
+    pool_handle = pool._raw()
+    n_docs = len(streams)
+    if n_docs == 0:
+        return []
+
+    id_arrays = (TokenIdPtr * n_docs)()
+    id_lens = (c_size_t * n_docs)()
+    # Keep the per-stream id buffers alive for the duration of the call.
+    keepalive: List[object] = []
+    for i, s in enumerate(streams):
+        id_lens[i] = c_size_t(len(s))
+        if len(s) == 0:
+            id_arrays[i] = ctypes.cast(None, TokenIdPtr)
+            continue
+        buf = (TokenId * len(s))(*s)
+        keepalive.append(buf)
+        id_arrays[i] = ctypes.cast(buf, TokenIdPtr)
+
+    out_hashes = (POINTER(c_uint64) * n_docs)()
+    out_lens = (c_size_t * n_docs)()
+    rc = lib.ztok_ngram_hash_batch(
+        pool_handle,
+        id_arrays,
+        id_lens,
+        c_size_t(n_docs),
+        c_uint32(n),
+        c_uint32(heads),
+        out_hashes,
+        out_lens,
+    )
+    try:
+        # Materialize every (possibly partial) buffer before raising, so
+        # an error mid-batch can't leak the buffers already allocated.
+        results: List[List[int]] = []
+        for i in range(n_docs):
+            ptr = out_hashes[i]
+            length = out_lens[i]
+            if ptr and length:
+                arr = ctypes.cast(ptr, POINTER(c_uint64 * length)).contents
+                results.append(list(arr))
+            else:
+                results.append([])
+        _raise_for_status(rc, "ztok_ngram_hash_batch")
+        return results
+    finally:
+        for i in range(n_docs):
+            if out_hashes[i]:
+                lib.ztok_u64s_free(out_hashes[i])
+
+
 __all__ = [
     "BatchPool",
+    "Chunk",
     "Pipeline",
+    "ngram_hash",
+    "ngram_hash_batch",
     "ZtokBufferTooSmallError",
     "ZtokError",
     "ZtokInternalError",
     "ZtokInvalidInputError",
     "ZtokLibraryNotFoundError",
     "ZtokOutOfMemoryError",
+    # Chunk boundary modes.
+    "CHUNK_BOUNDARY_CODEPOINT",
+    "CHUNK_BOUNDARY_PARAGRAPH",
+    "CHUNK_BOUNDARY_SENTENCE",
+    "CHUNK_BOUNDARY_TOKEN",
+    "CHUNK_BOUNDARY_WORD",
+    "CHUNK_BOUNDARY_WORD_DICT",
     # Enum constants (exposed so callers can pass non-default normalizers).
     "DECODER_BYTE_LEVEL",
     "DECODER_CONCAT",

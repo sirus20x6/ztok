@@ -35,6 +35,7 @@ from ctypes import (
     c_size_t,
     c_uint,
     c_uint32,
+    c_uint64,
     c_void_p,
 )
 
@@ -69,6 +70,16 @@ FORMAT_TIKTOKEN = 1
 FORMAT_HF_JSON = 2
 FORMAT_SP_MODEL = 3
 FORMAT_ZTM = 4
+FORMAT_TEKKEN = 5
+FORMAT_RWKV = 6
+
+# Chunk boundary modes (mirrors `ztok_chunk_boundary` in ztok.h).
+CHUNK_BOUNDARY_TOKEN = 0
+CHUNK_BOUNDARY_CODEPOINT = 1
+CHUNK_BOUNDARY_WORD = 2
+CHUNK_BOUNDARY_WORD_DICT = 3
+CHUNK_BOUNDARY_SENTENCE = 4
+CHUNK_BOUNDARY_PARAGRAPH = 5
 
 # Overlay channel kinds (mirrors `ztok_overlay_kind` in ztok.h). Cheap
 # channels are derived from encoder state; domain channels are zero-filled
@@ -97,6 +108,25 @@ class ZtokPipelineConfig(Structure):
         ("pre_tokenizer", c_uint),
         ("model", c_uint),
         ("decoder", c_uint),
+    ]
+
+
+class ZtokChunkRec(Structure):
+    """Mirrors `struct ztok_chunk_rec` in ztok.h.
+
+    `ids` is a ztok-allocated buffer of `ids_len` token ids (NULL when
+    ids_len == 0), released via ztok_chunks_free. `byte_*` is the
+    half-open byte range in the ORIGINAL input; `token_*` the half-open
+    token-index range in the full encoding.
+    """
+
+    _fields_ = [
+        ("ids", TokenIdPtr),
+        ("ids_len", c_size_t),
+        ("byte_start", c_uint32),
+        ("byte_end", c_uint32),
+        ("token_start", c_uint32),
+        ("token_end", c_uint32),
     ]
 
 
@@ -132,6 +162,7 @@ def bind(lib: ctypes.CDLL) -> ctypes.CDLL:
         "ztok_pipeline_new_bpe_from_tiktoken",
         "ztok_pipeline_new_bpe_from_hf_json",
         "ztok_pipeline_new_monster_from_file",
+        "ztok_pipeline_new_rwkv_from_file",
     ):
         fn = getattr(lib, fname)
         fn.argtypes = [c_char_p, POINTER(ZtokPipelineConfig), POINTER(c_int)]
@@ -217,6 +248,50 @@ def bind(lib: ctypes.CDLL) -> ctypes.CDLL:
     lib.ztok_version.argtypes = []
     lib.ztok_version.restype = c_char_p
 
+    # --- n-gram hashing (Engram) -----------------------------------------
+    lib.ztok_ngram_hash.argtypes = [
+        TokenIdPtr,             # ids
+        c_size_t,               # n_ids
+        c_uint32,               # n (window length)
+        c_uint32,               # heads
+        POINTER(c_uint64),      # out
+        c_size_t,               # out_cap
+        POINTER(c_size_t),      # out_len
+    ]
+    lib.ztok_ngram_hash.restype = c_int
+
+    lib.ztok_ngram_hash_batch.argtypes = [
+        c_void_p,                   # batch_pool*
+        POINTER(TokenIdPtr),        # id_arrays[]
+        POINTER(c_size_t),          # id_lens[]
+        c_size_t,                   # n_docs
+        c_uint32,                   # n
+        c_uint32,                   # heads
+        POINTER(POINTER(c_uint64)), # out_hashes[]
+        POINTER(c_size_t),          # out_lens[]
+    ]
+    lib.ztok_ngram_hash_batch.restype = c_int
+
+    lib.ztok_u64s_free.argtypes = [POINTER(c_uint64)]
+    lib.ztok_u64s_free.restype = None
+
+    # --- chunking ---------------------------------------------------------
+    lib.ztok_chunk.argtypes = [
+        c_void_p,                   # pipeline*
+        c_char_p,                   # text
+        c_size_t,                   # text_len
+        c_uint32,                   # max_tokens
+        c_uint32,                   # overlap
+        c_uint32,                   # boundary
+        POINTER(ZtokChunkRec),      # out_chunks (nullable for sizing)
+        c_size_t,                   # out_cap
+        POINTER(c_size_t),          # out_len
+    ]
+    lib.ztok_chunk.restype = c_int
+
+    lib.ztok_chunks_free.argtypes = [POINTER(ZtokChunkRec), c_size_t]
+    lib.ztok_chunks_free.restype = None
+
     # --- auto-detect ------------------------------------------------------
     lib.ztok_auto_detect.argtypes = [c_char_p]
     lib.ztok_auto_detect.restype = c_uint  # ztok_format enum (c_uint)
@@ -256,6 +331,8 @@ _FORMAT_CODE_TO_NAME = {
     FORMAT_HF_JSON: "hf_json",
     FORMAT_SP_MODEL: "sentencepiece",
     FORMAT_ZTM: "ztm",
+    FORMAT_TEKKEN: "tekken",
+    FORMAT_RWKV: "rwkv",
 }
 
 
