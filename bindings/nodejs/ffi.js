@@ -41,6 +41,16 @@ const FORMAT_TIKTOKEN = 1;
 const FORMAT_HF_JSON = 2;
 const FORMAT_SP_MODEL = 3;
 const FORMAT_ZTM = 4;
+const FORMAT_TEKKEN = 5;
+const FORMAT_RWKV = 6;
+
+// --- chunk boundary modes (mirror enum ztok_chunk_boundary) ---
+const CHUNK_BOUNDARY_TOKEN = 0;
+const CHUNK_BOUNDARY_CODEPOINT = 1;
+const CHUNK_BOUNDARY_WORD = 2;
+const CHUNK_BOUNDARY_WORD_DICT = 3;
+const CHUNK_BOUNDARY_SENTENCE = 4;
+const CHUNK_BOUNDARY_PARAGRAPH = 5;
 
 // --- overlay channel kinds (mirror enum ztok_overlay_kind) ---
 const OVERLAY_BYTE_START = 0;
@@ -59,6 +69,7 @@ const FORMAT_CODE_TO_NAME = {
     [FORMAT_HF_JSON]: 'hf_json',
     [FORMAT_SP_MODEL]: 'sentencepiece',
     [FORMAT_ZTM]: 'ztm',
+    [FORMAT_RWKV]: 'rwkv',
 };
 
 // Module-level singleton — koffi caches the dlopen handle, and binding
@@ -100,6 +111,9 @@ function getLib() {
     const ztok_pipeline_new_monster_from_file = lib.func(
         'void* ztok_pipeline_new_monster_from_file(const char* path, ztok_pipeline_config* cfg, _Out_ int* status)'
     );
+    const ztok_pipeline_new_rwkv_from_file = lib.func(
+        'void* ztok_pipeline_new_rwkv_from_file(const char* path, ztok_pipeline_config* cfg, _Out_ int* status)'
+    );
 
     // --- encode / decode ---
     const ztok_encode = lib.func(
@@ -140,6 +154,38 @@ function getLib() {
 
     const ztok_ids_free = lib.func('void ztok_ids_free(void* ids)');
 
+    // --- Engram n-gram hashing ---
+    // Raw token ids in, row-major [position][head] uint64 hashes out. The
+    // single-doc path fills a caller-owned uint64 buffer; the batch path
+    // hands back one ztok-allocated buffer per doc (free with
+    // ztok_u64s_free). We pass id arrays/hash buffers as void* so JS can
+    // marshal typed arrays or NULL.
+    const ztok_ngram_hash = lib.func(
+        'int ztok_ngram_hash(uint32_t* ids, size_t n_ids, uint32_t n, uint32_t heads, _Out_ uint64_t* out, size_t out_cap, _Out_ size_t* out_len)'
+    );
+    const ztok_ngram_hash_batch = lib.func(
+        'int ztok_ngram_hash_batch(void* pool, const uint32_t** id_arrays, size_t* id_lens, size_t n_docs, uint32_t n, uint32_t heads, _Out_ void** out_hashes, _Out_ size_t* out_lens)'
+    );
+    const ztok_u64s_free = lib.func('void ztok_u64s_free(void* hashes)');
+
+    // --- chunking ---
+    // Struct mirroring `ztok_chunk_rec`. `ids` is a ztok-allocated buffer
+    // of `ids_len` token ids (NULL when ids_len==0), released via
+    // ztok_chunks_free; byte_*/token_* are half-open ranges in the
+    // original input.
+    const ZtokChunkRec = koffi.struct('ztok_chunk_rec', {
+        ids: 'void*',
+        ids_len: 'size_t',
+        byte_start: 'uint32_t',
+        byte_end: 'uint32_t',
+        token_start: 'uint32_t',
+        token_end: 'uint32_t',
+    });
+    const ztok_chunk = lib.func(
+        'int ztok_chunk(void* pipeline, const char* text, size_t text_len, uint32_t max_tokens, uint32_t overlap, uint32_t boundary, _Out_ ztok_chunk_rec* out_chunks, size_t out_cap, _Out_ size_t* out_len)'
+    );
+    const ztok_chunks_free = lib.func('void ztok_chunks_free(ztok_chunk_rec* chunks, size_t n)');
+
     // --- auto-detect ---
     const ztok_auto_detect = lib.func('uint32_t ztok_auto_detect(const char* path)');
 
@@ -162,6 +208,7 @@ function getLib() {
         koffi,
         ZtokPipelineConfig,
         ZtokOverlayChannel,
+        ZtokChunkRec,
         ztok_encode_with_overlays,
         ztok_pipeline_new,
         ztok_pipeline_free,
@@ -170,6 +217,12 @@ function getLib() {
         ztok_pipeline_new_wordpiece_from_hf_json,
         ztok_pipeline_new_unigram_from_sp_model,
         ztok_pipeline_new_monster_from_file,
+        ztok_pipeline_new_rwkv_from_file,
+        ztok_ngram_hash,
+        ztok_ngram_hash_batch,
+        ztok_u64s_free,
+        ztok_chunk,
+        ztok_chunks_free,
         ztok_encode,
         ztok_decode,
         ztok_encode_batch,
@@ -225,7 +278,17 @@ module.exports = {
     FORMAT_HF_JSON,
     FORMAT_SP_MODEL,
     FORMAT_ZTM,
+    FORMAT_TEKKEN,
+    FORMAT_RWKV,
     FORMAT_CODE_TO_NAME,
+
+    // Chunk boundary modes
+    CHUNK_BOUNDARY_TOKEN,
+    CHUNK_BOUNDARY_CODEPOINT,
+    CHUNK_BOUNDARY_WORD,
+    CHUNK_BOUNDARY_WORD_DICT,
+    CHUNK_BOUNDARY_SENTENCE,
+    CHUNK_BOUNDARY_PARAGRAPH,
 
     // Overlay channel kinds
     OVERLAY_BYTE_START,

@@ -7,7 +7,43 @@
 /// <reference types="node" />
 
 /** Auto-detected tokenizer file format (return value of `detectFormat`). */
-export type ZtokFormat = 'unknown' | 'tiktoken' | 'hf_json' | 'sentencepiece' | 'ztm';
+export type ZtokFormat = 'unknown' | 'tiktoken' | 'hf_json' | 'sentencepiece' | 'ztm' | 'rwkv';
+
+/** Boundary mode for `Pipeline.chunk` (mirrors `ztok_chunk_boundary`). */
+export enum ChunkBoundary {
+    /** Pure token-count windows (default). */
+    Token = 0,
+    /** Snap to a UTF-8 codepoint boundary. */
+    Codepoint = 1,
+    /** Snap to a whitespace word boundary. */
+    Word = 2,
+    /** Snap to a dictionary word boundary (CJK/Thai/...). */
+    WordDict = 3,
+    /** Snap to a sentence boundary. */
+    Sentence = 4,
+    /** Snap to a paragraph break (\n\n). */
+    Paragraph = 5,
+}
+
+/** One token window produced by `Pipeline.chunk`. */
+export interface Chunk {
+    /** The token ids in this chunk. */
+    ids: Uint32Array;
+    /** Half-open byte range this chunk covers in the ORIGINAL input. */
+    byteStart: number;
+    byteEnd: number;
+    /** Half-open token-index range in the full encoding. */
+    tokenStart: number;
+    tokenEnd: number;
+}
+
+/** Options for `Pipeline.chunk`. */
+export interface ChunkOptions {
+    /** Tokens shared between neighboring windows. Default: 0. Must be < maxTokens. */
+    overlap?: number;
+    /** Boundary mode. Default: `ChunkBoundary.Token` (0). */
+    boundary?: ChunkBoundary | number;
+}
 
 /** Common options for every file-loading constructor. */
 export interface PipelineLoadOptions {
@@ -97,11 +133,18 @@ export class Pipeline {
     static fromMonster(path: string, opts?: PipelineLoadOptions): Pipeline;
 
     /**
+     * Load an RWKV "World" vocab (rwkv_vocab_v20230424.txt). Greedy
+     * longest-match byte trie with no pre-tokenizer.
+     */
+    static fromRWKV(path: string, opts?: PipelineLoadOptions): Pipeline;
+
+    /**
      * Auto-detect the file format and dispatch to the right loader.
      *   - `.tiktoken`        -> BPE + cl100k pre-tokenizer
      *   - `tokenizer.json`   -> BPE (HF JSON)
      *   - `.model`           -> SentencePiece Unigram
      *   - `.ztm`             -> TokenMonster
+     *   - RWKV World vocab   -> RWKV greedy byte trie
      */
     static fromPath(
         path: string,
@@ -150,7 +193,44 @@ export class Pipeline {
         text: string | Buffer | Uint8Array,
         opts?: StreamOptions
     ): Generator<Uint32Array, void, unknown>;
+
+    /**
+     * Split `text` into overlapping token windows (late chunking). Each
+     * window holds at most `maxTokens` ids with `overlap` ids shared
+     * between neighbors (stride = maxTokens - overlap). Returns [] for
+     * empty input. Throws `ZtokInvalidInputError` if `maxTokens <= 0` or
+     * `overlap >= maxTokens`.
+     */
+    chunk(
+        text: string | Buffer | Uint8Array,
+        maxTokens: number,
+        opts?: ChunkOptions
+    ): Chunk[];
 }
+
+/**
+ * Hash every length-`n` window of `ids` under `heads` hash functions,
+ * returning the row-major [position][head] uint64 hashes as a
+ * BigUint64Array (positions = ids.length - n + 1, or 0 if shorter than
+ * one window). Deterministic; operates on raw ids — no Pipeline needed.
+ */
+export function hashNgrams(
+    ids: Uint32Array | number[],
+    n: number,
+    heads: number
+): BigUint64Array;
+
+/**
+ * Hash many id streams in parallel across `pool`. `results[i]` holds the
+ * row-major hashes for `streams[i]` (empty for a stream shorter than one
+ * window). Equivalent to calling `hashNgrams` on each stream.
+ */
+export function hashNgramsBatch(
+    pool: BatchPool,
+    streams: (Uint32Array | number[])[],
+    n: number,
+    heads: number
+): BigUint64Array[];
 
 /** Returns the libztok version string (e.g. "1.19.0"). */
 export function version(): string;
@@ -185,3 +265,12 @@ export const OVERLAY_SYMBOL_REF: 5;
 export const OVERLAY_HUNK: 6;
 export const OVERLAY_PROVENANCE: 7;
 export const OVERLAY_USER_BASE: 0x8000;
+
+// --- chunk boundary modes (mirror ztok_chunk_boundary in include/ztok.h) ---
+
+export const CHUNK_BOUNDARY_TOKEN: 0;
+export const CHUNK_BOUNDARY_CODEPOINT: 1;
+export const CHUNK_BOUNDARY_WORD: 2;
+export const CHUNK_BOUNDARY_WORD_DICT: 3;
+export const CHUNK_BOUNDARY_SENTENCE: 4;
+export const CHUNK_BOUNDARY_PARAGRAPH: 5;

@@ -274,6 +274,26 @@ class Pipeline {
     }
 
     /**
+     * Load an RWKV "World" vocab (rwkv_vocab_v20230424.txt).
+     *
+     * The model is a greedy longest-match byte trie that runs over the
+     * whole input as a single span — there is no pre-tokenizer, so the
+     * pre-tokenizer slot is fixed to identity.
+     */
+    static fromRWKV(filePath, opts = {}) {
+        return Pipeline._fromFileWithCfg(
+            'ztok_pipeline_new_rwkv_from_file',
+            filePath,
+            {
+                normalizer: opts.normalizer ?? ffi.NORMALIZER_IDENTITY,
+                pre_tokenizer: ffi.PRETOK_IDENTITY,
+                model: ffi.MODEL_BYTE_ID,
+                decoder: opts.decoder ?? ffi.DECODER_CONCAT,
+            }
+        );
+    }
+
+    /**
      * Auto-detect the file format and dispatch to the right loader.
      * - .tiktoken          -> BPE + cl100k pre-tokenizer
      * - tokenizer.json     -> BPE (HF JSON)
@@ -291,6 +311,8 @@ class Pipeline {
                 return Pipeline.fromSentencePiece(filePath, opts);
             case 'ztm':
                 return Pipeline.fromMonster(filePath, opts);
+            case 'rwkv':
+                return Pipeline.fromRWKV(filePath, opts);
             default:
                 throw new ZtokInvalidInputError(
                     `could not auto-detect tokenizer format for ${filePath}; ` +
@@ -641,6 +663,95 @@ class Pipeline {
             try { lib.ztok_stream_free(streamHandle); } catch (_) { /* ignore */ }
         }
     }
+
+    // --- chunking ---
+
+    /**
+     * Split `text` into overlapping token windows (late chunking). Each
+     * window holds at most `maxTokens` ids with `overlap` ids shared
+     * between neighbors (stride = maxTokens - overlap). `boundary` is one
+     * of the CHUNK_BOUNDARY_* constants. Returns [] for empty input.
+     *
+     * Mirrors the C ABI sizing protocol: a first call with out_chunks =
+     * NULL queries the chunk count, then a record array is allocated and a
+     * second call fills it. The C-owned per-record id buffers are copied
+     * into Uint32Arrays and freed via ztok_chunks_free before returning.
+     *
+     * @param {string | Buffer | Uint8Array} text
+     * @param {number} maxTokens
+     * @param {{ overlap?: number, boundary?: number }} [opts]
+     * @returns {{ ids: Uint32Array, byteStart: number, byteEnd: number, tokenStart: number, tokenEnd: number }[]}
+     */
+    chunk(text, maxTokens, opts = {}) {
+        this._check();
+        const overlap = opts.overlap ?? 0;
+        const boundary = opts.boundary ?? ffi.CHUNK_BOUNDARY_TOKEN;
+        if (!Number.isInteger(maxTokens) || maxTokens <= 0
+            || !Number.isInteger(overlap) || overlap < 0 || overlap >= maxTokens) {
+            throw new ZtokInvalidInputError(
+                'chunk: maxTokens must be > 0 and 0 <= overlap < maxTokens'
+            );
+        }
+
+        const lib = ffi.getLib();
+        const koffi = lib.koffi;
+        const handle = this._handle;
+        const data = typeof text === 'string'
+            ? Buffer.from(text, 'utf-8')
+            : Buffer.isBuffer(text) ? text : Buffer.from(text);
+        if (data.length === 0) return [];
+
+        // Sizing pass: out_chunks = NULL -> *out_len = chunk count.
+        const outLen = [0];
+        let rc = lib.ztok_chunk(
+            handle, data, data.length,
+            maxTokens, overlap, boundary,
+            null, 0, outLen
+        );
+        if (rc !== ffi.ZTOK_OK && rc !== ffi.ZTOK_ERR_BUFFER_TOO_SMALL) {
+            raiseForStatus(rc, 'ztok_chunk (sizing)');
+        }
+        const count = Number(outLen[0]);
+        if (count === 0) return [];
+
+        // Fill pass: allocate a record array sized to the chunk count.
+        const recs = koffi.alloc('ztok_chunk_rec', count);
+        const outLen2 = [0];
+        rc = lib.ztok_chunk(
+            handle, data, data.length,
+            maxTokens, overlap, boundary,
+            recs, count, outLen2
+        );
+        const got = Number(outLen2[0]);
+        try {
+            raiseForStatus(rc, 'ztok_chunk');
+            const decoded = koffi.decode(recs, koffi.array('ztok_chunk_rec', got));
+            const out = new Array(got);
+            for (let i = 0; i < got; i++) {
+                const r = decoded[i];
+                const idsLen = Number(r.ids_len);
+                let ids;
+                if (r.ids && idsLen > 0) {
+                    const vals = koffi.decode(r.ids, koffi.array('uint32_t', idsLen));
+                    ids = Uint32Array.from(vals);
+                } else {
+                    ids = new Uint32Array(0);
+                }
+                out[i] = {
+                    ids,
+                    byteStart: r.byte_start,
+                    byteEnd: r.byte_end,
+                    tokenStart: r.token_start,
+                    tokenEnd: r.token_end,
+                };
+            }
+            return out;
+        } finally {
+            // Release each record's ztok-allocated id buffer. The recs
+            // array itself is JS-owned (koffi.alloc).
+            try { lib.ztok_chunks_free(recs, got); } catch (_) { /* ignore */ }
+        }
+    }
 }
 
 function materializeAndFreeIds(lib, ptr, n) {
@@ -651,10 +762,141 @@ function materializeAndFreeIds(lib, ptr, n) {
     return out;
 }
 
+// Decode `n` u64 hashes at `ptr` into a BigUint64Array. uint64 values
+// routinely exceed 2^53, so we read raw little-endian bytes rather than
+// koffi's number-decode (which would lose precision on big hashes).
+function decodeU64s(koffi, ptr, n) {
+    if (!ptr || n <= 0) return new BigUint64Array(0);
+    const bytes = koffi.decode(ptr, koffi.array('uint8_t', n * 8, 'Array'));
+    const buf = Buffer.from(bytes);
+    // Copy into a fresh BigUint64Array (Buffer.buffer may be a larger
+    // pooled ArrayBuffer; constructing over the exact slice is safest).
+    const out = new BigUint64Array(n);
+    for (let i = 0; i < n; i++) out[i] = buf.readBigUInt64LE(i * 8);
+    return out;
+}
+
+// --- Engram n-gram hashing ---
+
+/**
+ * Hash every length-`n` window of `ids` under `heads` hash functions,
+ * returning the row-major [position][head] uint64 hashes as a
+ * BigUint64Array (positions = ids.length - n + 1, or 0 if the stream is
+ * shorter than one window). Mask each hash to your table width
+ * (hash & ((1n << bits) - 1n)). Deterministic: identical ids always
+ * yield identical hashes. Operates on raw ids — no Pipeline needed.
+ *
+ * @param {Uint32Array | number[]} ids
+ * @param {number} n
+ * @param {number} heads
+ * @returns {BigUint64Array}
+ */
+function hashNgrams(ids, n, heads) {
+    if (!Number.isInteger(n) || !Number.isInteger(heads) || n <= 0 || heads <= 0) {
+        return new BigUint64Array(0);
+    }
+    const idArr = ids instanceof Uint32Array ? ids : Uint32Array.from(ids);
+    const nIds = idArr.length;
+    if (nIds < n) return new BigUint64Array(0);
+    const positions = nIds - n + 1;
+    let want = positions * heads;
+    if (want === 0) return new BigUint64Array(0);
+
+    const lib = ffi.getLib();
+    const koffi = lib.koffi;
+    let cap = want;
+    for (let attempt = 0; attempt < 2; attempt++) {
+        const out = koffi.alloc('uint64_t', cap);
+        const outLen = [0];
+        const rc = lib.ztok_ngram_hash(idArr, nIds, n, heads, out, cap, outLen);
+        if (rc === ffi.ZTOK_OK) {
+            return decodeU64s(koffi, out, Number(outLen[0]));
+        }
+        if (rc === ffi.ZTOK_ERR_BUFFER_TOO_SMALL) {
+            cap = Number(outLen[0]);
+            if (cap === 0) return new BigUint64Array(0);
+            continue;
+        }
+        raiseForStatus(rc, 'ztok_ngram_hash');
+    }
+    throw new ZtokInternalError('ztok_ngram_hash reported BUFFER_TOO_SMALL twice');
+}
+
+/**
+ * Hash many id streams in parallel across `pool`. results[i] holds the
+ * row-major hashes for streams[i] (empty for a stream shorter than one
+ * window). Equivalent to calling {@link hashNgrams} on each stream,
+ * fanned out across the pool's workers. Each per-doc C buffer is
+ * materialized into a BigUint64Array and freed via ztok_u64s_free (the
+ * only safe path — buffers carry a length-prefix header).
+ *
+ * @param {BatchPool} pool
+ * @param {(Uint32Array | number[])[]} streams
+ * @param {number} n
+ * @param {number} heads
+ * @returns {BigUint64Array[]}
+ */
+function hashNgramsBatch(pool, streams, n, heads) {
+    if (!(pool instanceof BatchPool)) {
+        throw new TypeError('hashNgramsBatch: first arg must be a BatchPool');
+    }
+    const poolHandle = pool._raw();
+    const nDocs = streams.length;
+    if (nDocs === 0) return [];
+
+    const lib = ffi.getLib();
+    const koffi = lib.koffi;
+
+    // Materialize each id stream into its own Uint32Array buffer. koffi
+    // needs an array of pointers for `const uint32_t**`; we keep the
+    // typed arrays alive in `bufs` for the duration of the call.
+    const bufs = new Array(nDocs);
+    const idArrays = new Array(nDocs);
+    const idLens = new Array(nDocs);
+    for (let i = 0; i < nDocs; i++) {
+        const s = streams[i];
+        const arr = s instanceof Uint32Array ? s : Uint32Array.from(s);
+        idLens[i] = arr.length;
+        if (arr.length === 0) {
+            bufs[i] = null;
+            idArrays[i] = null;
+            continue;
+        }
+        bufs[i] = arr;
+        idArrays[i] = arr;
+    }
+
+    const outHashes = new Array(nDocs).fill(null);
+    const outLens = new Array(nDocs).fill(0);
+
+    const rc = lib.ztok_ngram_hash_batch(
+        poolHandle, idArrays, idLens, nDocs, n, heads, outHashes, outLens
+    );
+
+    try {
+        // Materialize every (possibly partial) buffer before raising, so an
+        // error mid-batch can't leak the buffers already allocated.
+        const results = new Array(nDocs);
+        for (let i = 0; i < nDocs; i++) {
+            results[i] = decodeU64s(koffi, outHashes[i], Number(outLens[i]));
+        }
+        raiseForStatus(rc, 'ztok_ngram_hash_batch');
+        return results;
+    } finally {
+        for (let i = 0; i < nDocs; i++) {
+            if (outHashes[i]) {
+                try { lib.ztok_u64s_free(outHashes[i]); } catch (_) { /* ignore */ }
+            }
+        }
+    }
+}
+
 module.exports = {
     Pipeline,
     BatchPool,
     version,
+    hashNgrams,
+    hashNgramsBatch,
 
     // Exceptions
     ZtokError,
@@ -687,6 +929,14 @@ module.exports = {
     OVERLAY_HUNK: ffi.OVERLAY_HUNK,
     OVERLAY_PROVENANCE: ffi.OVERLAY_PROVENANCE,
     OVERLAY_USER_BASE: ffi.OVERLAY_USER_BASE,
+
+    // Chunk boundary modes (mirror ztok_chunk_boundary in include/ztok.h)
+    CHUNK_BOUNDARY_TOKEN: ffi.CHUNK_BOUNDARY_TOKEN,
+    CHUNK_BOUNDARY_CODEPOINT: ffi.CHUNK_BOUNDARY_CODEPOINT,
+    CHUNK_BOUNDARY_WORD: ffi.CHUNK_BOUNDARY_WORD,
+    CHUNK_BOUNDARY_WORD_DICT: ffi.CHUNK_BOUNDARY_WORD_DICT,
+    CHUNK_BOUNDARY_SENTENCE: ffi.CHUNK_BOUNDARY_SENTENCE,
+    CHUNK_BOUNDARY_PARAGRAPH: ffi.CHUNK_BOUNDARY_PARAGRAPH,
 
     // Format detection (string form). Mirrors Python's _detect_format.
     detectFormat: ffi.detectFormat,
