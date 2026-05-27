@@ -161,6 +161,19 @@ public final class Pipeline implements AutoCloseable {
     }
 
     /**
+     * Load an RWKV "World" vocab ({@code rwkv_vocab_v20230424.txt}). The
+     * model is a greedy longest-match byte trie that runs over the whole
+     * input as a single span — there is no pre-tokenizer, so the
+     * pre-tokenizer slot is fixed to identity.
+     */
+    public static Pipeline fromRwkv(Path path) {
+        return fromFile(Native.ZTOK_PIPELINE_NEW_RWKV_FROM_FILE, path,
+                        Native.NORMALIZER_IDENTITY, Native.PRETOK_IDENTITY,
+                        Native.MODEL_BYTE_ID, Native.DECODER_CONCAT,
+                        "ztok_pipeline_new_rwkv_from_file");
+    }
+
+    /**
      * Auto-detect the file format and dispatch to the right loader. The
      * lowercase name matches the API used in the Python / Node bindings:
      * Python's {@code Pipeline.from_path}, Node's {@code Pipeline.fromPath},
@@ -177,6 +190,7 @@ public final class Pipeline implements AutoCloseable {
             // Tekken is BPE under HF_JSON loader in the other bindings —
             // route it through fromHfJson for symmetry.
             case TEKKEN -> fromHfJson(path);
+            case RWKV -> fromRwkv(path);
             case UNKNOWN -> throw new ZtokException.InvalidInput(
                 "could not auto-detect tokenizer format for " + path
                 + "; use a specific from* constructor instead",
@@ -526,6 +540,123 @@ public final class Pipeline implements AutoCloseable {
                 }
             }
             return results;
+        }
+    }
+
+    // --- chunking ---------------------------------------------------------
+
+    // ztok_chunk_rec layout (64-bit): { token_id* ids; size_t ids_len;
+    //   uint32 byte_start, byte_end, token_start, token_end; }
+    // -> ids at 0, ids_len at 8, byte_start at 16, byte_end at 20,
+    //    token_start at 24, token_end at 28; struct size 32, align 8.
+    private static final long CHUNK_REC_SIZE = 32L;
+    private static final long CHUNK_REC_IDS_OFFSET = 0L;
+    private static final long CHUNK_REC_IDS_LEN_OFFSET = 8L;
+    private static final long CHUNK_REC_BYTE_START_OFFSET = 16L;
+    private static final long CHUNK_REC_BYTE_END_OFFSET = 20L;
+    private static final long CHUNK_REC_TOKEN_START_OFFSET = 24L;
+    private static final long CHUNK_REC_TOKEN_END_OFFSET = 28L;
+
+    /**
+     * Split {@code text} into non-overlapping token windows of at most
+     * {@code maxTokens} ids each, with token-count boundaries.
+     */
+    public Chunk[] chunk(String text, int maxTokens) {
+        return chunk(text, maxTokens, 0, ChunkBoundary.TOKEN);
+    }
+
+    /**
+     * Split {@code text} into token windows of at most {@code maxTokens} ids
+     * with {@code overlap} ids shared between neighbors, on token boundaries.
+     */
+    public Chunk[] chunk(String text, int maxTokens, int overlap) {
+        return chunk(text, maxTokens, overlap, ChunkBoundary.TOKEN);
+    }
+
+    /**
+     * Split {@code text} into overlapping token windows (late chunking).
+     * Each window holds at most {@code maxTokens} ids with {@code overlap}
+     * ids shared between neighbors (stride = {@code maxTokens - overlap}).
+     * Returns an empty array for empty input. The native-owned id buffers
+     * are copied into Java arrays and freed before returning.
+     *
+     * @throws ZtokException.InvalidInput if {@code maxTokens == 0} or
+     *         {@code overlap >= maxTokens}.
+     */
+    public Chunk[] chunk(String text, int maxTokens, int overlap,
+                         ChunkBoundary boundary) {
+        MemorySegment h = handle();
+        if (maxTokens <= 0 || overlap >= maxTokens) {
+            throw new ZtokException.InvalidInput(
+                "chunk: maxTokens must be > 0 and overlap < maxTokens",
+                Native.ZTOK_ERR_INVALID_INPUT);
+        }
+        byte[] data = text.getBytes(StandardCharsets.UTF_8);
+        if (data.length == 0) return new Chunk[0];
+        int boundaryCode = boundary.code();
+
+        try (Arena arena = Arena.ofConfined()) {
+            MemorySegment input = arena.allocate(data.length);
+            MemorySegment.copy(data, 0, input, Native.BYTE, 0, data.length);
+            MemorySegment outLen = arena.allocate(Native.SIZE_T);
+
+            // Sizing pass: out_chunks = NULL -> *out_len = chunk count.
+            int rc1;
+            try {
+                rc1 = (int) Native.ZTOK_CHUNK.invoke(
+                    h, input, (long) data.length,
+                    maxTokens, overlap, boundaryCode,
+                    MemorySegment.NULL, 0L, outLen);
+            } catch (Throwable t) {
+                throw rethrow("ztok_chunk (sizing)", t);
+            }
+            if (rc1 != Native.ZTOK_OK && rc1 != Native.ZTOK_ERR_BUFFER_TOO_SMALL) {
+                ZtokException.check(rc1, "ztok_chunk (sizing)");
+            }
+            long count = outLen.get(Native.SIZE_T, 0);
+            if (count == 0) return new Chunk[0];
+
+            // Fill pass: allocate the caller-owned record array.
+            MemorySegment recs = arena.allocate(CHUNK_REC_SIZE * count, 8);
+            int rc2;
+            try {
+                rc2 = (int) Native.ZTOK_CHUNK.invoke(
+                    h, input, (long) data.length,
+                    maxTokens, overlap, boundaryCode,
+                    recs, count, outLen);
+            } catch (Throwable t) {
+                throw rethrow("ztok_chunk", t);
+            }
+
+            long got = outLen.get(Native.SIZE_T, 0);
+            try {
+                ZtokException.check(rc2, "ztok_chunk");
+                Chunk[] chunks = new Chunk[(int) got];
+                for (int i = 0; i < got; i++) {
+                    long base = (long) i * CHUNK_REC_SIZE;
+                    MemorySegment idsPtr = recs.get(Native.PTR, base + CHUNK_REC_IDS_OFFSET);
+                    long idsLen = recs.get(Native.SIZE_T, base + CHUNK_REC_IDS_LEN_OFFSET);
+                    int[] ids;
+                    if (idsPtr.address() != 0 && idsLen > 0) {
+                        MemorySegment view = idsPtr.reinterpret(idsLen * Native.TOKEN_ID.byteSize());
+                        ids = new int[(int) idsLen];
+                        MemorySegment.copy(view, Native.TOKEN_ID, 0, ids, 0, (int) idsLen);
+                    } else {
+                        ids = new int[0];
+                    }
+                    int byteStart  = recs.get(Native.INT, base + CHUNK_REC_BYTE_START_OFFSET);
+                    int byteEnd    = recs.get(Native.INT, base + CHUNK_REC_BYTE_END_OFFSET);
+                    int tokenStart = recs.get(Native.INT, base + CHUNK_REC_TOKEN_START_OFFSET);
+                    int tokenEnd   = recs.get(Native.INT, base + CHUNK_REC_TOKEN_END_OFFSET);
+                    chunks[i] = new Chunk(ids, byteStart, byteEnd, tokenStart, tokenEnd);
+                }
+                return chunks;
+            } finally {
+                // Release each record's ztok-allocated id buffer. The recs
+                // array itself is arena-owned (freed by the try-with-resources).
+                try { Native.ZTOK_CHUNKS_FREE.invoke(recs, got); }
+                catch (Throwable ignored) { /* best-effort */ }
+            }
         }
     }
 

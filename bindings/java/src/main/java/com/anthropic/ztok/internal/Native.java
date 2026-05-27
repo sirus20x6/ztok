@@ -53,6 +53,15 @@ public final class Native {
     public static final int FORMAT_SP_MODEL = 3;
     public static final int FORMAT_ZTM = 4;
     public static final int FORMAT_TEKKEN = 5;
+    public static final int FORMAT_RWKV = 6;
+
+    // Chunk boundary modes (mirror ztok_chunk_boundary in ztok.h).
+    public static final int CHUNK_BOUNDARY_TOKEN = 0;
+    public static final int CHUNK_BOUNDARY_CODEPOINT = 1;
+    public static final int CHUNK_BOUNDARY_WORD = 2;
+    public static final int CHUNK_BOUNDARY_WORD_DICT = 3;
+    public static final int CHUNK_BOUNDARY_SENTENCE = 4;
+    public static final int CHUNK_BOUNDARY_PARAGRAPH = 5;
 
     // Common layouts.
     public static final ValueLayout.OfInt   INT    = ValueLayout.JAVA_INT;
@@ -97,6 +106,9 @@ public final class Native {
         FunctionDescriptor.of(PTR, PTR, INT, PTR, PTR));
     public static final MethodHandle ZTOK_PIPELINE_NEW_MONSTER_FROM_FILE = dc(
         "ztok_pipeline_new_monster_from_file",
+        FunctionDescriptor.of(PTR, PTR, PTR, PTR));
+    public static final MethodHandle ZTOK_PIPELINE_NEW_RWKV_FROM_FILE = dc(
+        "ztok_pipeline_new_rwkv_from_file",
         FunctionDescriptor.of(PTR, PTR, PTR, PTR));
 
     // --- encode/decode ---
@@ -151,6 +163,30 @@ public final class Native {
     public static final MethodHandle ZTOK_STREAM_FINISH = dc(
         "ztok_stream_finish",
         FunctionDescriptor.of(INT, PTR, PTR, PTR));
+
+    // --- n-gram hashing (Engram) ---
+    // ztok_ngram_hash(ids, n_ids, n, heads, out, out_cap, out_len)
+    public static final MethodHandle ZTOK_NGRAM_HASH = dc(
+        "ztok_ngram_hash",
+        FunctionDescriptor.of(INT, PTR, SIZE_T, INT, INT, PTR, SIZE_T, PTR));
+    // ztok_ngram_hash_batch(pool, id_arrays, id_lens, n_docs, n, heads,
+    //                       out_hashes, out_lens)
+    public static final MethodHandle ZTOK_NGRAM_HASH_BATCH = dc(
+        "ztok_ngram_hash_batch",
+        FunctionDescriptor.of(INT, PTR, PTR, PTR, SIZE_T, INT, INT, PTR, PTR));
+    public static final MethodHandle ZTOK_U64S_FREE = dc(
+        "ztok_u64s_free",
+        FunctionDescriptor.ofVoid(PTR));
+
+    // --- chunking ---
+    // ztok_chunk(pipeline, text, text_len, max_tokens, overlap, boundary,
+    //            out_chunks, out_cap, out_len)
+    public static final MethodHandle ZTOK_CHUNK = dc(
+        "ztok_chunk",
+        FunctionDescriptor.of(INT, PTR, PTR, SIZE_T, INT, INT, INT, PTR, SIZE_T, PTR));
+    public static final MethodHandle ZTOK_CHUNKS_FREE = dc(
+        "ztok_chunks_free",
+        FunctionDescriptor.ofVoid(PTR, SIZE_T));
 
     // --- version / fingerprint ---
     public static final MethodHandle ZTOK_VERSION = dc(

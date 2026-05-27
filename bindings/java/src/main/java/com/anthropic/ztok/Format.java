@@ -13,7 +13,8 @@ public enum Format {
     HF_JSON(Native.FORMAT_HF_JSON),
     SENTENCEPIECE(Native.FORMAT_SP_MODEL),
     ZTM(Native.FORMAT_ZTM),
-    TEKKEN(Native.FORMAT_TEKKEN);
+    TEKKEN(Native.FORMAT_TEKKEN),
+    RWKV(Native.FORMAT_RWKV);
 
     private final int code;
 
