@@ -24,6 +24,29 @@ public enum Format : uint
     Ztm = 4,
     /// <summary>Mistral <c>tekken.json</c> (tiktoken-style with extra config).</summary>
     Tekken = 5,
+    /// <summary>RWKV "World" vocab (<c>rwkv_vocab_v20230424.txt</c>, greedy longest-match byte trie).</summary>
+    Rwkv = 6,
+}
+
+/// <summary>
+/// Boundary mode for <see cref="Pipeline.Chunk"/>. Selects where chunk
+/// edges are allowed to fall. Mirrors <c>ztok_chunk_boundary</c> in
+/// <c>include/ztok.h</c>.
+/// </summary>
+public enum ChunkBoundary : uint
+{
+    /// <summary>Pure token-count windows (default).</summary>
+    Token = 0,
+    /// <summary>Snap to a UTF-8 codepoint boundary.</summary>
+    Codepoint = 1,
+    /// <summary>Snap to a whitespace word boundary.</summary>
+    Word = 2,
+    /// <summary>Snap to a dictionary word boundary (CJK/Thai/...).</summary>
+    WordDict = 3,
+    /// <summary>Snap to a sentence boundary.</summary>
+    Sentence = 4,
+    /// <summary>Snap to a paragraph break (<c>\n\n</c>).</summary>
+    Paragraph = 5,
 }
 
 /// <summary>Normalizer kind (mirrors <c>ztok_normalizer_kind</c>).</summary>

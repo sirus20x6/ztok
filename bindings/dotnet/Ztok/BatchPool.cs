@@ -84,6 +84,16 @@ public sealed class BatchPool : IDisposable
     /// <inheritdoc />
     public void Dispose() => _handle.Dispose();
 
+    /// <summary>Raw pool handle for internal callers (Engram batch path).</summary>
+    internal IntPtr Raw
+    {
+        get
+        {
+            ThrowIfDisposed();
+            return _handle.Raw;
+        }
+    }
+
     private void ThrowIfDisposed()
     {
         if (IsDisposed) throw new ObjectDisposedException(nameof(BatchPool));

@@ -45,6 +45,36 @@ public sealed class PipelineConfig
 }
 
 /// <summary>
+/// One token-window chunk produced by <see cref="Pipeline.Chunk"/>.
+/// <see cref="Ids"/> are the token ids in this chunk;
+/// <see cref="ByteStart"/>/<see cref="ByteEnd"/> the half-open byte range
+/// it covers in the ORIGINAL input; <see cref="TokenStart"/>/<see cref="TokenEnd"/>
+/// the half-open token-index range in the full encoding.
+/// </summary>
+public sealed class Chunk
+{
+    /// <summary>The token ids in this chunk (copied out of C memory).</summary>
+    public uint[] Ids { get; }
+    /// <summary>Half-open byte range start in the original input.</summary>
+    public uint ByteStart { get; }
+    /// <summary>Half-open byte range end (exclusive) in the original input.</summary>
+    public uint ByteEnd { get; }
+    /// <summary>Half-open token-index range start in the full encoding.</summary>
+    public uint TokenStart { get; }
+    /// <summary>Half-open token-index range end (exclusive) in the full encoding.</summary>
+    public uint TokenEnd { get; }
+
+    internal Chunk(uint[] ids, uint byteStart, uint byteEnd, uint tokenStart, uint tokenEnd)
+    {
+        Ids = ids;
+        ByteStart = byteStart;
+        ByteEnd = byteEnd;
+        TokenStart = tokenStart;
+        TokenEnd = tokenEnd;
+    }
+}
+
+/// <summary>
 /// A loaded tokenizer pipeline. Construct via one of the static factory
 /// methods (<see cref="Open"/>, <see cref="FromTiktoken"/>, etc.) and
 /// dispose when done. The wrapped handle is freed by <see cref="Dispose"/>
@@ -137,6 +167,7 @@ public sealed class Pipeline : IDisposable
             Format.HfJson => FromHfJson(path),
             Format.SentencePiece => FromSentencePiece(path, unkId: 0),
             Format.Ztm => FromMonster(path),
+            Format.Rwkv => FromRwkv(path),
             _ => throw new ZtokInvalidInputException(
                 $"Open: could not auto-detect tokenizer format for '{path}'",
                 Native.Status.ErrInvalidInput),
@@ -206,6 +237,23 @@ public sealed class Pipeline : IDisposable
         var raw = Native.CallPathCfgCtor(path, cfg.ToCConfig(),
             Native.PathCtorKind.Monster,
             "ztok_pipeline_new_monster_from_file");
+        return Wrap(raw);
+    }
+
+    /// <summary>
+    /// Load an RWKV "World" vocab (<c>rwkv_vocab_v20230424.txt</c>) into a
+    /// greedy longest-match byte-trie pipeline. The World scheme is
+    /// byte-lossless (every byte 0..255 is a token), so it runs with an
+    /// identity pre-tokenizer and concat decoder; there is no pre-tokenizer
+    /// to configure.
+    /// </summary>
+    public static Pipeline FromRwkv(string path, PipelineConfig? config = null)
+    {
+        ArgumentNullException.ThrowIfNull(path);
+        var cfg = config ?? new PipelineConfig();
+        var raw = Native.CallPathCfgCtor(path, cfg.ToCConfig(),
+            Native.PathCtorKind.Rwkv,
+            "ztok_pipeline_new_rwkv_from_file");
         return Wrap(raw);
     }
 
@@ -400,6 +448,49 @@ public sealed class Pipeline : IDisposable
         for (int i = 0; i < channels.Length; i++)
             result[channels[i]] = Trim(channelBufs[i]);
         return new OverlayResult(Trim(ids), result);
+    }
+
+    // ----- chunking ---------------------------------------------------------
+
+    /// <summary>
+    /// Split <paramref name="text"/> (UTF-8) into overlapping token windows
+    /// for late-chunking / embedding pipelines. Each window holds at most
+    /// <paramref name="maxTokens"/> ids with <paramref name="overlap"/> ids
+    /// shared between neighbors (stride = <c>maxTokens - overlap</c>).
+    /// Returns an empty array for empty input. Throws
+    /// <see cref="ZtokInvalidInputException"/> if <paramref name="maxTokens"/>
+    /// is 0 or <paramref name="overlap"/> is not less than
+    /// <paramref name="maxTokens"/>.
+    /// </summary>
+    public Chunk[] Chunk(string text, uint maxTokens, uint overlap = 0, ChunkBoundary boundary = ChunkBoundary.Token)
+    {
+        ArgumentNullException.ThrowIfNull(text);
+        var bytes = text.Length == 0 ? Array.Empty<byte>() : Encoding.UTF8.GetBytes(text);
+        return ChunkBytes(bytes, maxTokens, overlap, boundary);
+    }
+
+    /// <summary>
+    /// Raw-bytes form of <see cref="Chunk(string, uint, uint, ChunkBoundary)"/>.
+    /// Use this for non-UTF-8 inputs; libztok treats input as a byte stream.
+    /// </summary>
+    public Chunk[] ChunkBytes(ReadOnlySpan<byte> data, uint maxTokens, uint overlap = 0, ChunkBoundary boundary = ChunkBoundary.Token)
+    {
+        ThrowIfDisposed();
+        if (maxTokens == 0 || overlap >= maxTokens)
+            throw new ZtokInvalidInputException(
+                "Chunk: maxTokens must be > 0 and overlap < maxTokens",
+                Native.Status.ErrInvalidInput);
+
+        if (data.IsEmpty) return Array.Empty<Chunk>();
+
+        var recs = Native.CallChunk(_handle.Raw, data, maxTokens, overlap, (uint)boundary);
+        var result = new Chunk[recs.Length];
+        for (int i = 0; i < recs.Length; i++)
+        {
+            var r = recs[i];
+            result[i] = new Chunk(r.Ids, r.ByteStart, r.ByteEnd, r.TokenStart, r.TokenEnd);
+        }
+        return result;
     }
 
     // ----- fingerprint ------------------------------------------------------

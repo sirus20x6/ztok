@@ -178,6 +178,14 @@ internal static unsafe class Native
     internal const uint FormatSpModel = 3;
     internal const uint FormatZtm = 4;
     internal const uint FormatTekken = 5;
+    internal const uint FormatRwkv = 6;
+
+    internal const uint ChunkBoundaryToken = 0;
+    internal const uint ChunkBoundaryCodepoint = 1;
+    internal const uint ChunkBoundaryWord = 2;
+    internal const uint ChunkBoundaryWordDict = 3;
+    internal const uint ChunkBoundarySentence = 4;
+    internal const uint ChunkBoundaryParagraph = 5;
 
     // ----- struct mirrors ----------------------------------------------------
 
@@ -199,6 +207,23 @@ internal static unsafe class Native
         internal uint Kind;
         internal uint* Out;
         internal nuint OutCap;
+    }
+
+    // ztok_chunk_rec: { ztok_token_id* ids; size_t ids_len; uint32_t
+    // byte_start, byte_end, token_start, token_end; }. `Ids` points at a
+    // ztok-allocated buffer of `IdsLen` token ids (NULL when IdsLen == 0),
+    // released via ztok_chunks_free. `Byte*` is the half-open byte range
+    // in the ORIGINAL input; `Token*` the half-open token-index range in
+    // the full encoding.
+    [StructLayout(LayoutKind.Sequential)]
+    internal struct ZtokChunkRec
+    {
+        internal IntPtr Ids;
+        internal nuint IdsLen;
+        internal uint ByteStart;
+        internal uint ByteEnd;
+        internal uint TokenStart;
+        internal uint TokenEnd;
     }
 
     // ----- lifecycle ---------------------------------------------------------
@@ -223,6 +248,9 @@ internal static unsafe class Native
 
     [DllImport(LibName, EntryPoint = "ztok_pipeline_new_monster_from_file")]
     internal static extern IntPtr PipelineNewMonsterFromFile(byte* path, ZtokPipelineConfig* cfg, int* outStatus);
+
+    [DllImport(LibName, EntryPoint = "ztok_pipeline_new_rwkv_from_file")]
+    internal static extern IntPtr PipelineNewRwkvFromFile(byte* path, ZtokPipelineConfig* cfg, int* outStatus);
 
     // ----- encode / decode ---------------------------------------------------
 
@@ -275,6 +303,36 @@ internal static unsafe class Native
 
     [DllImport(LibName, EntryPoint = "ztok_ids_free")]
     internal static extern void IdsFree(IntPtr ids);
+
+    // ----- Engram n-gram hashing ---------------------------------------------
+
+    [DllImport(LibName, EntryPoint = "ztok_ngram_hash")]
+    internal static extern int NgramHash(
+        uint* ids, nuint nIds,
+        uint n, uint heads,
+        ulong* outBuf, nuint outCap, nuint* outLen);
+
+    [DllImport(LibName, EntryPoint = "ztok_ngram_hash_batch")]
+    internal static extern int NgramHashBatch(
+        IntPtr pool,
+        uint** idArrays, nuint* idLens, nuint nDocs,
+        uint n, uint heads,
+        IntPtr* outHashes, nuint* outLens);
+
+    [DllImport(LibName, EntryPoint = "ztok_u64s_free")]
+    internal static extern void U64sFree(IntPtr hashes);
+
+    // ----- chunking ----------------------------------------------------------
+
+    [DllImport(LibName, EntryPoint = "ztok_chunk")]
+    internal static extern int Chunk(
+        IntPtr pipeline,
+        byte* text, nuint textLen,
+        uint maxTokens, uint overlap, uint boundary,
+        ZtokChunkRec* outChunks, nuint outCap, nuint* outLen);
+
+    [DllImport(LibName, EntryPoint = "ztok_chunks_free")]
+    internal static extern void ChunksFree(ZtokChunkRec* chunks, nuint n);
 
     // ----- auto-detect -------------------------------------------------------
 
@@ -353,6 +411,33 @@ internal static unsafe class Native
         return Marshal.PtrToStringUTF8(ptr);
     }
 
+    /// <summary>
+    /// Copy a u64 hash buffer returned by libztok into a managed ulong[]
+    /// and free the native buffer via ztok_u64s_free. ptr may be
+    /// IntPtr.Zero (returns an empty array). The buffer carries an opaque
+    /// length-prefix header (see src/c_api.zig::allocU64Buf); ztok_u64s_free
+    /// is the only safe free path.
+    /// </summary>
+    internal static ulong[] MaterializeAndFreeHashes(IntPtr ptr, nuint n)
+    {
+        if (ptr == IntPtr.Zero) return Array.Empty<ulong>();
+        if (n == 0)
+        {
+            U64sFree(ptr);
+            return Array.Empty<ulong>();
+        }
+        var managed = new ulong[checked((int)n)];
+        fixed (ulong* dst = managed)
+        {
+            Buffer.MemoryCopy(
+                (void*)ptr, dst,
+                (long)n * sizeof(ulong),
+                (long)n * sizeof(ulong));
+        }
+        U64sFree(ptr);
+        return managed;
+    }
+
     // ----- safe-ish call helpers --------------------------------------------
     //
     // These wrappers let the higher-level Pipeline / BatchPool / StreamEncoder
@@ -367,6 +452,7 @@ internal static unsafe class Native
         BpeTiktoken,
         BpeHfJson,
         Monster,
+        Rwkv,
     }
 
     internal enum PathUnkCtorKind
@@ -397,6 +483,7 @@ internal static unsafe class Native
                 PathCtorKind.BpeTiktoken => PipelineNewBpeFromTiktoken(p, &cfg, &status),
                 PathCtorKind.BpeHfJson => PipelineNewBpeFromHfJson(p, &cfg, &status),
                 PathCtorKind.Monster => PipelineNewMonsterFromFile(p, &cfg, &status),
+                PathCtorKind.Rwkv => PipelineNewRwkvFromFile(p, &cfg, &status),
                 _ => throw new ArgumentOutOfRangeException(nameof(kind)),
             };
         }
@@ -678,5 +765,187 @@ internal static unsafe class Native
             ZtokException.Check(rc, "ztok_stream_finish");
         }
         return MaterializeAndFreeIds(outIds, outN);
+    }
+
+    // ----- n-gram hashing ----------------------------------------------------
+
+    /// <summary>
+    /// Hash every length-<paramref name="n"/> window of <paramref name="ids"/>
+    /// under <paramref name="heads"/> hash functions into <paramref name="outBuf"/>.
+    /// Returns the raw status; <paramref name="outLen"/> receives the count
+    /// written (or required, on BUFFER_TOO_SMALL).
+    /// </summary>
+    internal static int CallNgramHash(
+        ReadOnlySpan<uint> ids, uint n, uint heads, Span<ulong> outBuf, out nuint outLen)
+    {
+        nuint local = 0;
+        int rc;
+        fixed (uint* idsPtr = ids)
+        fixed (ulong* outPtr = outBuf)
+        {
+            rc = NgramHash(
+                idsPtr, (nuint)ids.Length,
+                n, heads,
+                outBuf.Length == 0 ? null : outPtr, (nuint)outBuf.Length,
+                &local);
+        }
+        outLen = local;
+        return rc;
+    }
+
+    /// <summary>
+    /// Batch n-gram hash via a persistent pool. Each id stream is pinned
+    /// for the duration of the call; every result slot is materialized
+    /// (and freed via ztok_u64s_free) even on error so partial allocations
+    /// can't leak.
+    /// </summary>
+    internal static ulong[][] CallNgramHashBatch(
+        IntPtr pool, IReadOnlyList<uint[]> streams, uint n, uint heads)
+    {
+        int nDocs = streams.Count;
+        if (nDocs == 0) return Array.Empty<ulong[]>();
+
+        var pins = new GCHandle[nDocs];
+        var idArrays = new IntPtr[nDocs];
+        var idLens = new nuint[nDocs];
+        var outHashes = new IntPtr[nDocs];
+        var outLens = new nuint[nDocs];
+        try
+        {
+            for (int i = 0; i < nDocs; i++)
+            {
+                var src = streams[i] ?? Array.Empty<uint>();
+                idLens[i] = (nuint)src.Length;
+                if (src.Length == 0)
+                {
+                    idArrays[i] = IntPtr.Zero;
+                }
+                else
+                {
+                    pins[i] = GCHandle.Alloc(src, GCHandleType.Pinned);
+                    idArrays[i] = pins[i].AddrOfPinnedObject();
+                }
+            }
+
+            int rc;
+            fixed (IntPtr* idArraysPin = idArrays)
+            fixed (nuint* idLensPin = idLens)
+            fixed (IntPtr* outHashesPin = outHashes)
+            fixed (nuint* outLensPin = outLens)
+            {
+                rc = NgramHashBatch(
+                    pool,
+                    (uint**)idArraysPin, idLensPin, (nuint)nDocs,
+                    n, heads,
+                    outHashesPin, outLensPin);
+            }
+
+            // Always materialize so we free everything, even on error.
+            var results = new ulong[nDocs][];
+            for (int i = 0; i < nDocs; i++)
+                results[i] = MaterializeAndFreeHashes(outHashes[i], outLens[i]);
+            ZtokException.Check(rc, "ztok_ngram_hash_batch");
+            return results;
+        }
+        finally
+        {
+            for (int i = 0; i < nDocs; i++)
+                if (pins[i].IsAllocated) pins[i].Free();
+        }
+    }
+
+    // ----- chunking ----------------------------------------------------------
+
+    /// <summary>One materialized chunk record (raw field values + copied ids).</summary>
+    internal readonly struct ChunkData
+    {
+        internal readonly uint[] Ids;
+        internal readonly uint ByteStart;
+        internal readonly uint ByteEnd;
+        internal readonly uint TokenStart;
+        internal readonly uint TokenEnd;
+
+        internal ChunkData(uint[] ids, uint byteStart, uint byteEnd, uint tokenStart, uint tokenEnd)
+        {
+            Ids = ids;
+            ByteStart = byteStart;
+            ByteEnd = byteEnd;
+            TokenStart = tokenStart;
+            TokenEnd = tokenEnd;
+        }
+    }
+
+    /// <summary>
+    /// Split <paramref name="text"/> into token-window chunks. Runs the C
+    /// ABI's sizing pass (out_chunks = NULL → chunk count) then the fill
+    /// pass, copies each record's ztok-allocated id buffer into managed
+    /// memory, and frees the buffers via ztok_chunks_free before returning.
+    /// </summary>
+    internal static ChunkData[] CallChunk(
+        IntPtr pipeline, ReadOnlySpan<byte> text,
+        uint maxTokens, uint overlap, uint boundary)
+    {
+        if (text.IsEmpty) return Array.Empty<ChunkData>();
+
+        // Sizing pass: out_chunks = NULL -> *out_len = chunk count.
+        nuint need = 0;
+        int rc;
+        fixed (byte* textPtr = text)
+        {
+            rc = Chunk(
+                pipeline, textPtr, (nuint)text.Length,
+                maxTokens, overlap, boundary,
+                null, 0, &need);
+        }
+        if (rc != Status.Ok && rc != Status.ErrBufferTooSmall)
+            ZtokException.Check(rc, "ztok_chunk (sizing)");
+
+        int count = (int)need;
+        if (count == 0) return Array.Empty<ChunkData>();
+
+        var recs = new ZtokChunkRec[count];
+        nuint got = 0;
+        fixed (byte* textPtr = text)
+        fixed (ZtokChunkRec* recsPtr = recs)
+        {
+            rc = Chunk(
+                pipeline, textPtr, (nuint)text.Length,
+                maxTokens, overlap, boundary,
+                recsPtr, (nuint)count, &got);
+            if (rc != Status.Ok)
+            {
+                // Nothing allocated on a non-OK fill pass; report it.
+                ZtokException.Check(rc, "ztok_chunk");
+            }
+
+            int n = (int)got;
+            var result = new ChunkData[n];
+            for (int i = 0; i < n; i++)
+            {
+                ref var r = ref recs[i];
+                int idsLen = (int)r.IdsLen;
+                uint[] ids;
+                if (r.Ids != IntPtr.Zero && idsLen > 0)
+                {
+                    ids = new uint[idsLen];
+                    fixed (uint* dst = ids)
+                    {
+                        Buffer.MemoryCopy(
+                            (void*)r.Ids, dst,
+                            (long)idsLen * sizeof(uint),
+                            (long)idsLen * sizeof(uint));
+                    }
+                }
+                else
+                {
+                    ids = Array.Empty<uint>();
+                }
+                result[i] = new ChunkData(ids, r.ByteStart, r.ByteEnd, r.TokenStart, r.TokenEnd);
+            }
+            // Release each record's ztok-allocated id buffer; the recs array
+            // itself is managed (caller-owned).
+            ChunksFree(recsPtr, got);
+            return result;
+        }
     }
 }
