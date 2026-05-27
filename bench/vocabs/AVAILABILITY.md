@@ -33,6 +33,7 @@ offline.
 | Qwen2-7B           | HF BPE (ByteLevel)        | huggingface.co/Qwen/Qwen2-7B                                     | no   | 7.0 MB  |
 | cl100k_base        | tiktoken BPE              | github.com/openai/tiktoken (bundled)                             | no   | 1.7 MB  |
 | TokenMonster englishcode-32000 | TokenMonster (.vocab → .ztm) | pip `tokenmonster`                              | no   | ~900 KB |
+| RWKV World v20230424 | greedy longest-match byte trie | github.com/BlinkDL/ChatRWKV (tokenizer/rwkv_vocab_v20230424.txt) | no   | 391 KB  |
 
 ## Fetched on demand (`fetch_vocabs.py --extended`)
 

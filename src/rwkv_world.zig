@@ -575,3 +575,58 @@ test "loadFromBytes validates the trailing length" {
     const bad = "0 'ab' 1\n"; // says len 1 but 'ab' is 2
     try testing.expectError(error.VocabLenMismatch, RwkvWorld.loadFromBytes(testing.allocator, bad));
 }
+
+test "RWKV World bit-parity against the canonical rwkv_vocab_v20230424 reference" {
+    // End-to-end correctness gate: ztok's greedy longest-match encoder,
+    // loaded with the real RWKV "World" vocab, must reproduce the
+    // canonical reference tokenizer bit-for-bit. The golden id sequences
+    // below were captured from BlinkDL's reference TRIE_TOKENIZER
+    // (ChatRWKV/tokenizer/rwkv_tokenizer.py) over rwkv_vocab_v20230424.txt
+    // — see bench/rwkv_parity.py, which regenerates and re-checks them
+    // across a larger corpus. The vocab is a separately-fetched fixture;
+    // skip cleanly when it is not present.
+    const path = "bench/vocabs/rwkv_vocab_v20230424.txt";
+    const io = std.Io.Threaded.global_single_threaded.io();
+    const bytes = std.Io.Dir.cwd().readFileAlloc(io, path, testing.allocator, .unlimited) catch return error.SkipZigTest;
+    defer testing.allocator.free(bytes);
+
+    var m = try RwkvWorld.loadFromBytes(testing.allocator, bytes);
+    defer m.deinit();
+
+    // The World vocab carries ids 1..65529 (id 0 is the reserved
+    // <|endoftext|>, which never appears in the file).
+    try testing.expect(m.vocabSize() >= 65529);
+
+    const Case = struct { input: []const u8, want: []const TokenId };
+    const cases = [_]Case{
+        // ASCII + punctuation.
+        .{ .input = "Hello, world!", .want = &.{ 33155, 45, 40213, 34 } },
+        // Common English sentence — exercises space-prefixed word tokens.
+        .{ .input = "The quick brown fox jumps over the lazy dog.", .want = &.{ 6699, 39418, 37917, 21704, 38828, 31601, 22590, 31261, 21551, 47 } },
+        // Code with newlines and indentation.
+        .{ .input = "def foo(x):\n    return x + 1\n", .want = &.{ 7334, 21699, 41, 121, 501, 28352, 42178, 355, 278, 284, 11 } },
+        // Japanese (CJK) — multi-byte UTF-8 throughout.
+        .{ .input = "起業家イーロン・マスク氏が創業した宇宙開発企業", .want = &.{ 16944, 13436, 11920, 10169, 10242, 10237, 10239, 10241, 10222, 10189, 10179, 13651, 10108, 10827, 13436, 43347, 11887, 11898, 17693, 14728, 10412, 13436 } },
+        // Emoji (4-byte sequences) fall back to per-byte tokens.
+        .{ .input = "emoji 😀🚀✨ test", .want = &.{ 34295, 33, 3319, 153, 129, 3319, 155, 129, 10059, 32223 } },
+        // Latin-1 accents + em dash.
+        .{ .input = "Café naïve résumé — em dash", .want = &.{ 918, 7596, 46644, 31918, 2238, 2503, 22898, 4516, 30577 } },
+        // Arabic (right-to-left script).
+        .{ .input = "مرحبا بالعالم", .want = &.{ 2949, 2934, 2930, 2925, 2924, 48211, 2942, 28211, 2949 } },
+        // Numbers, including the World vocab's dedicated ' 0'..' 99' tokens.
+        .{ .input = "0 1 2 10 99 100 ' 0' ' 99'", .want = &.{ 49, 284, 285, 3483, 3572, 3483, 49, 274, 283, 40, 274, 3572, 40 } },
+    };
+
+    var out: [256]TokenId = undefined;
+    var dec: std.ArrayList(u8) = .empty;
+    defer dec.deinit(testing.allocator);
+    for (cases) |c| {
+        const ids = try m.encodeChunk(c.input, &out);
+        try testing.expectEqualSlices(TokenId, c.want, ids);
+        // Round-trip: concatenating the matched token bytes rebuilds the
+        // input exactly (the World vocab has no UNK — every byte maps).
+        dec.clearRetainingCapacity();
+        for (ids) |id| try dec.appendSlice(testing.allocator, m.idBytes(id));
+        try testing.expectEqualStrings(c.input, dec.items);
+    }
+}
