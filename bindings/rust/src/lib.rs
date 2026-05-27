@@ -91,7 +91,7 @@
 //!
 //! All `unsafe` in this crate is confined to the [`sys`] module (raw
 //! `extern "C"` declarations) and small unsafe blocks inside the
-//! [`pipeline`], [`batch`], and [`stream`] modules that translate the
+//! `pipeline`, `batch`, `stream`, and `ngram` modules that translate the
 //! FFI surface to safe Rust. The public API contains no `unsafe`.
 
 #![deny(unsafe_op_in_unsafe_fn)]
@@ -102,13 +102,15 @@ pub mod sys;
 
 mod batch;
 mod error;
+mod ngram;
 mod pipeline;
 mod stream;
 
 pub use batch::BatchPool;
 pub use error::{Error, Result};
+pub use ngram::{hash_ngrams, hash_ngrams_batch};
 pub use pipeline::{
-    detect_format, version, Config, Decoder, Format, Normalizer, OverlayKind, Pipeline,
-    PreTokenizer,
+    detect_format, version, Chunk, ChunkBoundary, Config, Decoder, Format, Normalizer,
+    OverlayKind, Pipeline, PreTokenizer,
 };
 pub use stream::{StreamEncoder, StreamIter, DEFAULT_CHUNK_SIZE};

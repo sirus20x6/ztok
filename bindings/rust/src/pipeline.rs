@@ -36,6 +36,9 @@ pub enum Format {
     Ztm,
     /// Mistral `tekken.json` (tiktoken-style with an extra config block).
     Tekken,
+    /// RWKV "World" vocab (`rwkv_vocab_v20230424.txt`): line-oriented
+    /// `<id> <python-repr> <byte-len>` greedy longest-match byte trie.
+    Rwkv,
 }
 
 impl Format {
@@ -46,6 +49,7 @@ impl Format {
             sys::ZTOK_FORMAT_SP_MODEL => Format::SentencePiece,
             sys::ZTOK_FORMAT_ZTM => Format::Ztm,
             sys::ZTOK_FORMAT_TEKKEN => Format::Tekken,
+            sys::ZTOK_FORMAT_RWKV => Format::Rwkv,
             _ => Format::Unknown,
         }
     }
@@ -126,6 +130,51 @@ pub enum OverlayKind {
     Provenance = sys::ZTOK_OVERLAY_PROVENANCE,
 }
 
+/// Where chunk edges are allowed to fall (mirrors `ztok_chunk_boundary`).
+///
+/// [`Token`](ChunkBoundary::Token) produces pure token-count windows;
+/// the others snap window edges to the nearest boundary of the named
+/// kind so a downstream embedder's spans line up with natural text
+/// units. The default is [`Token`](ChunkBoundary::Token).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
+#[non_exhaustive]
+#[repr(u32)]
+pub enum ChunkBoundary {
+    /// Pure token-count windows (default).
+    #[default]
+    Token = sys::ZTOK_CHUNK_BOUNDARY_TOKEN,
+    /// Snap to a UTF-8 codepoint boundary.
+    Codepoint = sys::ZTOK_CHUNK_BOUNDARY_CODEPOINT,
+    /// Snap to a whitespace word boundary.
+    Word = sys::ZTOK_CHUNK_BOUNDARY_WORD,
+    /// Snap to a dictionary word boundary (CJK / Thai / ...).
+    WordDict = sys::ZTOK_CHUNK_BOUNDARY_WORD_DICT,
+    /// Snap to a sentence boundary.
+    Sentence = sys::ZTOK_CHUNK_BOUNDARY_SENTENCE,
+    /// Snap to a paragraph break (`\n\n`).
+    Paragraph = sys::ZTOK_CHUNK_BOUNDARY_PARAGRAPH,
+}
+
+/// One token-window chunk produced by [`Pipeline::chunk`].
+///
+/// `ids` are the token ids in this window (copied out of C memory and
+/// fully owned by Rust). `byte_start`/`byte_end` is the half-open byte
+/// range this chunk covers in the ORIGINAL input; `token_start`/
+/// `token_end` is the half-open token-index range in the full encoding.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Chunk {
+    /// Token ids in this window.
+    pub ids: Vec<u32>,
+    /// Half-open start byte offset in the original input.
+    pub byte_start: u32,
+    /// Half-open end byte offset (exclusive) in the original input.
+    pub byte_end: u32,
+    /// Half-open start token index in the full encoding.
+    pub token_start: u32,
+    /// Half-open end token index (exclusive) in the full encoding.
+    pub token_end: u32,
+}
+
 /// Optional configuration for pipeline constructors.
 ///
 /// The model kind is implicit (set by the constructor used: BPE,
@@ -202,6 +251,7 @@ impl Pipeline {
             Format::HfJson => Self::from_hf_json(path, None),
             Format::SentencePiece => Self::from_sentencepiece(path, 0, None),
             Format::Ztm => Self::from_monster(path, None),
+            Format::Rwkv => Self::from_rwkv(path, None),
             Format::Tekken | Format::Unknown => Err(Error::UnknownFormat),
         }
     }
@@ -306,6 +356,22 @@ impl Pipeline {
         };
         check_status(status, "ztok_pipeline_new_monster_from_file")?;
         Self::wrap(h, "ztok_pipeline_new_monster_from_file")
+    }
+
+    /// Load an RWKV "World" vocab (`rwkv_vocab_v20230424.txt`) into a
+    /// greedy longest-match byte-trie pipeline. The World scheme is
+    /// byte-lossless (every byte `0..=255` is a token), so it runs with
+    /// an identity pre-tokenizer and concat decoder and `encode` never
+    /// fails on unknown bytes.
+    pub fn from_rwkv<P: AsRef<Path>>(path: P, cfg: Option<Config>) -> Result<Self> {
+        let cpath = c_path(path.as_ref())?;
+        let cfg_c = cfg.unwrap_or_default().to_c();
+        let mut status: c_int = sys::ZTOK_OK;
+        let h = unsafe {
+            sys::ztok_pipeline_new_rwkv_from_file(cpath.as_ptr(), &cfg_c, &mut status)
+        };
+        check_status(status, "ztok_pipeline_new_rwkv_from_file")?;
+        Self::wrap(h, "ztok_pipeline_new_rwkv_from_file")
     }
 
     fn wrap(h: *mut sys::ZtokPipeline, op: &'static str) -> Result<Self> {
@@ -539,6 +605,131 @@ impl Pipeline {
             overlays.insert(k, buf);
         }
         Ok((ids, overlays))
+    }
+
+    /// Split `text` into overlapping token windows for embedding /
+    /// late-chunking pipelines.
+    ///
+    /// Each returned [`Chunk`] holds at most `max_tokens` ids with
+    /// `overlap` ids shared between neighbors (stride =
+    /// `max_tokens - overlap`), plus the byte- and token-index range it
+    /// covers in the original input. `boundary` selects where window
+    /// edges may fall (see [`ChunkBoundary`]).
+    ///
+    /// Empty input returns an empty `Vec` with no error. Returns
+    /// [`Error::InvalidInput`] if `max_tokens == 0` or
+    /// `overlap >= max_tokens`. The C-owned id buffers are copied into
+    /// Rust `Vec`s and freed before returning, so the result is fully
+    /// owned by Rust.
+    pub fn chunk(
+        &self,
+        text: &str,
+        max_tokens: u32,
+        overlap: u32,
+        boundary: ChunkBoundary,
+    ) -> Result<Vec<Chunk>> {
+        self.chunk_bytes(text.as_bytes(), max_tokens, overlap, boundary)
+    }
+
+    /// Raw-bytes form of [`Pipeline::chunk`]. Use this for non-UTF-8
+    /// inputs; the byte ranges in each [`Chunk`] index into `data`.
+    pub fn chunk_bytes(
+        &self,
+        data: &[u8],
+        max_tokens: u32,
+        overlap: u32,
+        boundary: ChunkBoundary,
+    ) -> Result<Vec<Chunk>> {
+        if max_tokens == 0 || overlap >= max_tokens {
+            return Err(Error::InvalidInput);
+        }
+        if data.is_empty() {
+            return Ok(Vec::new());
+        }
+
+        // Sizing pass: out_chunks = NULL -> *out_len = chunk count.
+        let mut need: usize = 0;
+        let rc = unsafe {
+            sys::ztok_chunk(
+                self.handle,
+                data.as_ptr() as *const _,
+                data.len(),
+                max_tokens,
+                overlap,
+                boundary as u32,
+                core::ptr::null_mut(),
+                0,
+                &mut need,
+            )
+        };
+        if rc != sys::ZTOK_OK && rc != sys::ZTOK_ERR_BUFFER_TOO_SMALL {
+            return Err(check_status(rc, "ztok_chunk (sizing)").unwrap_err());
+        }
+        let count = need;
+        if count == 0 {
+            return Ok(Vec::new());
+        }
+
+        // Fill pass: hand the C side a caller-owned record array. Each
+        // record's `ids` is a ztok-allocated buffer; we copy the ids out
+        // and release them via `ztok_chunks_free` before returning.
+        let mut recs: Vec<sys::ZtokChunkRec> = (0..count)
+            .map(|_| sys::ZtokChunkRec {
+                ids: core::ptr::null_mut(),
+                ids_len: 0,
+                byte_start: 0,
+                byte_end: 0,
+                token_start: 0,
+                token_end: 0,
+            })
+            .collect();
+        let mut got: usize = 0;
+        let rc = unsafe {
+            sys::ztok_chunk(
+                self.handle,
+                data.as_ptr() as *const _,
+                data.len(),
+                max_tokens,
+                overlap,
+                boundary as u32,
+                recs.as_mut_ptr(),
+                count,
+                &mut got,
+            )
+        };
+        // On failure no records were written, so there are no ztok id
+        // buffers to free; the `recs` Vec frees its own storage on drop.
+        check_status(rc, "ztok_chunk")?;
+
+        let out: Vec<Chunk> = recs[..got]
+            .iter()
+            .map(|r| {
+                // SAFETY: on success the C side set `r.ids` to a
+                // ztok-allocated buffer of `r.ids_len` u32s (NULL iff
+                // ids_len == 0). Copy into Rust-owned memory; the C
+                // buffer is freed by `ztok_chunks_free` below.
+                let ids = if r.ids.is_null() || r.ids_len == 0 {
+                    Vec::new()
+                } else {
+                    let slice = unsafe { core::slice::from_raw_parts(r.ids, r.ids_len) };
+                    slice.to_vec()
+                };
+                Chunk {
+                    ids,
+                    byte_start: r.byte_start,
+                    byte_end: r.byte_end,
+                    token_start: r.token_start,
+                    token_end: r.token_end,
+                }
+            })
+            .collect();
+
+        // SAFETY: `recs[..got]` are the records ztok_chunk populated;
+        // ztok_chunks_free releases each record's `ids` buffer. The
+        // record array itself stays caller-owned (the Vec).
+        unsafe { sys::ztok_chunks_free(recs.as_mut_ptr(), got) };
+
+        Ok(out)
     }
 
     /// Compute the tokenizer fingerprint — a deterministic 32-byte

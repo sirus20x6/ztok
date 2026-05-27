@@ -116,6 +116,12 @@ impl BatchPool {
         drop(lens);
         Ok(results)
     }
+
+    /// Borrow the raw FFI handle for use with the n-gram batch path in
+    /// [`crate::ngram`]. Internal API.
+    pub(crate) fn raw(&self) -> *mut sys::ZtokBatchPool {
+        self.handle
+    }
 }
 
 impl Drop for BatchPool {

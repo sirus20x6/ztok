@@ -84,6 +84,15 @@ pub const ZTOK_FORMAT_HF_JSON: u32 = 2;
 pub const ZTOK_FORMAT_SP_MODEL: u32 = 3;
 pub const ZTOK_FORMAT_ZTM: u32 = 4;
 pub const ZTOK_FORMAT_TEKKEN: u32 = 5;
+pub const ZTOK_FORMAT_RWKV: u32 = 6;
+
+// Chunk boundary modes (mirror `ztok_chunk_boundary`).
+pub const ZTOK_CHUNK_BOUNDARY_TOKEN: u32 = 0;
+pub const ZTOK_CHUNK_BOUNDARY_CODEPOINT: u32 = 1;
+pub const ZTOK_CHUNK_BOUNDARY_WORD: u32 = 2;
+pub const ZTOK_CHUNK_BOUNDARY_WORD_DICT: u32 = 3;
+pub const ZTOK_CHUNK_BOUNDARY_SENTENCE: u32 = 4;
+pub const ZTOK_CHUNK_BOUNDARY_PARAGRAPH: u32 = 5;
 
 // Overlay channel kinds (mirror `ztok_overlay_kind`).
 pub const ZTOK_OVERLAY_BYTE_START: u32 = 0;
@@ -113,6 +122,21 @@ pub struct ZtokOverlayChannel {
     pub kind: u32,
     pub out: *mut u32,
     pub out_cap: usize,
+}
+
+/// Mirrors `struct ztok_chunk_rec`. `ids` points at a ztok-allocated
+/// buffer of `ids_len` token ids (NULL when `ids_len == 0`), released via
+/// `ztok_chunks_free`. `byte_*` is the half-open byte range this chunk
+/// covers in the ORIGINAL input; `token_*` the half-open token-index
+/// range in the full encoding.
+#[repr(C)]
+pub struct ZtokChunkRec {
+    pub ids: *mut u32,
+    pub ids_len: usize,
+    pub byte_start: u32,
+    pub byte_end: u32,
+    pub token_start: u32,
+    pub token_end: u32,
 }
 
 // --- extern fn declarations ---------------------------------------------
@@ -153,6 +177,12 @@ extern "C" {
     ) -> *mut ZtokPipeline;
 
     pub fn ztok_pipeline_new_monster_from_file(
+        path: *const c_char,
+        cfg_or_null: *const ZtokPipelineConfig,
+        out_status: *mut c_int,
+    ) -> *mut ZtokPipeline;
+
+    pub fn ztok_pipeline_new_rwkv_from_file(
         path: *const c_char,
         cfg_or_null: *const ZtokPipelineConfig,
         out_status: *mut c_int,
@@ -236,6 +266,45 @@ extern "C" {
         out_ids: *mut *mut u32,
         out_n_ids: *mut usize,
     ) -> c_int;
+
+    // Engram n-gram hashing
+    pub fn ztok_ngram_hash(
+        ids: *const u32,
+        n_ids: usize,
+        n: u32,
+        heads: u32,
+        out: *mut u64,
+        out_cap: usize,
+        out_len: *mut usize,
+    ) -> c_int;
+
+    pub fn ztok_ngram_hash_batch(
+        pool: *mut ZtokBatchPool,
+        id_arrays: *const *const u32,
+        id_lens: *const usize,
+        n_docs: usize,
+        n: u32,
+        heads: u32,
+        out_hashes: *mut *mut u64,
+        out_lens: *mut usize,
+    ) -> c_int;
+
+    pub fn ztok_u64s_free(hashes: *mut u64);
+
+    // Chunking
+    pub fn ztok_chunk(
+        pipeline: *const ZtokPipeline,
+        text: *const c_char,
+        text_len: usize,
+        max_tokens: u32,
+        overlap: u32,
+        boundary: u32,
+        out_chunks: *mut ZtokChunkRec,
+        out_cap: usize,
+        out_len: *mut usize,
+    ) -> c_int;
+
+    pub fn ztok_chunks_free(chunks: *mut ZtokChunkRec, n: usize);
 
     pub fn ztok_version() -> *const c_char;
 
