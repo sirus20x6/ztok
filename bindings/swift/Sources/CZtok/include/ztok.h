@@ -76,6 +76,11 @@ typedef enum {
      * top-level `config.pattern` regex. Distinguished from HF
      * tokenizer.json by the `"type": "Tekkenizer"` marker. */
     ZTOK_FORMAT_TEKKEN = 5,
+    /* RWKV "World" vocab (`rwkv_vocab_v20230424.txt`): line-oriented
+     * `<id> <python-repr> <byte-len>` entries driving a greedy
+     * longest-match byte trie. Sniffed by the leading id + quoted/`b`-
+     * quoted middle column + trailing length. */
+    ZTOK_FORMAT_RWKV = 6,
 } ztok_format;
 
 typedef struct {
@@ -124,6 +129,17 @@ ztok_pipeline* ztok_pipeline_new_unigram_from_sp_model(
 /* Monster loader. Reads the ztok-native .ztm binary format (magic
  * "ZTM\x01", little-endian); see src/monster_io.zig for the layout. */
 ztok_pipeline* ztok_pipeline_new_monster_from_file(
+    const char* path,
+    const ztok_pipeline_config* cfg_or_null,
+    ztok_status* out_status
+);
+
+/* RWKV "World" loader. Reads a `rwkv_vocab_v20230424.txt`-style file
+ * (`<id> <python-repr> <byte-len>` per line) into a greedy longest-match
+ * byte trie. The pipeline runs identity normalizer + identity
+ * pre-tokenizer + concat decoder, matching the byte-lossless World
+ * scheme (every byte 0..255 is a token, so encode never fails). */
+ztok_pipeline* ztok_pipeline_new_rwkv_from_file(
     const char* path,
     const ztok_pipeline_config* cfg_or_null,
     ztok_status* out_status
@@ -242,6 +258,88 @@ ztok_status ztok_encode_batch_pooled(
 );
 
 void ztok_ids_free(ztok_token_id* ids);
+
+/* --- Engram n-gram hashing ---------------------------------------- */
+
+/* Deterministic multi-head token-n-gram hashing for Engram-style
+ * conditional-memory addressing. Operates on raw token ids — no
+ * pipeline handle needed. Output is row-major [position][head]: the
+ * `heads` hashes for window position 0 come first, then position 1, etc.
+ * Raw u64 hashes are emitted; mask each to your table width
+ * (hash & ((1<<bits)-1)). The number of window positions for an
+ * `n_ids`-long stream is (n_ids - n + 1), or 0 if shorter than n. */
+
+/* Hash every length-`n` window of `ids` under `heads` hash functions.
+ * `out` is a caller-owned buffer of `out_cap` uint64_t entries. On
+ * success writes positions*heads hashes and sets *out_len to that count.
+ * If `out` is NULL or too small, sets *out_len to the required count and
+ * returns ZTOK_BUFFER_TOO_SMALL without writing. A stream shorter than
+ * one window (or n/heads == 0) needs 0 entries and returns ZTOK_OK. */
+ztok_status ztok_ngram_hash(
+    const ztok_token_id* ids, size_t n_ids,
+    uint32_t n, uint32_t heads,
+    uint64_t* out, size_t out_cap, size_t* out_len
+);
+
+/* Hash `n_docs` id streams in parallel across `pool`. Each out_hashes[i]
+ * is set to a ztok-allocated uint64_t buffer (free with ztok_u64s_free)
+ * holding the row-major hashes for doc i, with out_lens[i] its u64
+ * count. A stream shorter than one window yields a NULL buffer and 0. */
+ztok_status ztok_ngram_hash_batch(
+    ztok_batch_pool* pool,
+    const ztok_token_id* const* id_arrays, const size_t* id_lens, size_t n_docs,
+    uint32_t n, uint32_t heads,
+    uint64_t** out_hashes, size_t* out_lens
+);
+
+/* Free a uint64_t buffer returned by ztok_ngram_hash_batch. */
+void ztok_u64s_free(uint64_t* hashes);
+
+/* --- chunking ----------------------------------------------------- */
+
+/* One token-window chunk produced by ztok_chunk. `ids` points at a
+ * ztok-allocated buffer of `ids_len` token ids (NULL when ids_len==0).
+ * `byte_start`/`byte_end` are the half-open byte range this chunk covers
+ * in the ORIGINAL input; `token_start`/`token_end` the half-open
+ * token-index range in the full encoding. */
+typedef struct {
+    ztok_token_id* ids;
+    size_t ids_len;
+    uint32_t byte_start;
+    uint32_t byte_end;
+    uint32_t token_start;
+    uint32_t token_end;
+} ztok_chunk_rec;
+
+/* Boundary mode for ztok_chunk (mirrors chunk.Boundary). */
+typedef enum {
+    ZTOK_CHUNK_BOUNDARY_TOKEN     = 0, /* pure token-count windows */
+    ZTOK_CHUNK_BOUNDARY_CODEPOINT = 1, /* snap to UTF-8 codepoint boundary */
+    ZTOK_CHUNK_BOUNDARY_WORD      = 2, /* snap to whitespace word boundary */
+    ZTOK_CHUNK_BOUNDARY_WORD_DICT = 3, /* dict word boundary (CJK/Thai...) */
+    ZTOK_CHUNK_BOUNDARY_SENTENCE  = 4, /* snap to sentence boundary */
+    ZTOK_CHUNK_BOUNDARY_PARAGRAPH = 5, /* snap to \n\n */
+} ztok_chunk_boundary;
+
+/* Split `text` into windows of at most `max_tokens` tokens with `overlap`
+ * tokens shared between neighbors (stride = max_tokens - overlap).
+ * `out_chunks` is a caller-owned buffer of `out_cap` records. On success
+ * writes one record per chunk and sets *out_len to the chunk count. If
+ * `out_chunks` is NULL or too small, sets *out_len to the required count
+ * and returns ZTOK_BUFFER_TOO_SMALL without writing (no ids allocated).
+ * Empty input yields 0 chunks and ZTOK_OK. Returns ZTOK_ERR_INVALID_INPUT
+ * if max_tokens==0, overlap>=max_tokens, or boundary is out of range.
+ * Each written record's `ids` must be released with ztok_chunks_free. */
+ztok_status ztok_chunk(
+    const ztok_pipeline* pipeline,
+    const char* text, size_t text_len,
+    uint32_t max_tokens, uint32_t overlap, uint32_t boundary,
+    ztok_chunk_rec* out_chunks, size_t out_cap, size_t* out_len
+);
+
+/* Free the `ids` buffers of `n` chunk records written by ztok_chunk. The
+ * `chunks` array itself is caller-owned and is not freed. */
+void ztok_chunks_free(ztok_chunk_rec* chunks, size_t n);
 
 /* --- auto-detect -------------------------------------------------- */
 

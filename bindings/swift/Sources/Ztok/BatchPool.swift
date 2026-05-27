@@ -47,6 +47,15 @@ public final class BatchPool: @unchecked Sendable {
 
     public var isClosed: Bool { handle == nil }
 
+    /// Borrow the raw FFI handle. Internal — used by `Engram`'s batch
+    /// n-gram path. Throws if the pool is closed.
+    internal func requireHandle(op: String) throws -> OpaquePointer {
+        guard let h = handle else {
+            throw ZtokError.closed(op: op)
+        }
+        return h
+    }
+
     /// Actual worker count (resolves `workers = 0` to the detected
     /// CPU count).
     public var workerCount: Int {

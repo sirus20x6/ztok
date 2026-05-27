@@ -24,6 +24,9 @@ public enum Format: UInt32, Sendable, CaseIterable {
     case ztm = 4
     /// Mistral `tekken.json` (tiktoken-style with extra config).
     case tekken = 5
+    /// RWKV "World" vocab (`rwkv_vocab_v20230424.txt`) — greedy
+    /// longest-match byte trie.
+    case rwkv = 6
 
     /// Build a `Format` from the raw `ztok_format` integer. Unknown
     /// codes map to `.unknown` — matches the C ABI's "best-effort,
@@ -81,6 +84,24 @@ public enum OverlayKind: UInt32, Sendable, Hashable, CaseIterable {
     case hunk = 6
     /// Provenance: 0 = model text, 1 = special token.
     case provenance = 7
+}
+
+/// Boundary mode for `Pipeline.chunk(_:maxTokens:overlap:boundary:)`
+/// (mirrors `ztok_chunk_boundary`). Selects where chunk edges are
+/// allowed to fall.
+public enum ChunkBoundary: UInt32, Sendable {
+    /// Pure token-count windows (default).
+    case token = 0
+    /// Snap to a UTF-8 codepoint boundary.
+    case codepoint = 1
+    /// Snap to a whitespace word boundary.
+    case word = 2
+    /// Snap to a dictionary word boundary (CJK/Thai/...).
+    case wordDict = 3
+    /// Snap to a sentence boundary.
+    case sentence = 4
+    /// Snap to a paragraph break (`\n\n`).
+    case paragraph = 5
 }
 
 /// Optional configuration for pipeline constructors.

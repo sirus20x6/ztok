@@ -100,6 +100,8 @@ public final class Pipeline: @unchecked Sendable {
             return try fromSentencePiece(path: path)
         case .ztm:
             return try fromMonster(path: path)
+        case .rwkv:
+            return try fromRwkv(path: path)
         case .unknown:
             throw ZtokError.unknownFormat(path: path)
         }
@@ -173,6 +175,21 @@ public final class Pipeline: @unchecked Sendable {
             op: "ztok_pipeline_new_monster_from_file"
         ) { cPath, cfgPtr, statusPtr in
             ztok_pipeline_new_monster_from_file(cPath, cfgPtr, statusPtr)
+        }
+    }
+
+    /// Load an RWKV "World" vocab (`rwkv_vocab_v20230424.txt`) into a
+    /// greedy longest-match byte-trie pipeline. The World scheme is
+    /// byte-lossless (every byte 0..255 is a token), so it runs with an
+    /// identity normalizer + identity pre-tokenizer + concat decoder;
+    /// there is no pre-tokenizer to configure.
+    public static func fromRwkv(path: String, config: PipelineConfig? = nil) throws -> Pipeline {
+        return try loadFile(
+            path: path,
+            config: config ?? PipelineConfig(),
+            op: "ztok_pipeline_new_rwkv_from_file"
+        ) { cPath, cfgPtr, statusPtr in
+            ztok_pipeline_new_rwkv_from_file(cPath, cfgPtr, statusPtr)
         }
     }
 
@@ -435,6 +452,107 @@ public final class Pipeline: @unchecked Sendable {
             map[k] = Array(flat[(i * count)..<((i + 1) * count)])
         }
         return OverlayResult(ids: ids, channels: map)
+    }
+
+    // MARK: - chunking
+
+    /// Split `text` into overlapping token windows (late chunking). Each
+    /// window holds at most `maxTokens` ids with `overlap` ids shared
+    /// between neighbors (stride = `maxTokens - overlap`). Returns an
+    /// empty array for empty input. Throws `ZtokError.invalidInput` when
+    /// `maxTokens == 0` or `overlap >= maxTokens`.
+    ///
+    /// The C-owned id buffers are copied into Swift `[UInt32]` and freed
+    /// via `ztok_chunks_free` before returning, so the result is fully
+    /// owned by Swift.
+    public func chunk(
+        _ text: String,
+        maxTokens: UInt32,
+        overlap: UInt32 = 0,
+        boundary: ChunkBoundary = .token
+    ) throws -> [Chunk] {
+        return try chunkBytes(
+            Array(text.utf8),
+            maxTokens: maxTokens,
+            overlap: overlap,
+            boundary: boundary)
+    }
+
+    /// Raw-bytes form of `chunk(_:maxTokens:overlap:boundary:)`. Use this
+    /// for non-UTF-8 inputs; the underlying tokenizer treats input as a
+    /// byte stream.
+    public func chunkBytes(
+        _ data: [UInt8],
+        maxTokens: UInt32,
+        overlap: UInt32 = 0,
+        boundary: ChunkBoundary = .token
+    ) throws -> [Chunk] {
+        let h = try requireHandle(op: "ztok_chunk")
+
+        // Validate args up front to surface a clean .invalidInput,
+        // matching the Python/Go bindings (which check before the call).
+        if maxTokens == 0 || overlap >= maxTokens {
+            throw ZtokError.invalidInput
+        }
+        if data.isEmpty { return [] }
+
+        return try data.withUnsafeBufferPointer { inBuf -> [Chunk] in
+            try inBuf.baseAddress!.withMemoryRebound(to: CChar.self, capacity: inBuf.count) { cIn -> [Chunk] in
+                // Sizing pass: out_chunks = nil -> *out_len = chunk count.
+                var need: Int = 0
+                let rc1 = ztok_chunk(
+                    h, cIn, inBuf.count,
+                    maxTokens, overlap, boundary.rawValue,
+                    nil, 0, &need)
+                let rc1i = Int32(rc1.rawValue)
+                if rc1i != Int32(ZTOK_OK.rawValue)
+                    && rc1i != Int32(ZTOK_ERR_BUFFER_TOO_SMALL.rawValue) {
+                    try checkStatus(rc1i, op: "ztok_chunk (sizing)")
+                }
+                let count = need
+                if count == 0 { return [] }
+
+                // Fill pass: caller-owned record array of capacity `count`.
+                var recs = [ztok_chunk_rec](
+                    repeating: ztok_chunk_rec(),
+                    count: count)
+                var got: Int = 0
+                let rc2: Int32 = recs.withUnsafeMutableBufferPointer { recBuf in
+                    let cStatus = ztok_chunk(
+                        h, cIn, inBuf.count,
+                        maxTokens, overlap, boundary.rawValue,
+                        recBuf.baseAddress, count, &got)
+                    return Int32(cStatus.rawValue)
+                }
+                // On success, ztok_chunk allocated an id buffer per record;
+                // copy the ids out, then release every buffer through
+                // ztok_chunks_free (the only safe free path). Always run
+                // the free, even if checkStatus throws.
+                defer {
+                    recs.withUnsafeMutableBufferPointer { recBuf in
+                        ztok_chunks_free(recBuf.baseAddress, got)
+                    }
+                }
+                try checkStatus(rc2, op: "ztok_chunk")
+
+                var out = [Chunk]()
+                out.reserveCapacity(got)
+                for i in 0..<got {
+                    let r = recs[i]
+                    var ids = [UInt32]()
+                    if let p = r.ids, r.ids_len > 0 {
+                        ids = Array(UnsafeBufferPointer(start: p, count: r.ids_len))
+                    }
+                    out.append(Chunk(
+                        ids: ids,
+                        byteStart: r.byte_start,
+                        byteEnd: r.byte_end,
+                        tokenStart: r.token_start,
+                        tokenEnd: r.token_end))
+                }
+                return out
+            }
+        }
     }
 
     // MARK: - fingerprint
