@@ -23,6 +23,13 @@ module Ztok
   #   Ztok::Pipeline.from_path("tokenizer.json") do |pipe|
   #     ids = pipe.encode("hello world")
   #   end
+  # One token window produced by Pipeline#chunk. `ids` are the token ids
+  # in this chunk. `byte_start`/`byte_end` is the half-open byte range the
+  # chunk covers in the ORIGINAL input; `token_start`/`token_end` the
+  # half-open token-index range in the full encoding.
+  Chunk = Struct.new(:ids, :byte_start, :byte_end, :token_start, :token_end,
+                     keyword_init: true)
+
   class Pipeline
     # Default chunk size for streaming encode (mirrors Python's 64 KiB).
     STREAM_FEED_SIZE = 64 * 1024
@@ -128,6 +135,21 @@ module Ztok
       wrap_or_yield(pipe, &block)
     end
 
+    # Load an RWKV "World" vocab (rwkv_vocab_v20230424.txt). The model is
+    # a greedy longest-match byte trie that runs over the whole input as a
+    # single span — there is no pre-tokenizer, so the pre_tokenizer slot is
+    # fixed to identity.
+    def self.from_rwkv(path,
+                       normalizer: FFI::NORMALIZER_IDENTITY,
+                       decoder: FFI::DECODER_CONCAT,
+                       &block)
+      pipe = from_file_with_cfg(:ztok_pipeline_new_rwkv_from_file, path,
+                                normalizer: normalizer,
+                                pre_tokenizer: FFI::PRETOK_IDENTITY,
+                                decoder: decoder)
+      wrap_or_yield(pipe, &block)
+    end
+
     # Auto-detect the file format and dispatch to the right loader:
     #
     #   .tiktoken            -> BPE + cl100k pre-tokenizer
@@ -156,6 +178,9 @@ module Ztok
         when :ztm
           from_monster(path, normalizer: normalizer,
                              decoder: decoder || FFI::DECODER_CONCAT)
+        when :rwkv
+          from_rwkv(path, normalizer: normalizer,
+                          decoder: decoder || FFI::DECODER_CONCAT)
         else
           raise InvalidInputError,
                 "could not auto-detect tokenizer format for #{path.inspect}; " \
@@ -411,6 +436,80 @@ module Ztok
         out_ptrs.each do |p|
           FFI.ztok_ids_free(p) if p && !p.null?
         end
+      end
+    end
+
+    # --- chunking -------------------------------------------------------
+
+    # Split +text+ into overlapping token windows (late chunking). Each
+    # window holds at most +max_tokens+ ids with +overlap+ ids shared
+    # between neighbors (stride = max_tokens - overlap). +boundary+ is a
+    # symbol from FFI::CHUNK_BOUNDARY_NAME_TO_CODE (:token, :codepoint,
+    # :word, :word_dict, :sentence, :paragraph) or an integer boundary
+    # code. Returns an empty Array for empty input. The C-owned id buffers
+    # are copied into Ruby Chunk objects and freed before returning.
+    def chunk(text, max_tokens:, overlap: 0, boundary: :token)
+      check_open!
+
+      boundary_code =
+        if boundary.is_a?(Symbol)
+          FFI::CHUNK_BOUNDARY_NAME_TO_CODE.fetch(boundary) do
+            raise InvalidInputError, "chunk: unknown boundary #{boundary.inspect}"
+          end
+        else
+          boundary.to_i
+        end
+
+      if max_tokens.to_i <= 0 || overlap.to_i >= max_tokens.to_i
+        raise InvalidInputError,
+              "chunk: max_tokens must be > 0 and overlap < max_tokens"
+      end
+
+      data = coerce_bytes(text)
+      return [] if data.bytesize.zero?
+
+      input_buf = ::FFI::MemoryPointer.new(:uint8, data.bytesize)
+      input_buf.write_bytes(data)
+
+      # Sizing pass: out_chunks = NULL -> *out_len = chunk count.
+      out_len_buf = ::FFI::MemoryPointer.new(:size_t)
+      rc = FFI.ztok_chunk(@handle, input_buf, data.bytesize,
+                          max_tokens, overlap, boundary_code,
+                          ::FFI::Pointer::NULL, 0, out_len_buf)
+      if rc != STATUS_OK && rc != STATUS_ERR_BUFFER_TOO_SMALL
+        Ztok.raise_for_status(rc, "ztok_chunk (sizing)")
+      end
+      count = out_len_buf.read(:size_t)
+      return [] if count.zero?
+
+      # Fill pass: caller-owned record array.
+      recs = ::FFI::MemoryPointer.new(FFI::ChunkRec, count)
+      out_len_buf = ::FFI::MemoryPointer.new(:size_t)
+      rc = FFI.ztok_chunk(@handle, input_buf, data.bytesize,
+                          max_tokens, overlap, boundary_code,
+                          recs, count, out_len_buf)
+
+      begin
+        Ztok.raise_for_status(rc, "ztok_chunk")
+        got = out_len_buf.read(:size_t)
+        Array.new(got) do |i|
+          r = FFI::ChunkRec.new(recs + i * FFI::ChunkRec.size)
+          ids_ptr = r[:ids]
+          ids_len = r[:ids_len]
+          ids =
+            if ids_ptr.nil? || ids_ptr.null? || ids_len.zero?
+              []
+            else
+              ids_ptr.read_array_of_uint32(ids_len)
+            end
+          Chunk.new(ids: ids,
+                    byte_start: r[:byte_start], byte_end: r[:byte_end],
+                    token_start: r[:token_start], token_end: r[:token_end])
+        end
+      ensure
+        # Release each record's ztok-allocated id buffer. The recs array
+        # itself is Ruby-owned (an FFI::MemoryPointer).
+        FFI.ztok_chunks_free(recs, count)
       end
     end
 

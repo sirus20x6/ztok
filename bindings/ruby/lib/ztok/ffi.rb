@@ -50,6 +50,8 @@ module Ztok
     FORMAT_HF_JSON  = 2
     FORMAT_SP_MODEL = 3
     FORMAT_ZTM      = 4
+    FORMAT_TEKKEN   = 5
+    FORMAT_RWKV     = 6
 
     FORMAT_CODE_TO_NAME = {
       FORMAT_UNKNOWN  => :unknown,
@@ -57,6 +59,26 @@ module Ztok
       FORMAT_HF_JSON  => :hf_json,
       FORMAT_SP_MODEL => :sentencepiece,
       FORMAT_ZTM      => :ztm,
+      FORMAT_TEKKEN   => :tekken,
+      FORMAT_RWKV     => :rwkv,
+    }.freeze
+
+    # Chunk boundary modes (mirror ztok_chunk_boundary in ztok.h).
+    CHUNK_BOUNDARY_TOKEN     = 0
+    CHUNK_BOUNDARY_CODEPOINT = 1
+    CHUNK_BOUNDARY_WORD      = 2
+    CHUNK_BOUNDARY_WORD_DICT = 3
+    CHUNK_BOUNDARY_SENTENCE  = 4
+    CHUNK_BOUNDARY_PARAGRAPH = 5
+
+    # Symbolic boundary names accepted by Pipeline#chunk's `boundary:` arg.
+    CHUNK_BOUNDARY_NAME_TO_CODE = {
+      token:     CHUNK_BOUNDARY_TOKEN,
+      codepoint: CHUNK_BOUNDARY_CODEPOINT,
+      word:      CHUNK_BOUNDARY_WORD,
+      word_dict: CHUNK_BOUNDARY_WORD_DICT,
+      sentence:  CHUNK_BOUNDARY_SENTENCE,
+      paragraph: CHUNK_BOUNDARY_PARAGRAPH,
     }.freeze
 
     # Overlay channel kinds (mirror ztok_overlay_kind in ztok.h). Cheap
@@ -89,6 +111,20 @@ module Ztok
              :out_cap, :size_t
     end
 
+    # Struct mirroring `ztok_chunk_rec` in ztok.h. `ids` is a
+    # ztok-allocated buffer of `ids_len` token ids (NULL when ids_len ==
+    # 0), released via ztok_chunks_free. `byte_*` is the half-open byte
+    # range in the ORIGINAL input; `token_*` the half-open token-index
+    # range in the full encoding.
+    class ChunkRec < ::FFI::Struct
+      layout :ids,         :pointer,
+             :ids_len,     :size_t,
+             :byte_start,  :uint32,
+             :byte_end,    :uint32,
+             :token_start, :uint32,
+             :token_end,   :uint32
+    end
+
     # Load the shared library once at require-time so signature errors
     # surface immediately. Lib.resolve raises Ztok::LibraryNotFoundError
     # with a descriptive message if the library can't be located.
@@ -108,6 +144,8 @@ module Ztok
     attach_function :ztok_pipeline_new_unigram_from_sp_model,
                     [:string, :uint32, :pointer, :pointer], :pointer
     attach_function :ztok_pipeline_new_monster_from_file,
+                    [:string, :pointer, :pointer], :pointer
+    attach_function :ztok_pipeline_new_rwkv_from_file,
                     [:string, :pointer, :pointer], :pointer
 
     # --- encode / decode ---------------------------------------------
@@ -136,6 +174,21 @@ module Ztok
                      :pointer, :pointer], :int
 
     attach_function :ztok_ids_free, [:pointer], :void
+
+    # --- n-gram hashing (Engram) -------------------------------------
+    attach_function :ztok_ngram_hash,
+                    [:pointer, :size_t, :uint32, :uint32,
+                     :pointer, :size_t, :pointer], :int
+    attach_function :ztok_ngram_hash_batch,
+                    [:pointer, :pointer, :pointer, :size_t,
+                     :uint32, :uint32, :pointer, :pointer], :int
+    attach_function :ztok_u64s_free, [:pointer], :void
+
+    # --- chunking ----------------------------------------------------
+    attach_function :ztok_chunk,
+                    [:pointer, :pointer, :size_t, :uint32, :uint32, :uint32,
+                     :pointer, :size_t, :pointer], :int
+    attach_function :ztok_chunks_free, [:pointer, :size_t], :void
 
     # --- auto-detect -------------------------------------------------
     attach_function :ztok_auto_detect, [:string], :uint32
