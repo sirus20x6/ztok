@@ -133,6 +133,15 @@ jobs:
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
 
+      # Hard gate: ztok's Monster encoder must stay >= 90% parity with
+      # TokenMonster-Go on the 100-line nocapcode/full-capcode cells.
+      # Locks in the .ztm v2 alias + encoder fixes (observed 92/93/96/96)
+      # so a regression below 90 fails CI instead of silently slipping.
+      # Runs only when the .ztm fixtures are vendored.
+      - name: TM parity gate (>= 90%)
+        if: hashFiles('bench/vocabs/tm_englishcode_32k.ztm') != ''
+        run: bash bench/tm_parity_gate.sh
+
       - name: Upload sweep log
         if: always()
         uses: actions/upload-artifact@v4

@@ -155,6 +155,46 @@ class BatchPool {
     }
 }
 
+// --- Fingerprint ---
+
+/**
+ * 32-byte deterministic tokenizer fingerprint. Two pipelines that return
+ * equal fingerprints produce bit-identical id streams for any input.
+ * Mirrors the dotnet/java value type: raw `bytes` plus a `hex()` helper.
+ */
+class Fingerprint {
+    constructor(buf) {
+        if (!Buffer.isBuffer(buf) || buf.length !== Fingerprint.SIZE) {
+            throw new ZtokInvalidInputError(
+                `fingerprint must be exactly ${Fingerprint.SIZE} bytes`
+            );
+        }
+        // Defensive copy so the caller can't mutate our backing store.
+        this._bytes = Buffer.from(buf);
+        Object.freeze(this);
+    }
+
+    /** Raw 32 fingerprint bytes (a fresh copy). */
+    get bytes() {
+        return Buffer.from(this._bytes);
+    }
+
+    /** Lowercase 64-char hexadecimal form, no separators. */
+    hex() {
+        return this._bytes.toString('hex');
+    }
+
+    /** Structural equality against another Fingerprint. */
+    equals(other) {
+        return other instanceof Fingerprint && this._bytes.equals(other._bytes);
+    }
+
+    toString() {
+        return `Fingerprint(${this.hex()})`;
+    }
+}
+Fingerprint.SIZE = 32;
+
 // --- Pipeline ---
 
 function makeConfig({
@@ -294,11 +334,34 @@ class Pipeline {
     }
 
     /**
+     * Load a Mistral Tekken `tekken.json` vocab (Nemo / Pixtral / Devstral
+     * / Magistral, etc.).
+     *
+     * The loader lowers Tekken's base64 byte vocab into a BPE with the
+     * special tokens packed into the bottom of the id space. The default
+     * pre-tokenizer is the Tekken pattern (PRETOK_TEKKEN) — NOT cl100k —
+     * and the default decoder is concat (pieces are raw bytes).
+     */
+    static fromTekken(filePath, opts = {}) {
+        return Pipeline._fromFileWithCfg(
+            'ztok_pipeline_new_tekken_from_file',
+            filePath,
+            {
+                normalizer: opts.normalizer ?? ffi.NORMALIZER_IDENTITY,
+                pre_tokenizer: opts.preTokenizer ?? ffi.PRETOK_TEKKEN,
+                model: ffi.MODEL_BYTE_ID,
+                decoder: opts.decoder ?? ffi.DECODER_CONCAT,
+            }
+        );
+    }
+
+    /**
      * Auto-detect the file format and dispatch to the right loader.
      * - .tiktoken          -> BPE + cl100k pre-tokenizer
      * - tokenizer.json     -> BPE (HF JSON)
      * - .model             -> SentencePiece Unigram (unkId defaults to 0)
      * - .ztm               -> TokenMonster
+     * - tekken.json        -> Mistral Tekken (Nemo / Pixtral / Devstral)
      */
     static fromPath(filePath, opts = {}) {
         const fmt = ffi.detectFormat(filePath);
@@ -313,6 +376,8 @@ class Pipeline {
                 return Pipeline.fromMonster(filePath, opts);
             case 'rwkv':
                 return Pipeline.fromRWKV(filePath, opts);
+            case 'tekken':
+                return Pipeline.fromTekken(filePath, opts);
             default:
                 throw new ZtokInvalidInputError(
                     `could not auto-detect tokenizer format for ${filePath}; ` +
@@ -388,6 +453,24 @@ class Pipeline {
         throw new ZtokInternalError(
             'ztok_encode kept reporting BUFFER_TOO_SMALL after 8 grow attempts'
         );
+    }
+
+    /**
+     * Select which domain normalizer populates the domain overlay channels
+     * (OPCODE/OPERAND/SYMBOL_REF/HUNK).
+     *
+     * Pass one of the `OVERLAY_DOMAIN_*` constants. `OVERLAY_DOMAIN_NONE`
+     * (the default) leaves those channels zero-filled; `OVERLAY_DOMAIN_X86_64`
+     * decodes the input as x86-64 machine code. An unrecognized value leaves
+     * the pipeline unchanged and throws {@link ZtokInvalidInputError}.
+     *
+     * @param {number} domain
+     */
+    setOverlayDomain(domain) {
+        this._check();
+        const lib = ffi.getLib();
+        const rc = lib.ztok_pipeline_set_overlay_domain(this._handle, domain >>> 0);
+        raiseForStatus(rc, 'ztok_pipeline_set_overlay_domain');
     }
 
     /**
@@ -752,6 +835,27 @@ class Pipeline {
             try { lib.ztok_chunks_free(recs, got); } catch (_) { /* ignore */ }
         }
     }
+
+    // --- fingerprint ---
+
+    /**
+     * Compute the tokenizer fingerprint: a deterministic 32-byte SHA-256
+     * digest over the pipeline's encoding behavior on a fixed canonical
+     * input set plus a model-kind tag and vocab size. Two pipelines that
+     * return equal fingerprints produce bit-identical id streams for any
+     * input — use it as a cache key, KV-store discriminator, or
+     * training-pipeline guard.
+     *
+     * @returns {Fingerprint}
+     */
+    fingerprint() {
+        this._check();
+        const lib = ffi.getLib();
+        const out = Buffer.alloc(Fingerprint.SIZE);
+        const rc = lib.ztok_fingerprint(this._handle, out);
+        raiseForStatus(rc, 'ztok_fingerprint');
+        return new Fingerprint(out);
+    }
 }
 
 function materializeAndFreeIds(lib, ptr, n) {
@@ -893,6 +997,7 @@ function hashNgramsBatch(pool, streams, n, heads) {
 
 module.exports = {
     Pipeline,
+    Fingerprint,
     BatchPool,
     version,
     hashNgrams,
@@ -915,6 +1020,7 @@ module.exports = {
     NORMALIZER_BYTE_LEVEL: ffi.NORMALIZER_BYTE_LEVEL,
     PRETOK_IDENTITY: ffi.PRETOK_IDENTITY,
     PRETOK_CL100K: ffi.PRETOK_CL100K,
+    PRETOK_TEKKEN: ffi.PRETOK_TEKKEN,
     DECODER_CONCAT: ffi.DECODER_CONCAT,
     DECODER_WORDPIECE: ffi.DECODER_WORDPIECE,
     DECODER_BYTE_LEVEL: ffi.DECODER_BYTE_LEVEL,
@@ -929,6 +1035,10 @@ module.exports = {
     OVERLAY_HUNK: ffi.OVERLAY_HUNK,
     OVERLAY_PROVENANCE: ffi.OVERLAY_PROVENANCE,
     OVERLAY_USER_BASE: ffi.OVERLAY_USER_BASE,
+
+    // Overlay domains (mirror ztok_overlay_domain in include/ztok.h)
+    OVERLAY_DOMAIN_NONE: ffi.OVERLAY_DOMAIN_NONE,
+    OVERLAY_DOMAIN_X86_64: ffi.OVERLAY_DOMAIN_X86_64,
 
     // Chunk boundary modes (mirror ztok_chunk_boundary in include/ztok.h)
     CHUNK_BOUNDARY_TOKEN: ffi.CHUNK_BOUNDARY_TOKEN,

@@ -73,6 +73,8 @@ public enum PreTokenizer : uint
     Identity = 0,
     /// <summary>OpenAI cl100k_base regex split.</summary>
     Cl100k = 1,
+    /// <summary>Mistral Tekken pre-tokenization pattern.</summary>
+    Tekken = 2,
 }
 
 /// <summary>Decoder kind (mirrors <c>ztok_decoder_kind</c>).</summary>
@@ -114,6 +116,22 @@ public enum OverlayKind : uint
     Hunk = 6,
     /// <summary>Provenance: 0 = model text, 1 = special token.</summary>
     Provenance = 7,
+}
+
+/// <summary>
+/// Overlay domain (mirrors <c>ztok_overlay_domain</c>). Selects which domain
+/// normalizer populates the domain overlay channels
+/// (<see cref="OverlayKind.Opcode"/> / <see cref="OverlayKind.Operand"/> /
+/// <see cref="OverlayKind.SymbolRef"/> / <see cref="OverlayKind.Hunk"/>).
+/// Pass to <see cref="Pipeline.SetOverlayDomain"/>. <see cref="None"/> (the
+/// default) leaves those channels zero-filled.
+/// </summary>
+public enum OverlayDomain : uint
+{
+    /// <summary>No domain normalizer; domain channels stay zero-filled (default).</summary>
+    None = 0,
+    /// <summary>Decode the input as x86-64 machine code.</summary>
+    X86_64 = 1,
 }
 
 /// <summary>Format-detection helpers and libztok version probe.</summary>

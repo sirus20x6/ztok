@@ -165,6 +165,7 @@ internal static unsafe class Native
 
     internal const uint PretokIdentity = 0;
     internal const uint PretokCl100k = 1;
+    internal const uint PretokTekken = 2;
 
     internal const uint ModelByteId = 0;
 
@@ -252,6 +253,9 @@ internal static unsafe class Native
     [DllImport(LibName, EntryPoint = "ztok_pipeline_new_rwkv_from_file")]
     internal static extern IntPtr PipelineNewRwkvFromFile(byte* path, ZtokPipelineConfig* cfg, int* outStatus);
 
+    [DllImport(LibName, EntryPoint = "ztok_pipeline_new_tekken_from_file")]
+    internal static extern IntPtr PipelineNewTekkenFromFile(byte* path, ZtokPipelineConfig* cfg, int* outStatus);
+
     // ----- encode / decode ---------------------------------------------------
 
     [DllImport(LibName, EntryPoint = "ztok_encode")]
@@ -275,6 +279,9 @@ internal static unsafe class Native
         uint* outIds, nuint outIdsCap,
         ZtokOverlayChannel* channels, nuint nChannels,
         nuint* outLen);
+
+    [DllImport(LibName, EntryPoint = "ztok_pipeline_set_overlay_domain")]
+    internal static extern int PipelineSetOverlayDomain(IntPtr p, uint domain);
 
     // ----- batch -------------------------------------------------------------
 
@@ -453,6 +460,7 @@ internal static unsafe class Native
         BpeHfJson,
         Monster,
         Rwkv,
+        Tekken,
     }
 
     internal enum PathUnkCtorKind
@@ -484,6 +492,7 @@ internal static unsafe class Native
                 PathCtorKind.BpeHfJson => PipelineNewBpeFromHfJson(p, &cfg, &status),
                 PathCtorKind.Monster => PipelineNewMonsterFromFile(p, &cfg, &status),
                 PathCtorKind.Rwkv => PipelineNewRwkvFromFile(p, &cfg, &status),
+                PathCtorKind.Tekken => PipelineNewTekkenFromFile(p, &cfg, &status),
                 _ => throw new ArgumentOutOfRangeException(nameof(kind)),
             };
         }

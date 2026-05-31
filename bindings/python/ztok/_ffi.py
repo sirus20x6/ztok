@@ -34,6 +34,7 @@ from ctypes import (
     c_int,
     c_size_t,
     c_uint,
+    c_uint8,
     c_uint32,
     c_uint64,
     c_void_p,
@@ -57,6 +58,7 @@ NORMALIZER_BYTE_LEVEL = 5
 
 PRETOK_IDENTITY = 0
 PRETOK_CL100K = 1
+PRETOK_TEKKEN = 2
 
 MODEL_BYTE_ID = 0
 
@@ -93,6 +95,12 @@ OVERLAY_SYMBOL_REF = 5
 OVERLAY_HUNK = 6
 OVERLAY_PROVENANCE = 7
 OVERLAY_USER_BASE = 0x8000
+
+# Overlay domains (mirrors `ztok_overlay_domain` in ztok.h). Selects which
+# domain normalizer populates the OPCODE/OPERAND/SYMBOL_REF/HUNK channels.
+# NONE (the default) leaves those channels zero-filled.
+OVERLAY_DOMAIN_NONE = 0
+OVERLAY_DOMAIN_X86_64 = 1
 
 
 # Typedefs.
@@ -163,6 +171,7 @@ def bind(lib: ctypes.CDLL) -> ctypes.CDLL:
         "ztok_pipeline_new_bpe_from_hf_json",
         "ztok_pipeline_new_monster_from_file",
         "ztok_pipeline_new_rwkv_from_file",
+        "ztok_pipeline_new_tekken_from_file",
     ):
         fn = getattr(lib, fname)
         fn.argtypes = [c_char_p, POINTER(ZtokPipelineConfig), POINTER(c_int)]
@@ -209,6 +218,13 @@ def bind(lib: ctypes.CDLL) -> ctypes.CDLL:
         POINTER(c_size_t),              # out_len
     ]
     lib.ztok_encode_with_overlays.restype = c_int
+
+    # Select the pipeline's overlay domain (NONE / X86_64).
+    lib.ztok_pipeline_set_overlay_domain.argtypes = [
+        c_void_p,                   # pipeline*
+        c_uint,                     # ztok_overlay_domain
+    ]
+    lib.ztok_pipeline_set_overlay_domain.restype = c_int
 
     # --- batch ------------------------------------------------------------
     lib.ztok_encode_batch.argtypes = [
@@ -291,6 +307,11 @@ def bind(lib: ctypes.CDLL) -> ctypes.CDLL:
 
     lib.ztok_chunks_free.argtypes = [POINTER(ZtokChunkRec), c_size_t]
     lib.ztok_chunks_free.restype = None
+
+    # --- fingerprint ------------------------------------------------------
+    # ztok_status ztok_fingerprint(ztok_pipeline*, uint8_t out_32[32])
+    lib.ztok_fingerprint.argtypes = [c_void_p, POINTER(c_uint8 * 32)]
+    lib.ztok_fingerprint.restype = c_int
 
     # --- auto-detect ------------------------------------------------------
     lib.ztok_auto_detect.argtypes = [c_char_p]

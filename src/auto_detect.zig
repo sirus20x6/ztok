@@ -8,12 +8,13 @@ pub const Format = enum {
     /// ztok's own Monster (.ztm) binary format. Magic: `'Z' 'T' 'M' 0x01`
     /// — see `monster_io.MAGIC`.
     ztm,
-    /// Mistral Tekken (`tekken.json`): tiktoken-style BPE vocab with
-    /// base64-encoded `token_bytes`, an explicit `special_tokens` block,
-    /// and a top-level `config.pattern` regex. Distinguishable from a
-    /// generic HF tokenizer.json by the `"type": "Tekkenizer"` field
-    /// (set on v7+) or by the absence of HF's `model` object combined
-    /// with the presence of `vocab` + `special_tokens` arrays.
+    /// Mistral Tekken (`tekken.json`): tiktoken-style BPE vocab with a
+    /// `vocab` array of base64-encoded `token_bytes` entries and a
+    /// top-level `config` object (`pattern` regex + `num_vocab_tokens`).
+    /// Distinguishable from a generic HF tokenizer.json by the
+    /// `"type": "Tekkenizer"` field (set on v7+), or — for the older v3
+    /// vocabs that omit it — by the `token_bytes` / `num_vocab_tokens`
+    /// keys, which HF tokenizer.json never uses.
     tekken,
     /// RWKV "World" vocab (`rwkv_vocab_v20230424.txt`): one entry per
     /// line, `<id> <python-repr> <byte-len>`, where the middle field is a
@@ -25,11 +26,15 @@ pub const Format = enum {
 
 /// First-pass peek for cheap magic checks (ztm, sentencepiece, tiktoken).
 const PEEK = 256;
-/// Extended peek for JSON-shape disambiguation. Tekken's `"type":
-/// "Tekkenizer"` marker generally lands within the first KiB on real
-/// files; we bump to 4 KiB to also catch hand-formatted variants that
-/// put `config` first.
-const JSON_PEEK = 4096;
+/// Peek window read off disk in `detectFile`. Sized to comfortably cover
+/// the Tekken-distinctive markers on real files: the strongest signals
+/// (`config.pattern`, `num_vocab_tokens`, the first `vocab` entry's
+/// `token_bytes`) all land within the first ~1 KiB on Mistral's released
+/// vocabs, but older v3 files front-load a large `config` block (a long
+/// `pattern` regex) ahead of `vocab`, so we read a generous 32 KiB to keep
+/// those markers reachable. Non-JSON formats are unaffected — their magic
+/// checks all fit in the first few bytes.
+const JSON_PEEK = 32 * 1024;
 
 fn isWs(c: u8) bool {
     return c == ' ' or c == '\t' or c == '\n' or c == '\r';
@@ -130,10 +135,11 @@ pub fn detect(bytes: []const u8) Format {
 
     if (bytes[i] == '{') {
         // Tekken vs generic HF tokenizer.json: both are JSON objects, but
-        // Tekken has the unique markers `"type": "Tekkenizer"` (v7+) or
-        // the combo `"special_tokens"` + `"token_bytes"` (any version).
-        // HF files instead carry a top-level `"model"` object. We
-        // substring-scan the peek window: it's a coarse signal but
+        // Tekken carries unique markers — `"type": "Tekkenizer"` (v7+), or
+        // the per-entry `"token_bytes"` field / the `config` sizing keys
+        // (`num_vocab_tokens`, `num_special_tokens`) on older v3 files.
+        // HF tokenizer.json uses `"model"` + `"merges"` and none of those.
+        // We substring-scan the peek window: a coarse signal but
         // sufficient for auto-detect's "best-effort sniff" contract.
         if (looksLikeTekkenJson(bytes[i..])) return .tekken;
         return .hf_json;
@@ -151,33 +157,42 @@ pub fn detect(bytes: []const u8) Format {
 }
 
 /// Substring-scan the JSON peek window for Tekken-distinctive markers.
-/// Cheap, doesn't try to actually parse the JSON. Returns false on the
-/// generic HF tokenizer.json shape (which contains a top-level `"model"`
-/// object Tekken files never have).
+/// Cheap, doesn't try to actually parse the JSON. Each signal below is
+/// chosen to be present in Tekken vocabs and *absent* from a generic HF
+/// `tokenizer.json` (whose token table uses `id`/`content`, a top-level
+/// `model` object, and `merges` — never `token_bytes` or the Tekken
+/// `config` keys).
 fn looksLikeTekkenJson(bytes: []const u8) bool {
-    // The strongest positive signal — explicit Tekkenizer type tag on
-    // v7+ files. Match the lenient form `"type"<ws>:<ws>"Tekkenizer"`
-    // by just searching for the quoted value.
+    // 1. Strongest positive signal — explicit Tekkenizer type tag on
+    //    v7+ files. Match the lenient form `"type"<ws>:<ws>"Tekkenizer"`
+    //    by just searching for the quoted value.
     if (std.mem.indexOf(u8, bytes, "\"Tekkenizer\"") != null) return true;
 
-    // Older / hand-rolled files may omit `type`. Fall back on shape: a
-    // top-level `"special_tokens"` array AND a `"token_bytes"` field
-    // (which appears in every Tekken vocab entry) together are enough
-    // to distinguish from an HF tokenizer.json — HF uses `"vocab"` +
-    // `"merges"` and never names a field `token_bytes`.
-    const has_specials = std.mem.indexOf(u8, bytes, "\"special_tokens\"") != null;
-    const has_token_bytes = std.mem.indexOf(u8, bytes, "\"token_bytes\"") != null;
-    if (has_specials and has_token_bytes) return true;
+    // 2. `"token_bytes"` is the per-entry base64 field that every Tekken
+    //    `vocab` entry carries. HF tokenizer.json never names a field
+    //    `token_bytes` (it stores token text under `content`/`vocab`
+    //    maps), so this alone is a reliable Tekken signal. This is the
+    //    marker the released Mistral v3 vocabs (mistral_nemo_tekken.json)
+    //    surface first — they omit `special_tokens` entirely, which the
+    //    old `special_tokens AND token_bytes` combo required and so
+    //    mis-detected them as hf_json.
+    if (std.mem.indexOf(u8, bytes, "\"token_bytes\"") != null) return true;
+
+    // 3. Tekken's top-level `config` object carries vocab-sizing keys that
+    //    HF tokenizer.json never uses. Either is Tekken-specific.
+    if (std.mem.indexOf(u8, bytes, "\"num_vocab_tokens\"") != null) return true;
+    if (std.mem.indexOf(u8, bytes, "\"num_special_tokens\"") != null) return true;
 
     return false;
 }
 
 pub fn detectFile(path: []const u8) !Format {
     const io = std.Io.Threaded.global_single_threaded.io();
-    // Use the larger JSON peek window so Tekken's `"Tekkenizer"` marker
-    // (which may not land in the first 256 bytes if `vocab` is listed
-    // before `type`) is reachable. Non-JSON formats are unaffected;
-    // their cheap magic checks all fit inside the first few bytes.
+    // Use the larger JSON peek window so Tekken's distinctive markers
+    // (`token_bytes` / `num_vocab_tokens` / `Tekkenizer`) are reachable
+    // even when a large `config` block precedes the first `vocab` entry.
+    // Non-JSON formats are unaffected; their cheap magic checks all fit
+    // inside the first few bytes.
     var buf: [JSON_PEEK]u8 = undefined;
     const slice = try std.Io.Dir.cwd().readFile(io, path, &buf);
     // Path-based hint: a file literally named `tekken.json` is the
@@ -352,4 +367,48 @@ test "detectFile recognizes a real .ztm file" {
     }
     const fmt = try detectFile(path);
     try testing.expectEqual(Format.ztm, fmt);
+}
+
+test "detect tekken by config shape (num_vocab_tokens, no special_tokens)" {
+    // Regression: the released Mistral v3 vocab (mistral_nemo_tekken.json)
+    // has a top-level `config` with `num_vocab_tokens` + `pattern` and a
+    // `vocab` array of `{rank, token_bytes, token_str}` entries, but NO
+    // `special_tokens` block and no `"type": "Tekkenizer"` tag. The old
+    // `special_tokens AND token_bytes` combo mis-classified it as hf_json.
+    const bytes =
+        \\{
+        \\  "config": {
+        \\    "pattern": "[^\\r\\n\\p{L}\\p{N}]?",
+        \\    "num_vocab_tokens": 150000,
+        \\    "default_vocab_size": 131072,
+        \\    "default_num_special_tokens": 1000,
+        \\    "version": "v3"
+        \\  },
+        \\  "vocab": [
+        \\    {"rank": 0, "token_bytes": "AA==", "token_str": "x"}
+        \\  ]
+        \\}
+    ;
+    try testing.expectEqual(Format.tekken, detect(bytes));
+}
+
+test "detectFile detects the real mistral_nemo_tekken fixture as tekken" {
+    // Skip silently if the (large) fixture isn't checked out.
+    const path = "bench/vocabs/mistral_nemo_tekken.json";
+    const fmt = detectFile(path) catch |e| switch (e) {
+        error.FileNotFound => return error.SkipZigTest,
+        else => return e,
+    };
+    try testing.expectEqual(Format.tekken, fmt);
+}
+
+test "detectFile keeps detecting the real llama3 HF fixture as hf_json" {
+    // No-regression guard: a representative HF tokenizer.json must still
+    // sniff as hf_json after the Tekken signal was broadened.
+    const path = "bench/vocabs/llama3.json";
+    const fmt = detectFile(path) catch |e| switch (e) {
+        error.FileNotFound => return error.SkipZigTest,
+        else => return e,
+    };
+    try testing.expectEqual(Format.hf_json, fmt);
 }

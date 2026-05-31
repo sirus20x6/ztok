@@ -123,3 +123,51 @@ test('no channels returns just ids', () => {
         pipe.close();
     }
 });
+
+// x86-64 machine code: `48 89 d8` mov rax,rbx / `e8 00000000` call rel32 /
+// `c3` ret. With the byteId pipeline each byte is its own token.
+const X86_64_CODE = Buffer.from([0x48, 0x89, 0xd8, 0xe8, 0x00, 0x00, 0x00, 0x00, 0xc3]);
+
+test('setOverlayDomain(X86_64) populates the OPCODE channel', () => {
+    const pipe = ztok.Pipeline.byteId();
+    try {
+        // Default domain (NONE): OPCODE is zero-filled.
+        const none = pipe.encodeWithOverlays(X86_64_CODE, [ztok.OVERLAY_OPCODE]);
+        const opcodeNone = Array.from(none.overlays.get(ztok.OVERLAY_OPCODE));
+        assert.equal(opcodeNone.length, X86_64_CODE.length);
+        assert.ok(opcodeNone.every((v) => v === 0));
+
+        // After selecting x86-64 the OPCODE channel is populated.
+        pipe.setOverlayDomain(ztok.OVERLAY_DOMAIN_X86_64);
+        const x86 = pipe.encodeWithOverlays(X86_64_CODE, [ztok.OVERLAY_OPCODE]);
+        const opcodeX86 = Array.from(x86.overlays.get(ztok.OVERLAY_OPCODE));
+        // Tokenization unchanged; only the domain channel differs.
+        assert.deepEqual(Array.from(x86.ids), Array.from(none.ids));
+        assert.notDeepEqual(opcodeX86, opcodeNone);
+        assert.ok(opcodeX86.some((v) => v !== 0));
+    } finally {
+        pipe.close();
+    }
+});
+
+test('setOverlayDomain(NONE) round-trips back to zero-fill', () => {
+    const pipe = ztok.Pipeline.byteId();
+    try {
+        pipe.setOverlayDomain(ztok.OVERLAY_DOMAIN_X86_64);
+        pipe.setOverlayDomain(ztok.OVERLAY_DOMAIN_NONE);
+        const { overlays } = pipe.encodeWithOverlays(X86_64_CODE, [ztok.OVERLAY_OPCODE]);
+        const opcode = Array.from(overlays.get(ztok.OVERLAY_OPCODE));
+        assert.ok(opcode.every((v) => v === 0));
+    } finally {
+        pipe.close();
+    }
+});
+
+test('setOverlayDomain rejects an unknown domain', () => {
+    const pipe = ztok.Pipeline.byteId();
+    try {
+        assert.throws(() => pipe.setOverlayDomain(999));
+    } finally {
+        pipe.close();
+    }
+});

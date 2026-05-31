@@ -134,4 +134,54 @@ class TestOverlays < Minitest::Test
       pipe.close
     end
   end
+
+  # x86-64 machine code: 48 89 d8 (mov rax,rbx) / e8 00000000 (call rel32) /
+  # c3 (ret). With byte_id each byte is its own token.
+  X86_64_CODE = [0x48, 0x89, 0xd8, 0xe8, 0x00, 0x00, 0x00, 0x00, 0xc3]
+                .pack("C*").force_encoding(Encoding::ASCII_8BIT)
+
+  def test_set_overlay_domain_x86_64_populates_opcode_channel
+    pipe = Ztok::Pipeline.byte_id
+    begin
+      # Default domain (NONE): OPCODE is zero-filled.
+      ids_none, ov_none = pipe.encode_with_overlays(X86_64_CODE, [Ztok::FFI::OVERLAY_OPCODE])
+      opcode_none = ov_none[Ztok::FFI::OVERLAY_OPCODE]
+      assert_equal X86_64_CODE.bytesize, opcode_none.length
+      assert opcode_none.all?(&:zero?), "OPCODE must be zero-filled with domain=NONE"
+
+      # After selecting x86-64 the OPCODE channel is populated.
+      pipe.set_overlay_domain(Ztok::FFI::OVERLAY_DOMAIN_X86_64)
+      ids_x86, ov_x86 = pipe.encode_with_overlays(X86_64_CODE, [Ztok::FFI::OVERLAY_OPCODE])
+      opcode_x86 = ov_x86[Ztok::FFI::OVERLAY_OPCODE]
+
+      assert_equal ids_none, ids_x86, "tokenization must be unchanged"
+      refute_equal opcode_none, opcode_x86, "domain channel must differ from NONE"
+      assert opcode_x86.any? { |v| v != 0 }, "OPCODE must be populated with domain=X86_64"
+    ensure
+      pipe.close
+    end
+  end
+
+  def test_set_overlay_domain_none_round_trips
+    pipe = Ztok::Pipeline.byte_id
+    begin
+      pipe.set_overlay_domain(Ztok::FFI::OVERLAY_DOMAIN_X86_64)
+      pipe.set_overlay_domain(Ztok::FFI::OVERLAY_DOMAIN_NONE)
+      _ids, ov = pipe.encode_with_overlays(X86_64_CODE, [Ztok::FFI::OVERLAY_OPCODE])
+      assert ov[Ztok::FFI::OVERLAY_OPCODE].all?(&:zero?)
+    ensure
+      pipe.close
+    end
+  end
+
+  def test_set_overlay_domain_invalid_raises
+    pipe = Ztok::Pipeline.byte_id
+    begin
+      assert_raises(Ztok::InvalidInputError) do
+        pipe.set_overlay_domain(999)
+      end
+    ensure
+      pipe.close
+    end
+  end
 end

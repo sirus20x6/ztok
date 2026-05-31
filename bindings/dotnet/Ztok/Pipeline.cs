@@ -168,6 +168,7 @@ public sealed class Pipeline : IDisposable
             Format.SentencePiece => FromSentencePiece(path, unkId: 0),
             Format.Ztm => FromMonster(path),
             Format.Rwkv => FromRwkv(path),
+            Format.Tekken => FromTekken(path),
             _ => throw new ZtokInvalidInputException(
                 $"Open: could not auto-detect tokenizer format for '{path}'",
                 Native.Status.ErrInvalidInput),
@@ -254,6 +255,24 @@ public sealed class Pipeline : IDisposable
         var raw = Native.CallPathCfgCtor(path, cfg.ToCConfig(),
             Native.PathCtorKind.Rwkv,
             "ztok_pipeline_new_rwkv_from_file");
+        return Wrap(raw);
+    }
+
+    /// <summary>
+    /// Load a Mistral Tekken <c>tekken.json</c> vocab (Nemo / Pixtral /
+    /// Devstral / Magistral, etc.) into a BPE pipeline. The loader lowers
+    /// Tekken's base64 byte vocab into a BPE with the special tokens packed
+    /// into the bottom of the id space. By default the Tekken pre-tokenizer
+    /// pattern is used (NOT cl100k) with a concat decoder; pass a config to
+    /// override.
+    /// </summary>
+    public static Pipeline FromTekken(string path, PipelineConfig? config = null)
+    {
+        ArgumentNullException.ThrowIfNull(path);
+        var cfg = config ?? new PipelineConfig { PreTokenizer = PreTokenizer.Tekken };
+        var raw = Native.CallPathCfgCtor(path, cfg.ToCConfig(),
+            Native.PathCtorKind.Tekken,
+            "ztok_pipeline_new_tekken_from_file");
         return Wrap(raw);
     }
 
@@ -370,6 +389,22 @@ public sealed class Pipeline : IDisposable
             Ids = ids;
             Channels = channels;
         }
+    }
+
+    /// <summary>
+    /// Select which domain normalizer populates the domain overlay channels
+    /// (<see cref="OverlayKind.Opcode"/> / <see cref="OverlayKind.Operand"/> /
+    /// <see cref="OverlayKind.SymbolRef"/> / <see cref="OverlayKind.Hunk"/>).
+    /// <see cref="OverlayDomain.None"/> (the default) leaves those channels
+    /// zero-filled; <see cref="OverlayDomain.X86_64"/> decodes the input as
+    /// x86-64 machine code. An unrecognized value leaves the pipeline
+    /// unchanged and throws <see cref="ZtokInvalidInputException"/>.
+    /// </summary>
+    public void SetOverlayDomain(OverlayDomain domain)
+    {
+        ThrowIfDisposed();
+        int rc = Native.PipelineSetOverlayDomain(_handle.Raw, (uint)domain);
+        ZtokException.Check(rc, "ztok_pipeline_set_overlay_domain");
     }
 
     /// <summary>

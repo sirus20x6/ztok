@@ -216,3 +216,55 @@ fn duplicate_kinds_rejected() {
         .unwrap_err();
     assert_eq!(err, ztok::Error::InvalidInput);
 }
+
+// x86-64 machine code: 48 89 d8 (mov rax,rbx) / e8 00000000 (call rel32) /
+// c3 (ret). With byte_id each byte is its own token, so the OPCODE channel
+// carries one class per byte.
+const X86_64_CODE: &[u8] = &[0x48, 0x89, 0xd8, 0xe8, 0x00, 0x00, 0x00, 0x00, 0xc3];
+
+#[test]
+fn set_overlay_domain_x86_64_populates_opcode() {
+    if !require_libztok() {
+        return;
+    }
+    let mut pipe = Pipeline::byte_id(None).unwrap();
+
+    // Default domain (None): OPCODE is zero-filled.
+    let (ids_none, ov_none) = pipe
+        .encode_bytes_with_overlays(X86_64_CODE, &[OverlayKind::Opcode])
+        .unwrap();
+    let opcode_none = &ov_none[&OverlayKind::Opcode];
+    assert_eq!(opcode_none.len(), X86_64_CODE.len());
+    assert!(
+        opcode_none.iter().all(|&v| v == 0),
+        "OPCODE must be zero-filled with domain=None"
+    );
+
+    // After selecting x86-64 the OPCODE channel is populated.
+    pipe.set_overlay_domain(ztok::OverlayDomain::X86_64).unwrap();
+    let (ids_x86, ov_x86) = pipe
+        .encode_bytes_with_overlays(X86_64_CODE, &[OverlayKind::Opcode])
+        .unwrap();
+    let opcode_x86 = &ov_x86[&OverlayKind::Opcode];
+
+    assert_eq!(ids_none, ids_x86, "tokenization must be unchanged");
+    assert_ne!(opcode_none, opcode_x86, "domain channel must differ from None");
+    assert!(
+        opcode_x86.iter().any(|&v| v != 0),
+        "OPCODE must be populated with domain=X86_64"
+    );
+}
+
+#[test]
+fn set_overlay_domain_none_round_trips() {
+    if !require_libztok() {
+        return;
+    }
+    let mut pipe = Pipeline::byte_id(None).unwrap();
+    pipe.set_overlay_domain(ztok::OverlayDomain::X86_64).unwrap();
+    pipe.set_overlay_domain(ztok::OverlayDomain::None).unwrap();
+    let (_ids, ov) = pipe
+        .encode_bytes_with_overlays(X86_64_CODE, &[OverlayKind::Opcode])
+        .unwrap();
+    assert!(ov[&OverlayKind::Opcode].iter().all(|&v| v == 0));
+}

@@ -18,6 +18,7 @@ import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
@@ -158,6 +159,66 @@ class OverlayTest {
         try (Pipeline pipe = Pipeline.byteId()) {
             assertThrows(ZtokException.InvalidInput.class, () ->
                 pipe.encodeWithOverlays("hi", OverlayKind.BYTE_START, OverlayKind.BYTE_START));
+        }
+    }
+
+    // x86-64 machine code: 48 89 d8 (mov rax,rbx) / e8 00000000 (call rel32) /
+    // c3 (ret). With byteId each byte is its own token, so the OPCODE channel
+    // carries one class per byte.
+    private static final byte[] X86_64_CODE = {
+        0x48, (byte) 0x89, (byte) 0xd8,
+        (byte) 0xe8, 0x00, 0x00, 0x00, 0x00,
+        (byte) 0xc3,
+    };
+
+    @Test
+    void setOverlayDomainX8664PopulatesOpcode() {
+        try (Pipeline pipe = Pipeline.byteId()) {
+            // Default domain (NONE): OPCODE is zero-filled.
+            Pipeline.OverlayResult none =
+                pipe.encodeBytesWithOverlays(X86_64_CODE, OverlayKind.OPCODE);
+            int[] opcodeNone = none.channels().get(OverlayKind.OPCODE);
+            assertEquals(X86_64_CODE.length, opcodeNone.length);
+            for (int v : opcodeNone) {
+                assertEquals(0, v, "OPCODE must be zero-filled with domain=NONE");
+            }
+
+            // After selecting x86-64 the OPCODE channel is populated.
+            pipe.setOverlayDomain(OverlayDomain.X86_64);
+            Pipeline.OverlayResult x86 =
+                pipe.encodeBytesWithOverlays(X86_64_CODE, OverlayKind.OPCODE);
+            int[] opcodeX86 = x86.channels().get(OverlayKind.OPCODE);
+
+            assertArrayEquals(none.ids(), x86.ids(), "tokenization must be unchanged");
+            assertFalse(java.util.Arrays.equals(opcodeNone, opcodeX86),
+                "domain channel must differ from NONE");
+            boolean any = false;
+            for (int v : opcodeX86) {
+                if (v != 0) { any = true; break; }
+            }
+            assertTrue(any, "OPCODE must be populated with domain=X86_64");
+        }
+    }
+
+    @Test
+    void setOverlayDomainNoneRoundTrips() {
+        try (Pipeline pipe = Pipeline.byteId()) {
+            pipe.setOverlayDomain(OverlayDomain.X86_64);
+            pipe.setOverlayDomain(OverlayDomain.NONE);
+            Pipeline.OverlayResult res =
+                pipe.encodeBytesWithOverlays(X86_64_CODE, OverlayKind.OPCODE);
+            for (int v : res.channels().get(OverlayKind.OPCODE)) {
+                assertEquals(0, v, "OPCODE must be zero-filled after switching back to NONE");
+            }
+        }
+    }
+
+    @Test
+    void setOverlayDomainInvalidRejected() {
+        try (Pipeline pipe = Pipeline.byteId()) {
+            // OverlayDomain.fromCode rejects unknown codes before the native call.
+            assertThrows(IllegalArgumentException.class, () ->
+                pipe.setOverlayDomain(OverlayDomain.fromCode(999)));
         }
     }
 }

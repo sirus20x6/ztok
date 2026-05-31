@@ -170,4 +170,52 @@ public class OverlayTests
         Assert.Throws<ZtokInvalidInputException>(() =>
             pipe.EncodeWithOverlays("hi", OverlayKind.ByteStart, OverlayKind.ByteStart));
     }
+
+    // x86-64 machine code: 48 89 d8 (mov rax,rbx) / e8 00000000 (call rel32) /
+    // c3 (ret). With ByteId each byte is its own token, so the OPCODE channel
+    // carries one class per byte.
+    private static readonly byte[] X86_64Code =
+        { 0x48, 0x89, 0xd8, 0xe8, 0x00, 0x00, 0x00, 0x00, 0xc3 };
+
+    [Fact]
+    public void SetOverlayDomainX8664PopulatesOpcode()
+    {
+        if (!LibAvailable()) return;
+        using var pipe = Pipeline.ByteId();
+
+        // Default domain (None): OPCODE is zero-filled.
+        var none = pipe.EncodeBytesWithOverlays(X86_64Code, OverlayKind.Opcode);
+        var opcodeNone = none.Channels[OverlayKind.Opcode];
+        Assert.Equal(X86_64Code.Length, opcodeNone.Length);
+        Assert.All(opcodeNone, v => Assert.Equal(0u, v));
+
+        // After selecting x86-64 the OPCODE channel is populated.
+        pipe.SetOverlayDomain(OverlayDomain.X86_64);
+        var x86 = pipe.EncodeBytesWithOverlays(X86_64Code, OverlayKind.Opcode);
+        var opcodeX86 = x86.Channels[OverlayKind.Opcode];
+
+        Assert.Equal(none.Ids, x86.Ids); // tokenization unchanged
+        Assert.False(opcodeNone.SequenceEqual(opcodeX86), "domain channel must differ from None");
+        Assert.Contains(opcodeX86, v => v != 0);
+    }
+
+    [Fact]
+    public void SetOverlayDomainNoneRoundTrips()
+    {
+        if (!LibAvailable()) return;
+        using var pipe = Pipeline.ByteId();
+        pipe.SetOverlayDomain(OverlayDomain.X86_64);
+        pipe.SetOverlayDomain(OverlayDomain.None);
+        var res = pipe.EncodeBytesWithOverlays(X86_64Code, OverlayKind.Opcode);
+        Assert.All(res.Channels[OverlayKind.Opcode], v => Assert.Equal(0u, v));
+    }
+
+    [Fact]
+    public void SetOverlayDomainInvalidThrows()
+    {
+        if (!LibAvailable()) return;
+        using var pipe = Pipeline.ByteId();
+        Assert.Throws<ZtokInvalidInputException>(() =>
+            pipe.SetOverlayDomain((OverlayDomain)999));
+    }
 }

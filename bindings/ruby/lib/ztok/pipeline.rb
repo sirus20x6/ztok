@@ -30,6 +30,47 @@ module Ztok
   Chunk = Struct.new(:ids, :byte_start, :byte_end, :token_start, :token_end,
                      keyword_init: true)
 
+  # 32-byte deterministic tokenizer fingerprint. Two pipelines that
+  # return equal fingerprints produce bit-identical id streams for any
+  # input — use it as a cache key, KV-store discriminator, or
+  # training-pipeline guard. Mirrors the dotnet/java value type: raw
+  # `bytes` plus a `hex` helper, with structural equality.
+  class Fingerprint
+    SIZE = 32
+
+    # @param bytes [String] exactly 32 binary bytes.
+    def initialize(bytes)
+      unless bytes.is_a?(String) && bytes.bytesize == SIZE
+        raise InvalidInputError, "fingerprint must be exactly #{SIZE} bytes"
+      end
+
+      @bytes = bytes.b.freeze
+      freeze
+    end
+
+    # The raw 32 fingerprint bytes as a binary-encoded String.
+    attr_reader :bytes
+
+    # Lowercase 64-char hexadecimal form, no separators.
+    def hex
+      @bytes.unpack1("H*")
+    end
+
+    def ==(other)
+      other.is_a?(Fingerprint) && other.bytes == @bytes
+    end
+    alias eql? ==
+
+    def hash
+      @bytes.hash
+    end
+
+    def to_s
+      "Fingerprint(#{hex})"
+    end
+    alias inspect to_s
+  end
+
   class Pipeline
     # Default chunk size for streaming encode (mirrors Python's 64 KiB).
     STREAM_FEED_SIZE = 64 * 1024
@@ -150,6 +191,23 @@ module Ztok
       wrap_or_yield(pipe, &block)
     end
 
+    # Load a Mistral Tekken tekken.json vocab (Nemo / Pixtral / Devstral /
+    # Magistral, etc.). The loader lowers Tekken's base64 byte vocab into a
+    # BPE with the special tokens packed into the bottom of the id space.
+    # The default pre-tokenizer is the Tekken pattern (PRETOK_TEKKEN) — NOT
+    # cl100k — and the default decoder is concat (pieces are raw bytes).
+    def self.from_tekken(path,
+                         normalizer: FFI::NORMALIZER_IDENTITY,
+                         pre_tokenizer: FFI::PRETOK_TEKKEN,
+                         decoder: FFI::DECODER_CONCAT,
+                         &block)
+      pipe = from_file_with_cfg(:ztok_pipeline_new_tekken_from_file, path,
+                                normalizer: normalizer,
+                                pre_tokenizer: pre_tokenizer,
+                                decoder: decoder)
+      wrap_or_yield(pipe, &block)
+    end
+
     # Auto-detect the file format and dispatch to the right loader:
     #
     #   .tiktoken            -> BPE + cl100k pre-tokenizer
@@ -181,6 +239,9 @@ module Ztok
         when :rwkv
           from_rwkv(path, normalizer: normalizer,
                           decoder: decoder || FFI::DECODER_CONCAT)
+        when :tekken
+          from_tekken(path, normalizer: normalizer,
+                            decoder: decoder || FFI::DECODER_CONCAT)
         else
           raise InvalidInputError,
                 "could not auto-detect tokenizer format for #{path.inspect}; " \
@@ -280,6 +341,21 @@ module Ztok
       Ztok.raise_for_status(rc, "ztok_decode")
       written = out_len_buf.read(:size_t)
       out_buf.read_bytes(written)
+    end
+
+    # --- overlay domain ------------------------------------------------
+
+    # Select which domain normalizer populates the domain overlay channels
+    # (OPCODE/OPERAND/SYMBOL_REF/HUNK). Pass one of the
+    # +Ztok::FFI::OVERLAY_DOMAIN_*+ constants. +OVERLAY_DOMAIN_NONE+ (the
+    # default) leaves those channels zero-filled; +OVERLAY_DOMAIN_X86_64+
+    # decodes the input as x86-64 machine code. An unrecognized value leaves
+    # the pipeline unchanged and raises Ztok::InvalidInputError.
+    def set_overlay_domain(domain)
+      check_open!
+      rc = FFI.ztok_pipeline_set_overlay_domain(@handle, domain)
+      Ztok.raise_for_status(rc, "ztok_pipeline_set_overlay_domain")
+      self
     end
 
     # --- encode with overlays ------------------------------------------
@@ -511,6 +587,23 @@ module Ztok
         # itself is Ruby-owned (an FFI::MemoryPointer).
         FFI.ztok_chunks_free(recs, count)
       end
+    end
+
+    # --- fingerprint ----------------------------------------------------
+
+    # Compute the tokenizer fingerprint: a deterministic 32-byte SHA-256
+    # digest over the pipeline's encoding behavior on a fixed canonical
+    # input set plus a model-kind tag and vocab size. Two pipelines that
+    # return equal fingerprints produce bit-identical id streams for any
+    # input.
+    #
+    # @return [Fingerprint] the 32-byte fingerprint (raw `bytes` + `hex`).
+    def fingerprint
+      check_open!
+      out_buf = ::FFI::MemoryPointer.new(:uint8, Fingerprint::SIZE)
+      rc = FFI.ztok_fingerprint(@handle, out_buf)
+      Ztok.raise_for_status(rc, "ztok_fingerprint")
+      Fingerprint.new(out_buf.read_bytes(Fingerprint::SIZE))
     end
 
     # --- streaming ------------------------------------------------------

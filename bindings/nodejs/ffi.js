@@ -28,6 +28,7 @@ const NORMALIZER_BYTE_LEVEL = 5;
 
 const PRETOK_IDENTITY = 0;
 const PRETOK_CL100K = 1;
+const PRETOK_TEKKEN = 2;
 
 const MODEL_BYTE_ID = 0;
 
@@ -63,12 +64,19 @@ const OVERLAY_HUNK = 6;
 const OVERLAY_PROVENANCE = 7;
 const OVERLAY_USER_BASE = 0x8000;
 
+// --- overlay domains (mirror enum ztok_overlay_domain) ---
+// Selects which domain normalizer populates the OPCODE/OPERAND/SYMBOL_REF/HUNK
+// channels. NONE (the default) leaves them zero-filled.
+const OVERLAY_DOMAIN_NONE = 0;
+const OVERLAY_DOMAIN_X86_64 = 1;
+
 const FORMAT_CODE_TO_NAME = {
     [FORMAT_UNKNOWN]: 'unknown',
     [FORMAT_TIKTOKEN]: 'tiktoken',
     [FORMAT_HF_JSON]: 'hf_json',
     [FORMAT_SP_MODEL]: 'sentencepiece',
     [FORMAT_ZTM]: 'ztm',
+    [FORMAT_TEKKEN]: 'tekken',
     [FORMAT_RWKV]: 'rwkv',
 };
 
@@ -114,6 +122,9 @@ function getLib() {
     const ztok_pipeline_new_rwkv_from_file = lib.func(
         'void* ztok_pipeline_new_rwkv_from_file(const char* path, ztok_pipeline_config* cfg, _Out_ int* status)'
     );
+    const ztok_pipeline_new_tekken_from_file = lib.func(
+        'void* ztok_pipeline_new_tekken_from_file(const char* path, ztok_pipeline_config* cfg, _Out_ int* status)'
+    );
 
     // --- encode / decode ---
     const ztok_encode = lib.func(
@@ -135,6 +146,10 @@ function getLib() {
     });
     const ztok_encode_with_overlays = lib.func(
         'int ztok_encode_with_overlays(void* p, const char* input, size_t input_len, _Out_ uint32_t* out_ids, size_t out_ids_cap, ztok_overlay_channel* channels, size_t n_channels, _Out_ size_t* out_len)'
+    );
+    // Select the pipeline's overlay domain (NONE / X86_64).
+    const ztok_pipeline_set_overlay_domain = lib.func(
+        'int ztok_pipeline_set_overlay_domain(void* p, uint32_t domain)'
     );
 
     // --- batch ---
@@ -186,6 +201,13 @@ function getLib() {
     );
     const ztok_chunks_free = lib.func('void ztok_chunks_free(ztok_chunk_rec* chunks, size_t n)');
 
+    // --- fingerprint ---
+    // ztok_status ztok_fingerprint(ztok_pipeline*, uint8_t out_32[32]).
+    // out_32 is a caller-owned 32-byte buffer koffi writes back into.
+    const ztok_fingerprint = lib.func(
+        'int ztok_fingerprint(void* p, _Out_ uint8_t* out_32)'
+    );
+
     // --- auto-detect ---
     const ztok_auto_detect = lib.func('uint32_t ztok_auto_detect(const char* path)');
 
@@ -210,6 +232,7 @@ function getLib() {
         ZtokOverlayChannel,
         ZtokChunkRec,
         ztok_encode_with_overlays,
+        ztok_pipeline_set_overlay_domain,
         ztok_pipeline_new,
         ztok_pipeline_free,
         ztok_pipeline_new_bpe_from_tiktoken,
@@ -218,11 +241,13 @@ function getLib() {
         ztok_pipeline_new_unigram_from_sp_model,
         ztok_pipeline_new_monster_from_file,
         ztok_pipeline_new_rwkv_from_file,
+        ztok_pipeline_new_tekken_from_file,
         ztok_ngram_hash,
         ztok_ngram_hash_batch,
         ztok_u64s_free,
         ztok_chunk,
         ztok_chunks_free,
+        ztok_fingerprint,
         ztok_encode,
         ztok_decode,
         ztok_encode_batch,
@@ -267,6 +292,7 @@ module.exports = {
     NORMALIZER_BYTE_LEVEL,
     PRETOK_IDENTITY,
     PRETOK_CL100K,
+    PRETOK_TEKKEN,
     MODEL_BYTE_ID,
     DECODER_CONCAT,
     DECODER_WORDPIECE,
@@ -300,4 +326,8 @@ module.exports = {
     OVERLAY_HUNK,
     OVERLAY_PROVENANCE,
     OVERLAY_USER_BASE,
+
+    // Overlay domains
+    OVERLAY_DOMAIN_NONE,
+    OVERLAY_DOMAIN_X86_64,
 };

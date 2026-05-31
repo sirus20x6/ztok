@@ -34,6 +34,7 @@ const Unigram = @import("unigram.zig").Unigram;
 const WordPiece = @import("wordpiece.zig").WordPiece;
 const Monster = @import("monster.zig").Monster;
 const RwkvWorld = @import("rwkv_world.zig").RwkvWorld;
+const TekkenModel = @import("tekken.zig").TekkenModel;
 const monster_io = @import("monster_io.zig");
 const sp_model = @import("sp_model.zig");
 const auto_detect = @import("auto_detect.zig");
@@ -78,7 +79,7 @@ const Config = extern struct {
 
 // --- handle ----------------------------------------------------------
 
-const HandleKind = enum(u8) { byte_id, bpe, unigram, wordpiece, monster, rwkv_world };
+const HandleKind = enum(u8) { byte_id, bpe, unigram, wordpiece, monster, rwkv_world, tekken };
 
 const ModelStorage = union(HandleKind) {
     byte_id: void,
@@ -87,6 +88,11 @@ const ModelStorage = union(HandleKind) {
     wordpiece: WordPiece,
     monster: Monster,
     rwkv_world: RwkvWorld,
+    // Tekken lowers its byte vocab into a `Bpe`; we keep the whole loaded
+    // model so its `specials` / image / audio config and pattern stay
+    // owned for the handle's lifetime. `modelFromStorage` references the
+    // inner `.bpe` for the merge loop.
+    tekken: TekkenModel,
 };
 
 // Wraps the Pipeline plus the heap-owned model+vocab. The Pipeline's
@@ -129,6 +135,7 @@ fn pretokFromKind(k: c_uint) ?PreTokenizer {
     return switch (k) {
         0 => .identity,
         1 => .cl100k,
+        2 => .tekken,
         else => null,
     };
 }
@@ -219,6 +226,7 @@ fn modelFromStorage(s: *ModelStorage) Model {
         .wordpiece => .{ .wordpiece = &s.wordpiece },
         .monster => .{ .monster = &s.monster },
         .rwkv_world => .{ .rwkv_world = &s.rwkv_world },
+        .tekken => .{ .bpe = &s.tekken.bpe },
     };
 }
 
@@ -230,6 +238,7 @@ fn freeHandle(h: *PipelineHandle) void {
         .wordpiece => |*w| w.deinit(),
         .monster => |*m| m.deinit(),
         .rwkv_world => |*r| r.deinit(),
+        .tekken => |*t| t.deinit(),
     }
     h.vocab.deinit();
     gpa.destroy(h);
@@ -565,6 +574,51 @@ export fn ztok_pipeline_new_rwkv_from_file(
     return ptrFromHandle(h);
 }
 
+// Mistral Tekken tokenizer from a `tekken.json` file (Nemo / Pixtral /
+// Devstral / Magistral, etc.). The loader lowers Tekken's base64 byte
+// vocab into a `Bpe` with special tokens packed into the bottom of the id
+// space (see tekken.zig). Defaults: identity normalizer, Tekken pre-
+// tokenizer (kind 2 — the hand-written `tekken_pretok` pattern, NOT
+// cl100k), concat decoder (pieces are raw bytes). Caller overrides via cfg.
+export fn ztok_pipeline_new_tekken_from_file(
+    path_c: ?[*:0]const u8,
+    cfg_or_null: ?*const Config,
+    out_status: ?*c_int,
+) ?*Pipeline {
+    const path_z = path_c orelse {
+        setStatus(out_status, ZTOK_ERR_INVALID_INPUT);
+        return null;
+    };
+    const path = std.mem.span(path_z);
+
+    const cfg = effectiveConfig(cfg_or_null, 2);
+    const n = normalizerFromKind(cfg.normalizer) orelse {
+        setStatus(out_status, ZTOK_ERR_INVALID_INPUT);
+        return null;
+    };
+    const pt = pretokFromKind(cfg.pre_tokenizer) orelse {
+        setStatus(out_status, ZTOK_ERR_INVALID_INPUT);
+        return null;
+    };
+    const d = decoderFromKind(cfg.decoder) orelse {
+        setStatus(out_status, ZTOK_ERR_INVALID_INPUT);
+        return null;
+    };
+
+    var t = @import("tekken.zig").loadTekkenFile(gpa, path) catch |e| {
+        setStatus(out_status, mapErr(e));
+        return null;
+    };
+
+    const h = newHandle(.tekken, n, pt, d, Vocab.empty(gpa), .{ .tekken = t }) catch |e| {
+        t.deinit();
+        setStatus(out_status, mapErr(e));
+        return null;
+    };
+    setStatus(out_status, ZTOK_OK);
+    return ptrFromHandle(h);
+}
+
 // --- encode / decode -------------------------------------------------
 //
 // `ztok_encode` writes directly into the caller buffer. When the buffer
@@ -748,7 +802,30 @@ export fn ztok_decode(
 // allocation length so `ztok_ids_free` can call `Allocator.free`
 // correctly without the C caller round-tripping the length.
 
-const Header = extern struct { byte_len: usize };
+// Distinct magic tags so a mismatched free (e.g. passing an ngram-batch
+// u64 buffer to ztok_ids_free, or vice versa) is caught instead of
+// silently corrupting the heap. The `magic` field only exists in builds
+// with runtime safety on (debug / ReleaseSafe); in ReleaseFast/Small it
+// compiles to a zero-sized field so the ABI and allocation size are
+// unchanged. See `MagicTag` below.
+const id_buf_magic: u32 = 0x5A54_4944; // "ZTID"
+const u64_buf_magic: u32 = 0x5A54_5536; // "ZTU6"
+
+// Zero-sized in unsafe builds, a u32 tag in safe builds. Kept first in
+// each header so the layout past it (byte_len) is identical to the
+// pre-magic layout in release.
+const MagicTag = if (std.debug.runtime_safety) u32 else void;
+
+inline fn setMagic(slot: *MagicTag, comptime tag: u32) void {
+    if (std.debug.runtime_safety) slot.* = tag;
+}
+inline fn checkMagic(slot: *MagicTag, comptime tag: u32) void {
+    if (std.debug.runtime_safety) {
+        std.debug.assert(slot.* == tag); // mismatched/wrong-typed free
+    }
+}
+
+const Header = extern struct { magic: MagicTag, byte_len: usize };
 const header_size = std.mem.alignForward(usize, @sizeOf(Header), @alignOf(TokenId));
 const buf_align: std.mem.Alignment = .fromByteUnits(@max(@alignOf(Header), @alignOf(TokenId)));
 
@@ -767,12 +844,14 @@ fn allocIdBuf(n: usize) ?[*]TokenId {
     const total_bytes = header_size + n * @sizeOf(TokenId);
     const raw = gpa.alignedAlloc(u8, buf_align, total_bytes) catch return null;
     const hdr: *Header = @ptrCast(@alignCast(raw.ptr));
+    setMagic(&hdr.magic, id_buf_magic);
     hdr.byte_len = total_bytes;
     return payloadFromHeader(hdr);
 }
 
 fn freeIdBuf(p: [*]TokenId) void {
     const hdr = headerFromPayload(p);
+    checkMagic(&hdr.magic, id_buf_magic);
     const raw_ptr: [*]u8 = @ptrCast(hdr);
     const aligned: [*]align(buf_align.toByteUnits()) u8 = @alignCast(raw_ptr);
     gpa.free(aligned[0..hdr.byte_len]);
@@ -1033,12 +1112,19 @@ export fn ztok_version() [*:0]const u8 {
 // to its own table width.
 
 // Hash every length-`n` window of `ids` under `heads` hash functions.
-// `out` is a caller-owned buffer of `out_cap` u64 entries. On success
-// writes positions*heads hashes and sets *out_len to that count. If
-// `out` is null or too small, sets *out_len to the required count and
-// returns BUFFER_TOO_SMALL (nothing is written). When the stream is
-// shorter than one window (or n/heads is 0) the required count is 0 and
-// the call succeeds writing nothing.
+// `out` is a CALLER-OWNED buffer of `out_cap` u64 entries — ztok never
+// owns it, so there is nothing to free on the ztok side (contrast
+// ztok_ngram_hash_batch, whose returned buffers are ztok-owned and must
+// go through ztok_u64s_free). On success writes positions*heads hashes
+// and sets *out_len to that count.
+//
+// Sizing/NULL convention differs from ztok_encode: when the required
+// count is 0 (stream shorter than one window, or n/heads == 0) we set
+// *out_len=0 and return ZTOK_OK even if `out` is null — an empty result
+// is success, not a sizing error. Only when need>0 and `out` is null or
+// too small do we set *out_len to the required count and return
+// BUFFER_TOO_SMALL (nothing written). ztok_encode instead treats a null
+// `out` as ALWAYS BUFFER_TOO_SMALL.
 export fn ztok_ngram_hash(
     ids: ?[*]const TokenId,
     n_ids: usize,
@@ -1065,7 +1151,7 @@ export fn ztok_ngram_hash(
 // u64 buffers returned by ztok_ngram_hash_batch are prefixed with a
 // length header (parallel to the TokenId Header above) so the matching
 // free can recover the allocation size.
-const U64Header = extern struct { byte_len: usize };
+const U64Header = extern struct { magic: MagicTag, byte_len: usize };
 const u64_header_size = std.mem.alignForward(usize, @sizeOf(U64Header), @alignOf(u64));
 const u64_buf_align: std.mem.Alignment = .fromByteUnits(@max(@alignOf(U64Header), @alignOf(u64)));
 
@@ -1084,12 +1170,14 @@ fn allocU64Buf(n: usize) ?[*]u64 {
     const total_bytes = u64_header_size + n * @sizeOf(u64);
     const raw = gpa.alignedAlloc(u8, u64_buf_align, total_bytes) catch return null;
     const hdr: *U64Header = @ptrCast(@alignCast(raw.ptr));
+    setMagic(&hdr.magic, u64_buf_magic);
     hdr.byte_len = total_bytes;
     return u64PayloadFromHeader(hdr);
 }
 
 fn freeU64Buf(p: [*]u64) void {
     const hdr = u64HeaderFromPayload(p);
+    checkMagic(&hdr.magic, u64_buf_magic);
     const raw_ptr: [*]u8 = @ptrCast(hdr);
     const aligned: [*]align(u64_buf_align.toByteUnits()) u8 = @alignCast(raw_ptr);
     gpa.free(aligned[0..hdr.byte_len]);
@@ -1127,11 +1215,18 @@ const NGramBatchCtx = struct {
     }
 };
 
-// Hash `n_docs` id streams in parallel across `pool`. Each `out_hashes[i]`
-// is set to a ztok-allocated u64 buffer (free with ztok_u64s_free) holding
-// the row-major hashes for doc i, and `out_lens[i]` to its u64 count. A
-// stream shorter than one window yields a null buffer and length 0. On
-// failure every buffer allocated so far is freed and the slots cleared.
+// Hash `n_docs` id streams in parallel across `pool`. On ZTOK_OK each
+// `out_hashes[i]` is set to a ZTOK-OWNED, header-prefixed u64 buffer
+// holding the row-major hashes for doc i, and `out_lens[i]` to its u64
+// count. Each non-null buffer MUST be freed with ztok_u64s_free (NOT
+// free()/ztok_ids_free — those expect a different/absent header and would
+// corrupt the heap). A stream shorter than one window yields a null
+// buffer and length 0.
+//
+// On any non-OK return every `out_hashes[i]` is null and `out_lens[i]` 0:
+// ztok freed everything it allocated, so the caller frees nothing. And
+// n_docs==0 returns ZTOK_OK leaving the out arrays UNTOUCHED (the early
+// return below runs before the pre-zeroing loop).
 export fn ztok_ngram_hash_batch(
     pool_handle: ?*BatchPoolHandle,
     id_arrays: ?[*]const [*]const TokenId,
@@ -1183,6 +1278,9 @@ export fn ztok_ngram_hash_batch(
     return ZTOK_OK;
 }
 
+// Free a u64 buffer returned by ztok_ngram_hash_batch (only those — never
+// a caller's ztok_ngram_hash buffer, and never via free()/ztok_ids_free).
+// Null is a no-op.
 export fn ztok_u64s_free(hashes: ?[*]u64) void {
     if (hashes) |p| freeU64Buf(p);
 }

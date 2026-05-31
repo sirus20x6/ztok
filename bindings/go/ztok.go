@@ -228,12 +228,24 @@ func OpenRWKVWorld(path string, cfg *Config) (*Pipeline, error) {
 		cfg, PretokIdentity, DecoderConcat)
 }
 
+// OpenTekken loads a Mistral Tekken `tekken.json` vocab (Nemo / Pixtral
+// / Devstral / Magistral, etc.). The loader lowers Tekken's base64 byte
+// vocab into a BPE with the special tokens packed into the bottom of the
+// id space. Defaults: identity normalizer, the Tekken pre-tokenizer
+// pattern (PretokTekken — NOT cl100k), and a concat decoder (pieces are
+// raw bytes).
+func OpenTekken(path string, cfg *Config) (*Pipeline, error) {
+	return openFromFile(path, "ztok_pipeline_new_tekken_from_file",
+		cfg, PretokTekken, DecoderConcat)
+}
+
 // Open auto-detects `path`'s format and dispatches to the right loader.
 //
 //   - .tiktoken            → OpenTiktoken with CL100K=true
 //   - tokenizer.json       → OpenHFJSON
 //   - .model               → OpenSentencePiece (UnkID=0)
 //   - .ztm                 → OpenMonster
+//   - tekken.json          → OpenTekken
 //   - rwkv vocab .txt      → OpenRWKVWorld
 //
 // For WordPiece (which lives inside tokenizer.json but needs a specific
@@ -249,6 +261,8 @@ func Open(path string) (*Pipeline, error) {
 		return OpenSentencePiece(path, nil)
 	case FormatZTM:
 		return OpenMonster(path, nil)
+	case FormatTekken:
+		return OpenTekken(path, nil)
 	case FormatRWKV:
 		return OpenRWKVWorld(path, nil)
 	default:
@@ -278,6 +292,8 @@ func openFromFile(path, fnName string, cfg *Config, defaultPre, defaultDecoder u
 		h = unsafe.Pointer(C.ztok_pipeline_new_monster_from_file(cpath, &c, &status))
 	case "ztok_pipeline_new_rwkv_from_file":
 		h = unsafe.Pointer(C.ztok_pipeline_new_rwkv_from_file(cpath, &c, &status))
+	case "ztok_pipeline_new_tekken_from_file":
+		h = unsafe.Pointer(C.ztok_pipeline_new_tekken_from_file(cpath, &c, &status))
 	default:
 		return nil, &InternalError{&StatusError{Status: -1, Op: "unknown loader: " + fnName}}
 	}
@@ -379,6 +395,26 @@ func (p *Pipeline) EncodeBytes(data []byte) ([]uint32, error) {
 		Status: int(cStatusBufferTooSmall),
 		Op:     "ztok_encode: BUFFER_TOO_SMALL after 8 grow attempts",
 	}}
+}
+
+// SetOverlayDomain selects which domain normalizer populates the domain
+// overlay channels (OPCODE/OPERAND/SYMBOL_REF/HUNK). Pass one of the
+// OverlayDomain* constants. OverlayDomainNone (the default) leaves those
+// channels zero-filled; OverlayDomainX86_64 decodes the input as x86-64
+// machine code. An unrecognized value leaves the pipeline unchanged and
+// returns a StatusError (ZTOK_ERR_INVALID_INPUT).
+func (p *Pipeline) SetOverlayDomain(domain OverlayDomain) error {
+	if err := p.checkOpen(); err != nil {
+		return err
+	}
+	rc := C.ztok_pipeline_set_overlay_domain(
+		(*C.ztok_pipeline)(p.handle),
+		C.ztok_overlay_domain(domain),
+	)
+	if int(rc) != int(cStatusOK) {
+		return statusToError(int(rc), "ztok_pipeline_set_overlay_domain")
+	}
+	return nil
 }
 
 // EncodeWithOverlays tokenizes `text` and returns the ids plus a map of

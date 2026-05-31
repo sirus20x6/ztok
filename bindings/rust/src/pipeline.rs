@@ -83,6 +83,8 @@ pub enum PreTokenizer {
     Identity = sys::ZTOK_PRETOK_IDENTITY,
     /// OpenAI cl100k_base regex split.
     Cl100k = sys::ZTOK_PRETOK_CL100K,
+    /// Mistral Tekken pre-tokenization pattern.
+    Tekken = sys::ZTOK_PRETOK_TEKKEN,
 }
 
 /// Decoder kind (mirrors `ztok_decoder_kind`).
@@ -128,6 +130,24 @@ pub enum OverlayKind {
     Hunk = sys::ZTOK_OVERLAY_HUNK,
     /// Provenance: `0` = model text, `1` = special token.
     Provenance = sys::ZTOK_OVERLAY_PROVENANCE,
+}
+
+/// Overlay domain (mirrors `ztok_overlay_domain`).
+///
+/// Selects which domain normalizer populates the domain overlay channels
+/// ([`Opcode`](OverlayKind::Opcode) / [`Operand`](OverlayKind::Operand) /
+/// [`SymbolRef`](OverlayKind::SymbolRef) / [`Hunk`](OverlayKind::Hunk)).
+/// Pass to [`Pipeline::set_overlay_domain`]. [`None`](OverlayDomain::None)
+/// (the default) leaves those channels zero-filled.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
+#[non_exhaustive]
+#[repr(u32)]
+pub enum OverlayDomain {
+    /// No domain normalizer; domain channels stay zero-filled (default).
+    #[default]
+    None = sys::ZTOK_OVERLAY_DOMAIN_NONE,
+    /// Decode the input as x86-64 machine code.
+    X86_64 = sys::ZTOK_OVERLAY_DOMAIN_X86_64,
 }
 
 /// Where chunk edges are allowed to fall (mirrors `ztok_chunk_boundary`).
@@ -252,7 +272,8 @@ impl Pipeline {
             Format::SentencePiece => Self::from_sentencepiece(path, 0, None),
             Format::Ztm => Self::from_monster(path, None),
             Format::Rwkv => Self::from_rwkv(path, None),
-            Format::Tekken | Format::Unknown => Err(Error::UnknownFormat),
+            Format::Tekken => Self::from_tekken(path, None),
+            Format::Unknown => Err(Error::UnknownFormat),
         }
     }
 
@@ -374,6 +395,29 @@ impl Pipeline {
         Self::wrap(h, "ztok_pipeline_new_rwkv_from_file")
     }
 
+    /// Load a Mistral Tekken `tekken.json` vocab (Nemo / Pixtral /
+    /// Devstral / Magistral, etc.) into a BPE pipeline. The loader lowers
+    /// Tekken's base64 byte vocab into a `Bpe` with the special tokens
+    /// packed into the bottom of the id space. The defaults are an
+    /// identity normalizer, the Tekken pre-tokenizer (NOT cl100k), and a
+    /// concat decoder (pieces are raw bytes); override via `cfg`.
+    pub fn from_tekken<P: AsRef<Path>>(path: P, cfg: Option<Config>) -> Result<Self> {
+        let cpath = c_path(path.as_ref())?;
+        // Tekken defaults to its own pre-tokenizer pattern (NOT cl100k);
+        // a None-cfg caller gets it. An explicit cfg is honored verbatim.
+        let cfg = cfg.unwrap_or(Config {
+            pre_tokenizer: PreTokenizer::Tekken,
+            ..Config::default()
+        });
+        let cfg_c = cfg.to_c();
+        let mut status: c_int = sys::ZTOK_OK;
+        let h = unsafe {
+            sys::ztok_pipeline_new_tekken_from_file(cpath.as_ptr(), &cfg_c, &mut status)
+        };
+        check_status(status, "ztok_pipeline_new_tekken_from_file")?;
+        Self::wrap(h, "ztok_pipeline_new_tekken_from_file")
+    }
+
     fn wrap(h: *mut sys::ZtokPipeline, op: &'static str) -> Result<Self> {
         if h.is_null() {
             Err(Error::NullHandle { op })
@@ -477,6 +521,19 @@ impl Pipeline {
         check_status(rc, "ztok_decode")?;
         buf.truncate(written);
         Ok(buf)
+    }
+
+    /// Select which domain normalizer populates the domain overlay channels
+    /// ([`Opcode`](OverlayKind::Opcode) / [`Operand`](OverlayKind::Operand) /
+    /// [`SymbolRef`](OverlayKind::SymbolRef) / [`Hunk`](OverlayKind::Hunk)).
+    ///
+    /// [`OverlayDomain::None`] (the default) leaves those channels
+    /// zero-filled; [`OverlayDomain::X86_64`] decodes the input as x86-64
+    /// machine code. An unrecognized value leaves the pipeline unchanged and
+    /// returns [`Error::InvalidInput`].
+    pub fn set_overlay_domain(&mut self, domain: OverlayDomain) -> Result<()> {
+        let rc = unsafe { sys::ztok_pipeline_set_overlay_domain(self.handle, domain as u32) };
+        check_status(rc, "ztok_pipeline_set_overlay_domain")
     }
 
     /// Encode `text` and return the ids plus a map of per-token overlay

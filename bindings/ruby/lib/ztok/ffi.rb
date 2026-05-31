@@ -37,6 +37,7 @@ module Ztok
 
     PRETOK_IDENTITY = 0
     PRETOK_CL100K   = 1
+    PRETOK_TEKKEN   = 2
 
     MODEL_BYTE_ID = 0
 
@@ -95,6 +96,12 @@ module Ztok
     OVERLAY_PROVENANCE = 7
     OVERLAY_USER_BASE  = 0x8000
 
+    # Overlay domains (mirror ztok_overlay_domain in ztok.h). Selects which
+    # domain normalizer populates the OPCODE/OPERAND/SYMBOL_REF/HUNK channels.
+    # NONE (the default) leaves those channels zero-filled.
+    OVERLAY_DOMAIN_NONE   = 0
+    OVERLAY_DOMAIN_X86_64 = 1
+
     # Struct mirroring `ztok_pipeline_config` (four packed uint32 fields).
     class PipelineConfig < ::FFI::Struct
       layout :normalizer,    :uint32,
@@ -147,6 +154,8 @@ module Ztok
                     [:string, :pointer, :pointer], :pointer
     attach_function :ztok_pipeline_new_rwkv_from_file,
                     [:string, :pointer, :pointer], :pointer
+    attach_function :ztok_pipeline_new_tekken_from_file,
+                    [:string, :pointer, :pointer], :pointer
 
     # --- encode / decode ---------------------------------------------
     attach_function :ztok_encode,
@@ -158,6 +167,10 @@ module Ztok
     attach_function :ztok_encode_with_overlays,
                     [:pointer, :pointer, :size_t, :pointer, :size_t,
                      :pointer, :size_t, :pointer], :int
+
+    # Select the pipeline's overlay domain (NONE / X86_64).
+    attach_function :ztok_pipeline_set_overlay_domain,
+                    [:pointer, :uint32], :int
 
     # --- batch -------------------------------------------------------
     attach_function :ztok_encode_batch,
@@ -189,6 +202,11 @@ module Ztok
                     [:pointer, :pointer, :size_t, :uint32, :uint32, :uint32,
                      :pointer, :size_t, :pointer], :int
     attach_function :ztok_chunks_free, [:pointer, :size_t], :void
+
+    # --- fingerprint -------------------------------------------------
+    # ztok_status ztok_fingerprint(ztok_pipeline*, uint8_t out_32[32]).
+    # out_32 is a caller-owned 32-byte buffer ztok writes back into.
+    attach_function :ztok_fingerprint, [:pointer, :pointer], :int
 
     # --- auto-detect -------------------------------------------------
     attach_function :ztok_auto_detect, [:string], :uint32

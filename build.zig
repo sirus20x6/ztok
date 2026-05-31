@@ -377,6 +377,34 @@ pub fn build(b: *std.Build) void {
         // Roll the ops checks into the default `test` step so a
         // regular `zig build test` includes them.
         test_step.dependOn(&run_ops_check.step);
+
+        // Downstream-consumer test (CMake find_package + pkg-config).
+        //
+        // tests/consumer/run.sh installs ztok to a temp ABSOLUTE prefix
+        // and a temp RELATIVE prefix, then for each prefix builds a tiny
+        // C program (tests/consumer/consumer.c) against the installed
+        // package once via `find_package(ztok)` and once via
+        // `pkg-config --cflags --libs ztok`, runs it, and asserts the
+        // baked-in paths are absolute even for the relative-prefix
+        // install (the regression guard for the relative-prefix bug
+        // fixed in 02f6d9f). The script self-skips (exit 0 with a clear
+        // message) when cmake / pkg-config / a C compiler are absent, so
+        // it's safe in the default `test` step on minimal hosts.
+        //
+        // We pass ZTOK_REPO_ROOT explicitly so the script installs *this*
+        // checkout regardless of the runner's cwd, and forward `zig`'s
+        // own path via ZIG so an out-of-PATH toolchain still works.
+        const consumer_check = b.addSystemCommand(&.{"sh"});
+        consumer_check.addFileArg(b.path("tests/consumer/run.sh"));
+        consumer_check.setEnvironmentVariable("ZTOK_REPO_ROOT", b.build_root.path orelse ".");
+        consumer_check.setEnvironmentVariable("ZIG", b.graph.zig_exe);
+        consumer_check.has_side_effects = true; // installs + compiles; never cache
+        const consumer_check_step = b.step("test-cmake", "CMake find_package + pkg-config consumer test (absolute & relative prefix)");
+        consumer_check_step.dependOn(&consumer_check.step);
+        // Intentionally NOT folded into the default `test` step: it shells
+        // out to cmake/pkg-config and reinstalls ztok twice, which is
+        // heavier than the in-process smoke tests. Run it explicitly via
+        // `zig build test-cmake` (CI does this in a dedicated job).
     }
 
     // ---- Browser WASM target ---------------------------------------
@@ -541,13 +569,21 @@ fn emitConsumerConfigs(b: *std.Build) void {
     // only resolve when the compiler runs from the one directory holding
     // `prefix/`. pkg-config consumers (cgo via PKG_CONFIG_PATH, CMake)
     // invoke from elsewhere and break. Absolutize against the build
-    // runner's cwd, which is what `-p` is itself relative to.
+    // runner's *process cwd* — that is what zig itself resolves a
+    // relative `-p` against when it places the install tree, so the
+    // baked-in paths land on the same files zig actually wrote. (An
+    // earlier fix resolved against `b.build_root` instead, which is only
+    // the same directory when you run `zig build` from the repo root;
+    // `zig build -p out --build-file <repo>/build.zig` from a separate
+    // build dir baked in <repo>/out while the files landed in <cwd>/out.
+    // tests/consumer/run.sh guards both spellings.)
     const prefix = if (std.fs.path.isAbsolute(b.install_path))
         b.install_path
-    else
-        // Resolve against the build root (which is absolute) — the same
-        // mechanism std uses to absolutize the default `zig-out` prefix.
-        b.build_root.join(b.allocator, &.{b.install_path}) catch @panic("emitConsumerConfigs: resolve prefix failed");
+    else blk: {
+        const io = std.Io.Threaded.global_single_threaded.io();
+        const cwd = std.process.currentPathAlloc(io, b.allocator) catch @panic("emitConsumerConfigs: getcwd failed");
+        break :blk std.fs.path.join(b.allocator, &.{ cwd, b.install_path }) catch @panic("emitConsumerConfigs: resolve prefix failed");
+    };
     const lib_dir = b.fmt("{s}/lib", .{prefix});
     const include_dir = b.fmt("{s}/include", .{prefix});
     const version = projectVersion(b);

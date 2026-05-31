@@ -31,6 +31,7 @@ from ctypes import (
     c_char_p,
     c_int,
     c_size_t,
+    c_uint8,
     c_uint32,
     c_uint64,
     c_void_p,
@@ -66,8 +67,11 @@ from ._ffi import (
     OVERLAY_PROVENANCE,
     OVERLAY_SYMBOL_REF,
     OVERLAY_USER_BASE,
+    OVERLAY_DOMAIN_NONE,
+    OVERLAY_DOMAIN_X86_64,
     PRETOK_CL100K,
     PRETOK_IDENTITY,
+    PRETOK_TEKKEN,
     TokenId,
     TokenIdPtr,
     ZTOK_ERR_BUFFER_TOO_SMALL,
@@ -430,6 +434,32 @@ class Pipeline:
         )
 
     @classmethod
+    def from_tekken(
+        cls,
+        path: Union[str, os.PathLike],
+        *,
+        normalizer: int = NORMALIZER_IDENTITY,
+        pre_tokenizer: int = PRETOK_TEKKEN,
+        decoder: int = DECODER_CONCAT,
+    ) -> "Pipeline":
+        """Load a Mistral Tekken ``tekken.json`` vocab (Nemo / Pixtral /
+        Devstral / Magistral, etc.).
+
+        The loader lowers Tekken's base64 byte vocab into a BPE with the
+        special tokens packed into the bottom of the id space. The default
+        pre-tokenizer is the Tekken pattern (``PRETOK_TEKKEN``) — NOT
+        cl100k — and the default decoder is concat (pieces are raw bytes).
+        """
+
+        return cls._from_file_with_cfg(
+            "ztok_pipeline_new_tekken_from_file",
+            path,
+            normalizer=normalizer,
+            pre_tokenizer=pre_tokenizer,
+            decoder=decoder,
+        )
+
+    @classmethod
     def from_path(
         cls,
         path: Union[str, os.PathLike],
@@ -444,6 +474,7 @@ class Pipeline:
         - ``tokenizer.json`` → BPE (HF JSON)
         - ``.model``       → SentencePiece Unigram (``unk_id`` defaults to 0)
         - ``.ztm``         → TokenMonster
+        - ``tekken.json``  → Mistral Tekken (Nemo / Pixtral / Devstral)
         """
 
         fmt = _detect_format(path)
@@ -457,6 +488,8 @@ class Pipeline:
             return cls.from_monster(path, normalizer=normalizer)
         if fmt == "rwkv":
             return cls.from_rwkv(path, normalizer=normalizer)
+        if fmt == "tekken":
+            return cls.from_tekken(path, normalizer=normalizer)
         raise ZtokInvalidInputError(
             f"could not auto-detect tokenizer format for {path!r}; "
             "use a specific from_* constructor instead"
@@ -538,6 +571,22 @@ class Pipeline:
         raise ZtokInternalError(
             "ztok_encode kept reporting BUFFER_TOO_SMALL after 8 grow attempts"
         )
+
+    # --- overlay domain -------------------------------------------------
+
+    def set_overlay_domain(self, domain: int) -> None:
+        """Select which domain normalizer populates the domain overlay
+        channels (OPCODE/OPERAND/SYMBOL_REF/HUNK).
+
+        Pass one of the ``OVERLAY_DOMAIN_*`` constants. ``OVERLAY_DOMAIN_NONE``
+        (the default) leaves those channels zero-filled; ``OVERLAY_DOMAIN_X86_64``
+        decodes the input as x86-64 machine code. An unrecognized value leaves
+        the pipeline unchanged and raises :class:`ZtokInvalidInputError`.
+        """
+
+        lib = _get_lib()
+        rc = lib.ztok_pipeline_set_overlay_domain(self._raw(), c_uint32(domain))
+        _raise_for_status(rc, "ztok_pipeline_set_overlay_domain")
 
     # --- encode with overlays ------------------------------------------
 
@@ -915,6 +964,23 @@ class Pipeline:
             # array itself is Python-owned.
             lib.ztok_chunks_free(recs, c_size_t(out_len.value))
 
+    def fingerprint(self) -> bytes:
+        """Compute the tokenizer fingerprint: a deterministic 32-byte
+        SHA-256 digest over the pipeline's encoding behavior on a fixed
+        canonical input set plus a model-kind tag and vocab size.
+
+        Two pipelines that return the same 32 bytes will produce
+        bit-identical id streams for ANY input — use it as a cache key,
+        KV-store discriminator, or training-pipeline guard. The returned
+        ``bytes`` object's :meth:`bytes.hex` gives the printable form.
+        """
+
+        lib = _get_lib()
+        out = (c_uint8 * 32)()
+        rc = lib.ztok_fingerprint(self._raw(), ctypes.byref(out))
+        _raise_for_status(rc, "ztok_fingerprint")
+        return bytes(out)
+
 
 def _Pipeline_free(lib: ctypes.CDLL, handle: int) -> None:
     lib.ztok_pipeline_free(handle)
@@ -1063,6 +1129,8 @@ __all__ = [
     "NORMALIZER_NFD",
     "NORMALIZER_NFKC",
     "NORMALIZER_NFKD",
+    "OVERLAY_DOMAIN_NONE",
+    "OVERLAY_DOMAIN_X86_64",
     "OVERLAY_BOUNDARY",
     "OVERLAY_BYTE_END",
     "OVERLAY_BYTE_START",
@@ -1074,5 +1142,6 @@ __all__ = [
     "OVERLAY_USER_BASE",
     "PRETOK_CL100K",
     "PRETOK_IDENTITY",
+    "PRETOK_TEKKEN",
     "version",
 ]

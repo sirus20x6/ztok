@@ -92,10 +92,10 @@ public final class Pipeline: @unchecked Sendable {
         switch fmt {
         case .tiktoken:
             return try fromTiktoken(path: path)
-        case .hfJson, .tekken:
-            // Tekken is BPE under the HF JSON loader in the other
-            // bindings; route it through fromHfJson for symmetry.
+        case .hfJson:
             return try fromHfJson(path: path)
+        case .tekken:
+            return try fromTekken(path: path)
         case .sentencePiece:
             return try fromSentencePiece(path: path)
         case .ztm:
@@ -190,6 +190,24 @@ public final class Pipeline: @unchecked Sendable {
             op: "ztok_pipeline_new_rwkv_from_file"
         ) { cPath, cfgPtr, statusPtr in
             ztok_pipeline_new_rwkv_from_file(cPath, cfgPtr, statusPtr)
+        }
+    }
+
+    /// Load a Mistral Tekken `tekken.json` vocab (Nemo / Pixtral /
+    /// Devstral / Magistral, etc.). The loader lowers Tekken's base64
+    /// byte vocab into a BPE with the special tokens packed into the
+    /// bottom of the id space. The default pre-tokenizer is the Tekken
+    /// pattern (`.tekken`) — NOT cl100k — and the default decoder is
+    /// concat (pieces are raw bytes).
+    public static func fromTekken(path: String, config: PipelineConfig? = nil) throws -> Pipeline {
+        let cfg = config ?? PipelineConfig(
+            normalizer: .identity, preTokenizer: .tekken, decoder: .concat)
+        return try loadFile(
+            path: path,
+            config: cfg,
+            op: "ztok_pipeline_new_tekken_from_file"
+        ) { cPath, cfgPtr, statusPtr in
+            ztok_pipeline_new_tekken_from_file(cPath, cfgPtr, statusPtr)
         }
     }
 
@@ -344,6 +362,18 @@ public final class Pipeline: @unchecked Sendable {
         public let ids: [UInt32]
         /// Per-token overlay channels keyed by kind, aligned 1:1 with `ids`.
         public let channels: [OverlayKind: [UInt32]]
+    }
+
+    /// Select which domain normalizer populates the domain overlay channels
+    /// (`.opcode` / `.operand` / `.symbolRef` / `.hunk`). `.none` (the
+    /// default) leaves those channels zero-filled; `.x86_64` decodes the
+    /// input as x86-64 machine code. An unrecognized value leaves the
+    /// pipeline unchanged and throws `ZtokError.invalidInput`.
+    public func setOverlayDomain(_ domain: OverlayDomain) throws {
+        let h = try requireHandle(op: "ztok_pipeline_set_overlay_domain")
+        let cStatus = ztok_pipeline_set_overlay_domain(
+            h, ztok_overlay_domain(rawValue: domain.rawValue))
+        try checkStatus(Int32(cStatus.rawValue), op: "ztok_pipeline_set_overlay_domain")
     }
 
     /// Encode a UTF-8 string and return the ids plus a map of per-token

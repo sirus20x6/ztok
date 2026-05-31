@@ -139,12 +139,20 @@ export class Pipeline {
     static fromRWKV(path: string, opts?: PipelineLoadOptions): Pipeline;
 
     /**
+     * Load a Mistral Tekken `tekken.json` vocab (Nemo / Pixtral /
+     * Devstral / Magistral, etc.). Lowered into a BPE with the Tekken
+     * pre-tokenizer (PRETOK_TEKKEN) and a concat decoder by default.
+     */
+    static fromTekken(path: string, opts?: PipelineLoadOptions): Pipeline;
+
+    /**
      * Auto-detect the file format and dispatch to the right loader.
      *   - `.tiktoken`        -> BPE + cl100k pre-tokenizer
      *   - `tokenizer.json`   -> BPE (HF JSON)
      *   - `.model`           -> SentencePiece Unigram
      *   - `.ztm`             -> TokenMonster
      *   - RWKV World vocab   -> RWKV greedy byte trie
+     *   - `tekken.json`      -> Mistral Tekken
      */
     static fromPath(
         path: string,
@@ -156,6 +164,14 @@ export class Pipeline {
 
     /** Encode a string (UTF-8) or bytes into a Uint32Array of token ids. */
     encode(text: string | Buffer | Uint8Array): Uint32Array;
+
+    /**
+     * Select which domain normalizer populates the domain overlay channels
+     * (OPCODE/OPERAND/SYMBOL_REF/HUNK). Pass one of the `OVERLAY_DOMAIN_*`
+     * constants. `OVERLAY_DOMAIN_NONE` (the default) leaves those channels
+     * zero-filled. An unrecognized value throws.
+     */
+    setOverlayDomain(domain: number): void;
 
     /**
      * Encode `text` and return ids plus per-token overlay channels.
@@ -206,6 +222,32 @@ export class Pipeline {
         maxTokens: number,
         opts?: ChunkOptions
     ): Chunk[];
+
+    /**
+     * Compute the tokenizer fingerprint: a deterministic 32-byte SHA-256
+     * digest over the pipeline's encoding behavior on a fixed canonical
+     * input set plus a model-kind tag and vocab size. Two pipelines that
+     * return equal fingerprints produce bit-identical id streams for any
+     * input — use it as a cache key, KV-store discriminator, or
+     * training-pipeline guard.
+     */
+    fingerprint(): Fingerprint;
+}
+
+/**
+ * 32-byte deterministic tokenizer fingerprint. Two pipelines that return
+ * equal fingerprints produce bit-identical id streams for any input.
+ */
+export class Fingerprint {
+    /** Fixed digest size in bytes (32). */
+    static readonly SIZE: 32;
+    /** Raw 32 fingerprint bytes (a fresh copy). */
+    readonly bytes: Buffer;
+    /** Lowercase 64-char hexadecimal form, no separators. */
+    hex(): string;
+    /** Structural equality against another Fingerprint. */
+    equals(other: Fingerprint): boolean;
+    toString(): string;
 }
 
 /**
@@ -249,6 +291,7 @@ export const NORMALIZER_BYTE_LEVEL: 5;
 
 export const PRETOK_IDENTITY: 0;
 export const PRETOK_CL100K: 1;
+export const PRETOK_TEKKEN: 2;
 
 export const DECODER_CONCAT: 0;
 export const DECODER_WORDPIECE: 1;
@@ -265,6 +308,10 @@ export const OVERLAY_SYMBOL_REF: 5;
 export const OVERLAY_HUNK: 6;
 export const OVERLAY_PROVENANCE: 7;
 export const OVERLAY_USER_BASE: 0x8000;
+
+/** Overlay domains (mirror `ztok_overlay_domain` in include/ztok.h). */
+export const OVERLAY_DOMAIN_NONE: 0;
+export const OVERLAY_DOMAIN_X86_64: 1;
 
 // --- chunk boundary modes (mirror ztok_chunk_boundary in include/ztok.h) ---
 
