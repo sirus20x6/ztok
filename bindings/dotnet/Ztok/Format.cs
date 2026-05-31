@@ -73,6 +73,8 @@ public enum PreTokenizer : uint
     Identity = 0,
     /// <summary>OpenAI cl100k_base regex split.</summary>
     Cl100k = 1,
+    /// <summary>Mistral Tekken pre-tokenization pattern.</summary>
+    Tekken = 2,
 }
 
 /// <summary>Decoder kind (mirrors <c>ztok_decoder_kind</c>).</summary>
