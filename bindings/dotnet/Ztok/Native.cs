@@ -280,6 +280,9 @@ internal static unsafe class Native
         ZtokOverlayChannel* channels, nuint nChannels,
         nuint* outLen);
 
+    [DllImport(LibName, EntryPoint = "ztok_pipeline_set_overlay_domain")]
+    internal static extern int PipelineSetOverlayDomain(IntPtr p, uint domain);
+
     // ----- batch -------------------------------------------------------------
 
     [DllImport(LibName, EntryPoint = "ztok_encode_batch")]

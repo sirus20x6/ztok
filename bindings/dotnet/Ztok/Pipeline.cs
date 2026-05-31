@@ -392,6 +392,22 @@ public sealed class Pipeline : IDisposable
     }
 
     /// <summary>
+    /// Select which domain normalizer populates the domain overlay channels
+    /// (<see cref="OverlayKind.Opcode"/> / <see cref="OverlayKind.Operand"/> /
+    /// <see cref="OverlayKind.SymbolRef"/> / <see cref="OverlayKind.Hunk"/>).
+    /// <see cref="OverlayDomain.None"/> (the default) leaves those channels
+    /// zero-filled; <see cref="OverlayDomain.X86_64"/> decodes the input as
+    /// x86-64 machine code. An unrecognized value leaves the pipeline
+    /// unchanged and throws <see cref="ZtokInvalidInputException"/>.
+    /// </summary>
+    public void SetOverlayDomain(OverlayDomain domain)
+    {
+        ThrowIfDisposed();
+        int rc = Native.PipelineSetOverlayDomain(_handle.Raw, (uint)domain);
+        ZtokException.Check(rc, "ztok_pipeline_set_overlay_domain");
+    }
+
+    /// <summary>
     /// Encode <paramref name="text"/> (UTF-8) and return the ids plus a map
     /// of per-token overlay channels aligned 1:1 with the id stream.
     /// Requesting overlays never changes tokenization — the ids are

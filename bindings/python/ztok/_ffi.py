@@ -96,6 +96,12 @@ OVERLAY_HUNK = 6
 OVERLAY_PROVENANCE = 7
 OVERLAY_USER_BASE = 0x8000
 
+# Overlay domains (mirrors `ztok_overlay_domain` in ztok.h). Selects which
+# domain normalizer populates the OPCODE/OPERAND/SYMBOL_REF/HUNK channels.
+# NONE (the default) leaves those channels zero-filled.
+OVERLAY_DOMAIN_NONE = 0
+OVERLAY_DOMAIN_X86_64 = 1
+
 
 # Typedefs.
 TokenId = c_uint32
@@ -212,6 +218,13 @@ def bind(lib: ctypes.CDLL) -> ctypes.CDLL:
         POINTER(c_size_t),              # out_len
     ]
     lib.ztok_encode_with_overlays.restype = c_int
+
+    # Select the pipeline's overlay domain (NONE / X86_64).
+    lib.ztok_pipeline_set_overlay_domain.argtypes = [
+        c_void_p,                   # pipeline*
+        c_uint,                     # ztok_overlay_domain
+    ]
+    lib.ztok_pipeline_set_overlay_domain.restype = c_int
 
     # --- batch ------------------------------------------------------------
     lib.ztok_encode_batch.argtypes = [

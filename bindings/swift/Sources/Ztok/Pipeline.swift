@@ -364,6 +364,18 @@ public final class Pipeline: @unchecked Sendable {
         public let channels: [OverlayKind: [UInt32]]
     }
 
+    /// Select which domain normalizer populates the domain overlay channels
+    /// (`.opcode` / `.operand` / `.symbolRef` / `.hunk`). `.none` (the
+    /// default) leaves those channels zero-filled; `.x86_64` decodes the
+    /// input as x86-64 machine code. An unrecognized value leaves the
+    /// pipeline unchanged and throws `ZtokError.invalidInput`.
+    public func setOverlayDomain(_ domain: OverlayDomain) throws {
+        let h = try requireHandle(op: "ztok_pipeline_set_overlay_domain")
+        let cStatus = ztok_pipeline_set_overlay_domain(
+            h, ztok_overlay_domain(rawValue: domain.rawValue))
+        try checkStatus(Int32(cStatus.rawValue), op: "ztok_pipeline_set_overlay_domain")
+    }
+
     /// Encode a UTF-8 string and return the ids plus a map of per-token
     /// overlay channels aligned 1:1 with the id stream.
     ///

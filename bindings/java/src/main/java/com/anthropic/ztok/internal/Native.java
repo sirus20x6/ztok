@@ -133,6 +133,11 @@ public final class Native {
         "ztok_encode_with_overlays",
         FunctionDescriptor.of(INT, PTR, PTR, SIZE_T, PTR, SIZE_T, PTR, SIZE_T, PTR));
 
+    // ztok_pipeline_set_overlay_domain(p, domain)
+    public static final MethodHandle ZTOK_PIPELINE_SET_OVERLAY_DOMAIN = dc(
+        "ztok_pipeline_set_overlay_domain",
+        FunctionDescriptor.of(INT, PTR, INT));
+
     // --- batch / pool ---
     public static final MethodHandle ZTOK_ENCODE_BATCH = dc(
         "ztok_encode_batch",

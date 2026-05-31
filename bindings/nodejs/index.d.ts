@@ -166,6 +166,14 @@ export class Pipeline {
     encode(text: string | Buffer | Uint8Array): Uint32Array;
 
     /**
+     * Select which domain normalizer populates the domain overlay channels
+     * (OPCODE/OPERAND/SYMBOL_REF/HUNK). Pass one of the `OVERLAY_DOMAIN_*`
+     * constants. `OVERLAY_DOMAIN_NONE` (the default) leaves those channels
+     * zero-filled. An unrecognized value throws.
+     */
+    setOverlayDomain(domain: number): void;
+
+    /**
      * Encode `text` and return ids plus per-token overlay channels.
      *
      * `channels` is a list of overlay-kind codes (the `OVERLAY_*`
@@ -300,6 +308,10 @@ export const OVERLAY_SYMBOL_REF: 5;
 export const OVERLAY_HUNK: 6;
 export const OVERLAY_PROVENANCE: 7;
 export const OVERLAY_USER_BASE: 0x8000;
+
+/** Overlay domains (mirror `ztok_overlay_domain` in include/ztok.h). */
+export const OVERLAY_DOMAIN_NONE: 0;
+export const OVERLAY_DOMAIN_X86_64: 1;
 
 // --- chunk boundary modes (mirror ztok_chunk_boundary in include/ztok.h) ---
 

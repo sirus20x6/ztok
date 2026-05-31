@@ -96,6 +96,12 @@ module Ztok
     OVERLAY_PROVENANCE = 7
     OVERLAY_USER_BASE  = 0x8000
 
+    # Overlay domains (mirror ztok_overlay_domain in ztok.h). Selects which
+    # domain normalizer populates the OPCODE/OPERAND/SYMBOL_REF/HUNK channels.
+    # NONE (the default) leaves those channels zero-filled.
+    OVERLAY_DOMAIN_NONE   = 0
+    OVERLAY_DOMAIN_X86_64 = 1
+
     # Struct mirroring `ztok_pipeline_config` (four packed uint32 fields).
     class PipelineConfig < ::FFI::Struct
       layout :normalizer,    :uint32,
@@ -161,6 +167,10 @@ module Ztok
     attach_function :ztok_encode_with_overlays,
                     [:pointer, :pointer, :size_t, :pointer, :size_t,
                      :pointer, :size_t, :pointer], :int
+
+    # Select the pipeline's overlay domain (NONE / X86_64).
+    attach_function :ztok_pipeline_set_overlay_domain,
+                    [:pointer, :uint32], :int
 
     # --- batch -------------------------------------------------------
     attach_function :ztok_encode_batch,

@@ -371,6 +371,24 @@ public final class Pipeline implements AutoCloseable {
     private static final long OVERLAY_CHANNEL_OUT_OFFSET = 8L;
     private static final long OVERLAY_CHANNEL_CAP_OFFSET = 16L;
 
+    /**
+     * Select which domain normalizer populates the domain overlay channels
+     * (OPCODE / OPERAND / SYMBOL_REF / HUNK). {@link OverlayDomain#NONE} (the
+     * default) leaves those channels zero-filled; {@link OverlayDomain#X86_64}
+     * decodes the input as x86-64 machine code. An unrecognized value leaves
+     * the pipeline unchanged and throws {@link ZtokException.InvalidInput}.
+     */
+    public void setOverlayDomain(OverlayDomain domain) {
+        MemorySegment h = handle();
+        int rc;
+        try {
+            rc = (int) Native.ZTOK_PIPELINE_SET_OVERLAY_DOMAIN.invoke(h, domain.code());
+        } catch (Throwable t) {
+            throw rethrow("ztok_pipeline_set_overlay_domain", t);
+        }
+        ZtokException.check(rc, "ztok_pipeline_set_overlay_domain");
+    }
+
     /** Encode a UTF-8 string and return ids plus the requested overlay channels. */
     public OverlayResult encodeWithOverlays(String text, OverlayKind... channels) {
         return encodeBytesWithOverlays(text.getBytes(StandardCharsets.UTF_8), channels);

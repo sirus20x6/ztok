@@ -397,6 +397,26 @@ func (p *Pipeline) EncodeBytes(data []byte) ([]uint32, error) {
 	}}
 }
 
+// SetOverlayDomain selects which domain normalizer populates the domain
+// overlay channels (OPCODE/OPERAND/SYMBOL_REF/HUNK). Pass one of the
+// OverlayDomain* constants. OverlayDomainNone (the default) leaves those
+// channels zero-filled; OverlayDomainX86_64 decodes the input as x86-64
+// machine code. An unrecognized value leaves the pipeline unchanged and
+// returns a StatusError (ZTOK_ERR_INVALID_INPUT).
+func (p *Pipeline) SetOverlayDomain(domain OverlayDomain) error {
+	if err := p.checkOpen(); err != nil {
+		return err
+	}
+	rc := C.ztok_pipeline_set_overlay_domain(
+		(*C.ztok_pipeline)(p.handle),
+		C.ztok_overlay_domain(domain),
+	)
+	if int(rc) != int(cStatusOK) {
+		return statusToError(int(rc), "ztok_pipeline_set_overlay_domain")
+	}
+	return nil
+}
+
 // EncodeWithOverlays tokenizes `text` and returns the ids plus a map of
 // per-token annotation channels aligned 1:1 with the id stream. Each
 // requested overlay kind (the Overlay* constants) maps to a []uint32 of

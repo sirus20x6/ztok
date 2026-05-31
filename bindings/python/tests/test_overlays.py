@@ -84,3 +84,45 @@ def test_no_channels_returns_just_ids(bpe_pipeline: ztok.Pipeline) -> None:
     ids, overlays = bpe_pipeline.encode_with_overlays("hello world", [])
     assert ids == bpe_pipeline.encode("hello world")
     assert overlays == {}
+
+
+# x86-64 machine code: `48 89 d8` mov rax,rbx / `e8 00000000` call rel32 /
+# `c3` ret. With the byte_id pipeline each byte is its own token, so the
+# OPCODE channel is one class per byte.
+_X86_64_CODE = bytes([0x48, 0x89, 0xD8, 0xE8, 0x00, 0x00, 0x00, 0x00, 0xC3])
+
+
+def test_set_overlay_domain_x86_64_populates_opcode_channel() -> None:
+    with ztok.Pipeline.byte_id() as pipe:
+        # Default domain (NONE): the OPCODE channel is zero-filled.
+        ids_none, ov_none = pipe.encode_with_overlays(
+            _X86_64_CODE, [ztok.OVERLAY_OPCODE]
+        )
+        opcode_none = ov_none[ztok.OVERLAY_OPCODE]
+        assert len(opcode_none) == len(ids_none) == len(_X86_64_CODE)
+        assert all(v == 0 for v in opcode_none)
+
+        # After selecting the x86-64 domain the OPCODE channel is populated.
+        pipe.set_overlay_domain(ztok.OVERLAY_DOMAIN_X86_64)
+        ids_x86, ov_x86 = pipe.encode_with_overlays(
+            _X86_64_CODE, [ztok.OVERLAY_OPCODE]
+        )
+        opcode_x86 = ov_x86[ztok.OVERLAY_OPCODE]
+        # Tokenization is unchanged; only the domain channel differs.
+        assert ids_x86 == ids_none
+        assert opcode_x86 != opcode_none
+        assert any(v != 0 for v in opcode_x86)
+
+
+def test_set_overlay_domain_none_round_trips() -> None:
+    with ztok.Pipeline.byte_id() as pipe:
+        pipe.set_overlay_domain(ztok.OVERLAY_DOMAIN_X86_64)
+        pipe.set_overlay_domain(ztok.OVERLAY_DOMAIN_NONE)
+        _, ov = pipe.encode_with_overlays(_X86_64_CODE, [ztok.OVERLAY_OPCODE])
+        assert all(v == 0 for v in ov[ztok.OVERLAY_OPCODE])
+
+
+def test_set_overlay_domain_invalid_raises() -> None:
+    with ztok.Pipeline.byte_id() as pipe:
+        with pytest.raises(ztok.ZtokInvalidInputError):
+            pipe.set_overlay_domain(999)
