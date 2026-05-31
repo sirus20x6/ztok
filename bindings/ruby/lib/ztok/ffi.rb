@@ -193,6 +193,11 @@ module Ztok
                      :pointer, :size_t, :pointer], :int
     attach_function :ztok_chunks_free, [:pointer, :size_t], :void
 
+    # --- fingerprint -------------------------------------------------
+    # ztok_status ztok_fingerprint(ztok_pipeline*, uint8_t out_32[32]).
+    # out_32 is a caller-owned 32-byte buffer ztok writes back into.
+    attach_function :ztok_fingerprint, [:pointer, :pointer], :int
+
     # --- auto-detect -------------------------------------------------
     attach_function :ztok_auto_detect, [:string], :uint32
 

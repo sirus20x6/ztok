@@ -34,6 +34,7 @@ from ctypes import (
     c_int,
     c_size_t,
     c_uint,
+    c_uint8,
     c_uint32,
     c_uint64,
     c_void_p,
@@ -293,6 +294,11 @@ def bind(lib: ctypes.CDLL) -> ctypes.CDLL:
 
     lib.ztok_chunks_free.argtypes = [POINTER(ZtokChunkRec), c_size_t]
     lib.ztok_chunks_free.restype = None
+
+    # --- fingerprint ------------------------------------------------------
+    # ztok_status ztok_fingerprint(ztok_pipeline*, uint8_t out_32[32])
+    lib.ztok_fingerprint.argtypes = [c_void_p, POINTER(c_uint8 * 32)]
+    lib.ztok_fingerprint.restype = c_int
 
     # --- auto-detect ------------------------------------------------------
     lib.ztok_auto_detect.argtypes = [c_char_p]
