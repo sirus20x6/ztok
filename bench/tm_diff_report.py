@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
 """TokenMonster diff-categorizer for ztok's Monster encoder.
 
-ztok's Monster encoder matches TokenMonster-Go (TM-Go) at ~80-85/100 on
-nocapcode vocabs and ~56-77/100 on full-capcode vocabs (corpus-dependent).
-To close that gap we first need to know WHY each line diverges. This tool
-buckets every diverging line by root cause so we know which fixes to write
-first.
+ztok's Monster encoder now matches TokenMonster-Go (TM-Go) at ~92-93/100
+on nocapcode vocabs and ~96/100 on full-capcode vocabs at 100 lines
+(was ~80-85 nocapcode / ~56-77 full-capcode before the .ztm v2 alias +
+encoder fixes — see bench/RESULTS.md "TM Monster equivalence" and the
+bench/tm_parity_gate.sh floor). This tool buckets each still-diverging
+line by root cause so the remaining gap can be attacked next.
 
 It reuses the existing harness plumbing:
   * ztok side: shells out to `bench_cross --kind monster ... --dump-sample`
