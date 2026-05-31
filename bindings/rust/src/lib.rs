@@ -111,6 +111,6 @@ pub use error::{Error, Result};
 pub use ngram::{hash_ngrams, hash_ngrams_batch};
 pub use pipeline::{
     detect_format, version, Chunk, ChunkBoundary, Config, Decoder, Format, Normalizer,
-    OverlayKind, Pipeline, PreTokenizer,
+    OverlayDomain, OverlayKind, Pipeline, PreTokenizer,
 };
 pub use stream::{StreamEncoder, StreamIter, DEFAULT_CHUNK_SIZE};

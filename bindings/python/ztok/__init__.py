@@ -67,6 +67,8 @@ from ._ffi import (
     OVERLAY_PROVENANCE,
     OVERLAY_SYMBOL_REF,
     OVERLAY_USER_BASE,
+    OVERLAY_DOMAIN_NONE,
+    OVERLAY_DOMAIN_X86_64,
     PRETOK_CL100K,
     PRETOK_IDENTITY,
     PRETOK_TEKKEN,
@@ -569,6 +571,22 @@ class Pipeline:
         raise ZtokInternalError(
             "ztok_encode kept reporting BUFFER_TOO_SMALL after 8 grow attempts"
         )
+
+    # --- overlay domain -------------------------------------------------
+
+    def set_overlay_domain(self, domain: int) -> None:
+        """Select which domain normalizer populates the domain overlay
+        channels (OPCODE/OPERAND/SYMBOL_REF/HUNK).
+
+        Pass one of the ``OVERLAY_DOMAIN_*`` constants. ``OVERLAY_DOMAIN_NONE``
+        (the default) leaves those channels zero-filled; ``OVERLAY_DOMAIN_X86_64``
+        decodes the input as x86-64 machine code. An unrecognized value leaves
+        the pipeline unchanged and raises :class:`ZtokInvalidInputError`.
+        """
+
+        lib = _get_lib()
+        rc = lib.ztok_pipeline_set_overlay_domain(self._raw(), c_uint32(domain))
+        _raise_for_status(rc, "ztok_pipeline_set_overlay_domain")
 
     # --- encode with overlays ------------------------------------------
 
@@ -1111,6 +1129,8 @@ __all__ = [
     "NORMALIZER_NFD",
     "NORMALIZER_NFKC",
     "NORMALIZER_NFKD",
+    "OVERLAY_DOMAIN_NONE",
+    "OVERLAY_DOMAIN_X86_64",
     "OVERLAY_BOUNDARY",
     "OVERLAY_BYTE_END",
     "OVERLAY_BYTE_START",

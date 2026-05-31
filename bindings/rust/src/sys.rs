@@ -106,6 +106,12 @@ pub const ZTOK_OVERLAY_HUNK: u32 = 6;
 pub const ZTOK_OVERLAY_PROVENANCE: u32 = 7;
 pub const ZTOK_OVERLAY_USER_BASE: u32 = 0x8000;
 
+// Overlay domains (mirror `ztok_overlay_domain`). Select which domain
+// normalizer populates the OPCODE/OPERAND/SYMBOL_REF/HUNK channels; NONE
+// (the default) leaves them zero-filled.
+pub const ZTOK_OVERLAY_DOMAIN_NONE: u32 = 0;
+pub const ZTOK_OVERLAY_DOMAIN_X86_64: u32 = 1;
+
 /// Mirrors `struct ztok_pipeline_config` — four packed `u32` enum fields.
 #[repr(C)]
 #[derive(Clone, Copy)]
@@ -225,6 +231,9 @@ extern "C" {
         n_channels: usize,
         out_len: *mut usize,
     ) -> c_int;
+
+    // Select the pipeline's overlay domain (NONE / X86_64).
+    pub fn ztok_pipeline_set_overlay_domain(p: *mut ZtokPipeline, domain: u32) -> c_int;
 
     // Batch encode
     pub fn ztok_encode_batch(

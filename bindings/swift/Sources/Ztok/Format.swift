@@ -88,6 +88,19 @@ public enum OverlayKind: UInt32, Sendable, Hashable, CaseIterable {
     case provenance = 7
 }
 
+/// Overlay domain (mirrors `ztok_overlay_domain`).
+///
+/// Selects which domain normalizer populates the domain overlay channels
+/// (`.opcode` / `.operand` / `.symbolRef` / `.hunk`). Pass to
+/// `Pipeline.setOverlayDomain(_:)`. `.none` (the default) leaves those
+/// channels zero-filled; `.x86_64` decodes the input as x86-64 machine code.
+public enum OverlayDomain: UInt32, Sendable {
+    /// No domain normalizer; domain channels stay zero-filled (default).
+    case none = 0
+    /// Decode the input as x86-64 machine code.
+    case x86_64 = 1
+}
+
 /// Boundary mode for `Pipeline.chunk(_:maxTokens:overlap:boundary:)`
 /// (mirrors `ztok_chunk_boundary`). Selects where chunk edges are
 /// allowed to fall.

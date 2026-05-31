@@ -112,4 +112,44 @@ final class OverlayTests: XCTestCase {
             }
         }
     }
+
+    // x86-64 machine code: 48 89 d8 (mov rax,rbx) / e8 00000000 (call rel32) /
+    // c3 (ret). With byteId each byte is its own token, so the OPCODE channel
+    // carries one class per byte.
+    private static let x86_64Code: [UInt8] =
+        [0x48, 0x89, 0xd8, 0xe8, 0x00, 0x00, 0x00, 0x00, 0xc3]
+
+    func testSetOverlayDomainX8664PopulatesOpcode() throws {
+        let pipe = try Pipeline.byteId()
+        defer { pipe.close() }
+
+        // Default domain (.none): OPCODE is zero-filled.
+        let none = try pipe.encodeBytesWithOverlays(
+            OverlayTests.x86_64Code, channels: [.opcode])
+        let opcodeNone = none.channels[.opcode] ?? []
+        XCTAssertEqual(opcodeNone.count, OverlayTests.x86_64Code.count)
+        XCTAssertTrue(opcodeNone.allSatisfy { $0 == 0 },
+                      "OPCODE must be zero-filled with domain=.none")
+
+        // After selecting x86-64 the OPCODE channel is populated.
+        try pipe.setOverlayDomain(.x86_64)
+        let x86 = try pipe.encodeBytesWithOverlays(
+            OverlayTests.x86_64Code, channels: [.opcode])
+        let opcodeX86 = x86.channels[.opcode] ?? []
+
+        XCTAssertEqual(none.ids, x86.ids, "tokenization must be unchanged")
+        XCTAssertNotEqual(opcodeNone, opcodeX86, "domain channel must differ from .none")
+        XCTAssertTrue(opcodeX86.contains { $0 != 0 },
+                      "OPCODE must be populated with domain=.x86_64")
+    }
+
+    func testSetOverlayDomainNoneRoundTrips() throws {
+        let pipe = try Pipeline.byteId()
+        defer { pipe.close() }
+        try pipe.setOverlayDomain(.x86_64)
+        try pipe.setOverlayDomain(.none)
+        let res = try pipe.encodeBytesWithOverlays(
+            OverlayTests.x86_64Code, channels: [.opcode])
+        XCTAssertTrue((res.channels[.opcode] ?? []).allSatisfy { $0 == 0 })
+    }
 }

@@ -132,6 +132,24 @@ pub enum OverlayKind {
     Provenance = sys::ZTOK_OVERLAY_PROVENANCE,
 }
 
+/// Overlay domain (mirrors `ztok_overlay_domain`).
+///
+/// Selects which domain normalizer populates the domain overlay channels
+/// ([`Opcode`](OverlayKind::Opcode) / [`Operand`](OverlayKind::Operand) /
+/// [`SymbolRef`](OverlayKind::SymbolRef) / [`Hunk`](OverlayKind::Hunk)).
+/// Pass to [`Pipeline::set_overlay_domain`]. [`None`](OverlayDomain::None)
+/// (the default) leaves those channels zero-filled.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Default)]
+#[non_exhaustive]
+#[repr(u32)]
+pub enum OverlayDomain {
+    /// No domain normalizer; domain channels stay zero-filled (default).
+    #[default]
+    None = sys::ZTOK_OVERLAY_DOMAIN_NONE,
+    /// Decode the input as x86-64 machine code.
+    X86_64 = sys::ZTOK_OVERLAY_DOMAIN_X86_64,
+}
+
 /// Where chunk edges are allowed to fall (mirrors `ztok_chunk_boundary`).
 ///
 /// [`Token`](ChunkBoundary::Token) produces pure token-count windows;
@@ -503,6 +521,19 @@ impl Pipeline {
         check_status(rc, "ztok_decode")?;
         buf.truncate(written);
         Ok(buf)
+    }
+
+    /// Select which domain normalizer populates the domain overlay channels
+    /// ([`Opcode`](OverlayKind::Opcode) / [`Operand`](OverlayKind::Operand) /
+    /// [`SymbolRef`](OverlayKind::SymbolRef) / [`Hunk`](OverlayKind::Hunk)).
+    ///
+    /// [`OverlayDomain::None`] (the default) leaves those channels
+    /// zero-filled; [`OverlayDomain::X86_64`] decodes the input as x86-64
+    /// machine code. An unrecognized value leaves the pipeline unchanged and
+    /// returns [`Error::InvalidInput`].
+    pub fn set_overlay_domain(&mut self, domain: OverlayDomain) -> Result<()> {
+        let rc = unsafe { sys::ztok_pipeline_set_overlay_domain(self.handle, domain as u32) };
+        check_status(rc, "ztok_pipeline_set_overlay_domain")
     }
 
     /// Encode `text` and return the ids plus a map of per-token overlay

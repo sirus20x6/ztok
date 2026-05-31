@@ -118,6 +118,22 @@ public enum OverlayKind : uint
     Provenance = 7,
 }
 
+/// <summary>
+/// Overlay domain (mirrors <c>ztok_overlay_domain</c>). Selects which domain
+/// normalizer populates the domain overlay channels
+/// (<see cref="OverlayKind.Opcode"/> / <see cref="OverlayKind.Operand"/> /
+/// <see cref="OverlayKind.SymbolRef"/> / <see cref="OverlayKind.Hunk"/>).
+/// Pass to <see cref="Pipeline.SetOverlayDomain"/>. <see cref="None"/> (the
+/// default) leaves those channels zero-filled.
+/// </summary>
+public enum OverlayDomain : uint
+{
+    /// <summary>No domain normalizer; domain channels stay zero-filled (default).</summary>
+    None = 0,
+    /// <summary>Decode the input as x86-64 machine code.</summary>
+    X86_64 = 1,
+}
+
 /// <summary>Format-detection helpers and libztok version probe.</summary>
 public static class ZtokLibrary
 {

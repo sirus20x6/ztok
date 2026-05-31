@@ -456,6 +456,24 @@ class Pipeline {
     }
 
     /**
+     * Select which domain normalizer populates the domain overlay channels
+     * (OPCODE/OPERAND/SYMBOL_REF/HUNK).
+     *
+     * Pass one of the `OVERLAY_DOMAIN_*` constants. `OVERLAY_DOMAIN_NONE`
+     * (the default) leaves those channels zero-filled; `OVERLAY_DOMAIN_X86_64`
+     * decodes the input as x86-64 machine code. An unrecognized value leaves
+     * the pipeline unchanged and throws {@link ZtokInvalidInputError}.
+     *
+     * @param {number} domain
+     */
+    setOverlayDomain(domain) {
+        this._check();
+        const lib = ffi.getLib();
+        const rc = lib.ztok_pipeline_set_overlay_domain(this._handle, domain >>> 0);
+        raiseForStatus(rc, 'ztok_pipeline_set_overlay_domain');
+    }
+
+    /**
      * Encode `text` and return ids plus per-token overlay channels.
      *
      * `channels` is an array of overlay-kind codes (the `OVERLAY_*`
@@ -1017,6 +1035,10 @@ module.exports = {
     OVERLAY_HUNK: ffi.OVERLAY_HUNK,
     OVERLAY_PROVENANCE: ffi.OVERLAY_PROVENANCE,
     OVERLAY_USER_BASE: ffi.OVERLAY_USER_BASE,
+
+    // Overlay domains (mirror ztok_overlay_domain in include/ztok.h)
+    OVERLAY_DOMAIN_NONE: ffi.OVERLAY_DOMAIN_NONE,
+    OVERLAY_DOMAIN_X86_64: ffi.OVERLAY_DOMAIN_X86_64,
 
     // Chunk boundary modes (mirror ztok_chunk_boundary in include/ztok.h)
     CHUNK_BOUNDARY_TOKEN: ffi.CHUNK_BOUNDARY_TOKEN,

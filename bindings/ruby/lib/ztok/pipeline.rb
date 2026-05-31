@@ -343,6 +343,21 @@ module Ztok
       out_buf.read_bytes(written)
     end
 
+    # --- overlay domain ------------------------------------------------
+
+    # Select which domain normalizer populates the domain overlay channels
+    # (OPCODE/OPERAND/SYMBOL_REF/HUNK). Pass one of the
+    # +Ztok::FFI::OVERLAY_DOMAIN_*+ constants. +OVERLAY_DOMAIN_NONE+ (the
+    # default) leaves those channels zero-filled; +OVERLAY_DOMAIN_X86_64+
+    # decodes the input as x86-64 machine code. An unrecognized value leaves
+    # the pipeline unchanged and raises Ztok::InvalidInputError.
+    def set_overlay_domain(domain)
+      check_open!
+      rc = FFI.ztok_pipeline_set_overlay_domain(@handle, domain)
+      Ztok.raise_for_status(rc, "ztok_pipeline_set_overlay_domain")
+      self
+    end
+
     # --- encode with overlays ------------------------------------------
 
     # Encode +text+ and return [ids, overlays] where +overlays+ is a Hash
