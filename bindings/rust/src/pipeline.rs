@@ -83,6 +83,8 @@ pub enum PreTokenizer {
     Identity = sys::ZTOK_PRETOK_IDENTITY,
     /// OpenAI cl100k_base regex split.
     Cl100k = sys::ZTOK_PRETOK_CL100K,
+    /// Mistral Tekken pre-tokenization pattern.
+    Tekken = sys::ZTOK_PRETOK_TEKKEN,
 }
 
 /// Decoder kind (mirrors `ztok_decoder_kind`).
@@ -252,7 +254,8 @@ impl Pipeline {
             Format::SentencePiece => Self::from_sentencepiece(path, 0, None),
             Format::Ztm => Self::from_monster(path, None),
             Format::Rwkv => Self::from_rwkv(path, None),
-            Format::Tekken | Format::Unknown => Err(Error::UnknownFormat),
+            Format::Tekken => Self::from_tekken(path, None),
+            Format::Unknown => Err(Error::UnknownFormat),
         }
     }
 
@@ -372,6 +375,29 @@ impl Pipeline {
         };
         check_status(status, "ztok_pipeline_new_rwkv_from_file")?;
         Self::wrap(h, "ztok_pipeline_new_rwkv_from_file")
+    }
+
+    /// Load a Mistral Tekken `tekken.json` vocab (Nemo / Pixtral /
+    /// Devstral / Magistral, etc.) into a BPE pipeline. The loader lowers
+    /// Tekken's base64 byte vocab into a `Bpe` with the special tokens
+    /// packed into the bottom of the id space. The defaults are an
+    /// identity normalizer, the Tekken pre-tokenizer (NOT cl100k), and a
+    /// concat decoder (pieces are raw bytes); override via `cfg`.
+    pub fn from_tekken<P: AsRef<Path>>(path: P, cfg: Option<Config>) -> Result<Self> {
+        let cpath = c_path(path.as_ref())?;
+        // Tekken defaults to its own pre-tokenizer pattern (NOT cl100k);
+        // a None-cfg caller gets it. An explicit cfg is honored verbatim.
+        let cfg = cfg.unwrap_or(Config {
+            pre_tokenizer: PreTokenizer::Tekken,
+            ..Config::default()
+        });
+        let cfg_c = cfg.to_c();
+        let mut status: c_int = sys::ZTOK_OK;
+        let h = unsafe {
+            sys::ztok_pipeline_new_tekken_from_file(cpath.as_ptr(), &cfg_c, &mut status)
+        };
+        check_status(status, "ztok_pipeline_new_tekken_from_file")?;
+        Self::wrap(h, "ztok_pipeline_new_tekken_from_file")
     }
 
     fn wrap(h: *mut sys::ZtokPipeline, op: &'static str) -> Result<Self> {

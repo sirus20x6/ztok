@@ -71,6 +71,7 @@ pub const ZTOK_NORMALIZER_BYTE_LEVEL: u32 = 5;
 
 pub const ZTOK_PRETOK_IDENTITY: u32 = 0;
 pub const ZTOK_PRETOK_CL100K: u32 = 1;
+pub const ZTOK_PRETOK_TEKKEN: u32 = 2;
 
 pub const ZTOK_MODEL_BYTE_ID: u32 = 0;
 
@@ -183,6 +184,12 @@ extern "C" {
     ) -> *mut ZtokPipeline;
 
     pub fn ztok_pipeline_new_rwkv_from_file(
+        path: *const c_char,
+        cfg_or_null: *const ZtokPipelineConfig,
+        out_status: *mut c_int,
+    ) -> *mut ZtokPipeline;
+
+    pub fn ztok_pipeline_new_tekken_from_file(
         path: *const c_char,
         cfg_or_null: *const ZtokPipelineConfig,
         out_status: *mut c_int,
