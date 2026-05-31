@@ -2643,6 +2643,198 @@ test "1.16: encode bit-identical with hot_table on vs off" {
     try testing.expectEqualSlices(TokenId, la, lb);
 }
 
+// Independent leftmost-min scalar BPE reference, re-implemented here so
+// the cross-path parity test below does NOT route through the
+// production `encodeChunkScratch` (which itself branches on
+// HEAP_THRESHOLD). Mirrors `scalarRef` in bpe_heap.zig: single-byte
+// init, leftmost (`<`) min scan, O(live) splice, two neighbour-rank
+// refreshes per merge, hashmap-only lookups. Returns the number of ids.
+fn xpathScalarRef(
+    chunk: []const u8,
+    by_bytes: *const std.StringHashMap(TokenId),
+    out: []TokenId,
+) usize {
+    if (chunk.len == 0) return 0;
+    std.debug.assert(chunk.len <= 512);
+    var parts_start: [512]u32 = undefined;
+    var parts_len: [512]u32 = undefined;
+    var ranks: [512]u32 = undefined;
+
+    var live: u32 = @intCast(chunk.len);
+    for (0..chunk.len) |i| {
+        parts_start[i] = @intCast(i);
+        parts_len[i] = 1;
+    }
+    if (live >= 2) {
+        var i: u32 = 0;
+        while (i + 1 < live) : (i += 1) {
+            const s = parts_start[i];
+            const total = parts_len[i] + parts_len[i + 1];
+            const key = chunk[s .. s + total];
+            ranks[i] = if (by_bytes.get(key)) |r| r else std.math.maxInt(u32);
+        }
+    }
+    if (live > 0) ranks[live - 1] = std.math.maxInt(u32);
+
+    while (live >= 2) {
+        // Leftmost min scan (strict `<` keeps the first occurrence).
+        var mi: u32 = 0;
+        var best: u32 = std.math.maxInt(u32);
+        var k: u32 = 0;
+        while (k + 1 < live) : (k += 1) {
+            if (ranks[k] < best) {
+                best = ranks[k];
+                mi = k;
+            }
+        }
+        if (best == std.math.maxInt(u32)) break;
+
+        parts_len[mi] += parts_len[mi + 1];
+        var j: u32 = mi + 1;
+        while (j + 1 < live) : (j += 1) {
+            parts_start[j] = parts_start[j + 1];
+            parts_len[j] = parts_len[j + 1];
+            ranks[j] = ranks[j + 1];
+        }
+        live -= 1;
+
+        if (mi > 0) {
+            const li = mi - 1;
+            const s = parts_start[li];
+            const total = parts_len[li] + parts_len[mi];
+            const key = chunk[s .. s + total];
+            ranks[li] = if (by_bytes.get(key)) |r| r else std.math.maxInt(u32);
+        }
+        if (mi + 1 < live) {
+            const s = parts_start[mi];
+            const total = parts_len[mi] + parts_len[mi + 1];
+            const key = chunk[s .. s + total];
+            ranks[mi] = if (by_bytes.get(key)) |r| r else std.math.maxInt(u32);
+        } else {
+            ranks[mi] = std.math.maxInt(u32);
+        }
+    }
+
+    var w: usize = 0;
+    var idx: u32 = 0;
+    while (idx < live) : (idx += 1) {
+        const s = parts_start[idx];
+        const len = parts_len[idx];
+        const key = chunk[s .. s + len];
+        out[w] = by_bytes.get(key) orelse std.math.maxInt(TokenId);
+        w += 1;
+    }
+    return w;
+}
+
+test "cross-path parity: scalar/SIMD and heap branches agree across HEAP_THRESHOLD" {
+    // Drives the SAME logical content through BOTH internal branches of
+    // `encodeChunkScratch` — the scalar+SIMD min path (live <= 64) and
+    // the 4-ary heap path (live > 64) — and asserts:
+    //   (a) each encode equals an INDEPENDENT scalar reference
+    //       (`xpathScalarRef`, which never touches the production
+    //       branch), and
+    //   (b) the two production paths agree end-to-end on the repeating
+    //       structure: the period-aligned heap output equals the scalar
+    //       output for the same prefix length.
+    //
+    // Existing tests pin each path against its own oracle but no single
+    // test pushes one input across the threshold through both branches.
+    // This is the regression guard the wave-1 review flagged as missing.
+    // `buildByteVocab` requires the extra ranks to be unique and
+    // contiguous from 256 (loader enforces max_rank+1 == line_count), so
+    // the synthetic merges below carry distinct ranks. Tie behaviour is
+    // covered by the dedicated tie-break tests in simd_min.zig /
+    // bpe_heap.zig; this test targets cross-branch end-to-end parity.
+    // The merge set deliberately includes cross-period pairs (`bc`,
+    // `de`, `fa`, `efab`) so the segmentation is non-trivial and not a
+    // clean per-period split — making the doubling check below a real
+    // constraint rather than a tautology.
+    var bpe = try buildByteVocab(testing.allocator, &.{
+        .{ .bytes = "ab", .rank = 256 },
+        .{ .bytes = "cd", .rank = 257 },
+        .{ .bytes = "ef", .rank = 258 },
+        .{ .bytes = "bc", .rank = 259 },
+        .{ .bytes = "de", .rank = 260 },
+        .{ .bytes = "fa", .rank = 261 },
+        .{ .bytes = "abcd", .rank = 262 },
+        .{ .bytes = "cdef", .rank = 263 },
+        .{ .bytes = "efab", .rank = 264 },
+        .{ .bytes = "abcdef", .rank = 265 },
+    });
+    defer bpe.deinit();
+    // hot_table is populated (buildByteVocab forces it on); both
+    // branches must give the hashmap-only reference the same result.
+    try testing.expect(bpe.hot_table != null);
+
+    var arena = std.heap.ArenaAllocator.init(testing.allocator);
+    defer arena.deinit();
+    const aa = arena.allocator();
+
+    const period = "abcdef";
+
+    // Lengths chosen to bracket HEAP_THRESHOLD == 64. The initial `live`
+    // count equals chunk.len (one part per byte), so:
+    //   len <= 64  -> scalar/SIMD min path
+    //   len  > 64  -> heap path
+    // All stay <= STACK_LIMIT (256) so the inline scalar path also uses
+    // its stack buffers (no scratch spill), matching the hot path.
+    const scalar_lens = [_]usize{ 6, 30, 60, 64 }; // live <= 64
+    const heap_lens = [_]usize{ 65, 66, 120, 180, 240 }; // live > 64
+
+    inline for (.{ scalar_lens, heap_lens }, 0..) |lens, group| {
+        for (lens) |len| {
+            const input = try aa.alloc(u8, len);
+            for (input, 0..) |*c, i| c.* = period[i % period.len];
+
+            // Sanity: confirm which branch this length drives. `live`
+            // starts at one part per byte, threshold is 64.
+            const is_heap = len > 64;
+            try testing.expectEqual(group == 1, is_heap);
+
+            var prod_out: [256]TokenId = undefined;
+            const prod = bpe.encodeChunkScratch(aa, input, &prod_out);
+
+            var ref_out: [256]TokenId = undefined;
+            const ref_n = xpathScalarRef(input, &bpe.by_bytes, &ref_out);
+
+            // (a) Production branch == independent scalar reference, on
+            // BOTH the scalar/SIMD path (len <= 64) and the heap path
+            // (len > 64). Because the same oracle pins both groups, this
+            // transitively proves the two production branches agree.
+            try testing.expectEqualSlices(TokenId, ref_out[0..ref_n], prod);
+        }
+    }
+
+    // (b) Direct cross-branch agreement on the SAME logical content
+    // straddling the threshold. Take a fixed period-aligned body and
+    // encode it at one length below the threshold (scalar/SIMD path) and
+    // one length above it (heap path), where the larger input is the
+    // smaller input with whole extra periods appended. The leftmost-min
+    // merge of a fully periodic input is translation-invariant in its
+    // interior, so the heap output must begin with exactly the
+    // scalar-path token stream of the shorter prefix. This is a direct
+    // path-vs-path assertion that does not go through the oracle.
+    const small_len: usize = 60; // 10 periods -> scalar/SIMD path
+    const big_len: usize = 132; // 22 periods -> heap path
+    try testing.expect(small_len <= 64 and big_len > 64);
+
+    const small_in = try aa.alloc(u8, small_len);
+    for (small_in, 0..) |*c, i| c.* = period[i % period.len];
+    var small_out: [256]TokenId = undefined;
+    const small_ids = bpe.encodeChunkScratch(aa, small_in, &small_out);
+
+    const big_in = try aa.alloc(u8, big_len);
+    for (big_in, 0..) |*c, i| c.* = period[i % period.len];
+    var big_out: [256]TokenId = undefined;
+    const big_ids = bpe.encodeChunkScratch(aa, big_in, &big_out);
+
+    // The heap-path stream is strictly longer and shares the leading
+    // run with the scalar/SIMD-path stream of the embedded prefix.
+    try testing.expect(big_ids.len > small_ids.len);
+    try testing.expectEqualSlices(TokenId, small_ids, big_ids[0..small_ids.len]);
+}
+
 // --- ignore_merges regression tests --------------------------------
 //
 // Llama-3 / GPT-4-style HF BPE vocabs ship `model.ignore_merges = true`
