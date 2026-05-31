@@ -722,3 +722,61 @@ test "bpeFromHF non-SP-reshelled fixtures stay on .bpe_merge path" {
     }
     if (!any_ran) return error.SkipZigTest;
 }
+
+test "bpeFromHF llama3 ignore_merges short-circuits the whole-chunk multilingual piece" {
+    // End-to-end regression for the Llama-3 multilingual parity gap.
+    //
+    // Root cause (see /tmp/ztok_wave1/card-055f3d0a.md): Llama-3's
+    // tokenizer.json sets `model.ignore_merges = true`, so the HF Rust
+    // encoder probes the ENTIRE pretok chunk against the vocab before
+    // running the byte-pair merge loop and, on a hit, emits that single
+    // id. ztok's byte-level rank-by-id merge loop never reaches the
+    // whole-vocab piece for these sequences, so without the
+    // short-circuit " Федерации" (one Split→ByteLevel chunk) split into
+    // 3 tokens [126723, 7753, 54686] instead of HF's single id 111112 —
+    // decoding to the same string but inflating the token count ~5% on
+    // multilingual text.
+    //
+    // This test loads the real bench fixture through the production
+    // loader (`bpeFromHF`) — not a synthetic vocab — to prove the
+    // `ignore_merges` flag survives hf_json → hf_bridge → Bpe and that
+    // the short-circuit fires on the byte-exact mapped key.
+    const io = std.Io.Threaded.global_single_threaded.io();
+    const path = "bench/vocabs/llama3.json";
+    const bytes = std.Io.Dir.cwd().readFileAlloc(io, path, std.testing.allocator, .unlimited) catch return error.SkipZigTest;
+    defer std.testing.allocator.free(bytes);
+
+    var hf = try hf_json.loadFromBytes(std.testing.allocator, bytes);
+    defer hf.deinit();
+
+    // The flag must be parsed off the fixture (default is false; a flip
+    // here would mean the loader dropped it).
+    try std.testing.expect(hf.ignore_merges);
+
+    var bpe = try bpeFromHF(std.testing.allocator, &hf);
+    defer bpe.deinit();
+
+    // ...and it must be plumbed all the way onto the Bpe model.
+    try std.testing.expect(bpe.ignore_merges);
+
+    // The GPT-2 byte_to_unicode-mapped form of " Федерации" (U+0020 +
+    // Cyrillic) — one Split→ByteLevel chunk, 38 mapped bytes, well under
+    // the 64-codepoint HEAP_THRESHOLD so it stays on the inline SoA path.
+    const fed_chunk = "\xC4\xA0\xC3\x90\xC2\xA4\xC3\x90\xC2\xB5\xC3\x90\xC2\xB4" ++
+        "\xC3\x90\xC2\xB5\xC3\x91\xC4\xA2\xC3\x90\xC2\xB0\xC3\x91\xC4\xA8" ++
+        "\xC3\x90\xC2\xB8\xC3\x90\xC2\xB8";
+
+    var out: [64]TokenId = undefined;
+
+    // With ignore_merges live, the whole-chunk lookup wins -> single id.
+    const ids = bpe.encodeChunk(fed_chunk, &out);
+    try std.testing.expectEqualSlices(TokenId, &.{111112}, ids);
+
+    // Negative control: with the short-circuit disabled, the rank-by-id
+    // merge loop produces the original 3-token split. This pins the
+    // short-circuit (not some incidental merge-rank change) as the thing
+    // delivering parity, and documents the pre-fix behavior.
+    bpe.ignore_merges = false;
+    const split = bpe.encodeChunk(fed_chunk, &out);
+    try std.testing.expectEqualSlices(TokenId, &.{ 126723, 7753, 54686 }, split);
+}
