@@ -228,12 +228,24 @@ func OpenRWKVWorld(path string, cfg *Config) (*Pipeline, error) {
 		cfg, PretokIdentity, DecoderConcat)
 }
 
+// OpenTekken loads a Mistral Tekken `tekken.json` vocab (Nemo / Pixtral
+// / Devstral / Magistral, etc.). The loader lowers Tekken's base64 byte
+// vocab into a BPE with the special tokens packed into the bottom of the
+// id space. Defaults: identity normalizer, the Tekken pre-tokenizer
+// pattern (PretokTekken — NOT cl100k), and a concat decoder (pieces are
+// raw bytes).
+func OpenTekken(path string, cfg *Config) (*Pipeline, error) {
+	return openFromFile(path, "ztok_pipeline_new_tekken_from_file",
+		cfg, PretokTekken, DecoderConcat)
+}
+
 // Open auto-detects `path`'s format and dispatches to the right loader.
 //
 //   - .tiktoken            → OpenTiktoken with CL100K=true
 //   - tokenizer.json       → OpenHFJSON
 //   - .model               → OpenSentencePiece (UnkID=0)
 //   - .ztm                 → OpenMonster
+//   - tekken.json          → OpenTekken
 //   - rwkv vocab .txt      → OpenRWKVWorld
 //
 // For WordPiece (which lives inside tokenizer.json but needs a specific
@@ -249,6 +261,8 @@ func Open(path string) (*Pipeline, error) {
 		return OpenSentencePiece(path, nil)
 	case FormatZTM:
 		return OpenMonster(path, nil)
+	case FormatTekken:
+		return OpenTekken(path, nil)
 	case FormatRWKV:
 		return OpenRWKVWorld(path, nil)
 	default:
@@ -278,6 +292,8 @@ func openFromFile(path, fnName string, cfg *Config, defaultPre, defaultDecoder u
 		h = unsafe.Pointer(C.ztok_pipeline_new_monster_from_file(cpath, &c, &status))
 	case "ztok_pipeline_new_rwkv_from_file":
 		h = unsafe.Pointer(C.ztok_pipeline_new_rwkv_from_file(cpath, &c, &status))
+	case "ztok_pipeline_new_tekken_from_file":
+		h = unsafe.Pointer(C.ztok_pipeline_new_tekken_from_file(cpath, &c, &status))
 	default:
 		return nil, &InternalError{&StatusError{Status: -1, Op: "unknown loader: " + fnName}}
 	}

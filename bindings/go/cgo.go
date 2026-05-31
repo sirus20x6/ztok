@@ -54,6 +54,12 @@ const (
 
 	PretokIdentity uint32 = C.ZTOK_PRETOK_IDENTITY
 	PretokCL100K   uint32 = C.ZTOK_PRETOK_CL100K
+	// PretokTekken is the Mistral Tekken pre-tokenizer pattern. The C
+	// header's ztok_pretok_kind enum doesn't surface it (the
+	// ztok_pipeline_new_tekken_from_file constructor selects it
+	// implicitly when given a nil cfg), so we pin the stable wire value
+	// (2) the way the Python binding does (PRETOK_TEKKEN = 2).
+	PretokTekken uint32 = 2
 
 	ModelByteID uint32 = C.ZTOK_MODEL_BYTE_ID
 
@@ -89,6 +95,7 @@ const (
 	FormatHFJSON        Format = C.ZTOK_FORMAT_HF_JSON
 	FormatSentencePiece Format = C.ZTOK_FORMAT_SP_MODEL
 	FormatZTM           Format = C.ZTOK_FORMAT_ZTM
+	FormatTekken        Format = C.ZTOK_FORMAT_TEKKEN
 	FormatRWKV          Format = C.ZTOK_FORMAT_RWKV
 )
 
@@ -104,6 +111,8 @@ func (f Format) String() string {
 		return "sentencepiece"
 	case FormatZTM:
 		return "ztm"
+	case FormatTekken:
+		return "tekken"
 	case FormatRWKV:
 		return "rwkv"
 	default:

@@ -40,6 +40,11 @@ public final class Native {
 
     public static final int PRETOK_IDENTITY = 0;
     public static final int PRETOK_CL100K = 1;
+    // Mistral Tekken pre-tokenizer pattern. Not surfaced in ztok.h's
+    // ztok_pretok_kind enum (the tekken constructor selects it
+    // implicitly for a null cfg); we pin the stable wire value (2) the
+    // way the Python binding does (PRETOK_TEKKEN = 2).
+    public static final int PRETOK_TEKKEN = 2;
 
     public static final int MODEL_BYTE_ID = 0;
 
@@ -109,6 +114,9 @@ public final class Native {
         FunctionDescriptor.of(PTR, PTR, PTR, PTR));
     public static final MethodHandle ZTOK_PIPELINE_NEW_RWKV_FROM_FILE = dc(
         "ztok_pipeline_new_rwkv_from_file",
+        FunctionDescriptor.of(PTR, PTR, PTR, PTR));
+    public static final MethodHandle ZTOK_PIPELINE_NEW_TEKKEN_FROM_FILE = dc(
+        "ztok_pipeline_new_tekken_from_file",
         FunctionDescriptor.of(PTR, PTR, PTR, PTR));
 
     // --- encode/decode ---
