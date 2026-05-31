@@ -57,6 +57,7 @@ NORMALIZER_BYTE_LEVEL = 5
 
 PRETOK_IDENTITY = 0
 PRETOK_CL100K = 1
+PRETOK_TEKKEN = 2
 
 MODEL_BYTE_ID = 0
 
@@ -163,6 +164,7 @@ def bind(lib: ctypes.CDLL) -> ctypes.CDLL:
         "ztok_pipeline_new_bpe_from_hf_json",
         "ztok_pipeline_new_monster_from_file",
         "ztok_pipeline_new_rwkv_from_file",
+        "ztok_pipeline_new_tekken_from_file",
     ):
         fn = getattr(lib, fname)
         fn.argtypes = [c_char_p, POINTER(ZtokPipelineConfig), POINTER(c_int)]

@@ -68,6 +68,7 @@ from ._ffi import (
     OVERLAY_USER_BASE,
     PRETOK_CL100K,
     PRETOK_IDENTITY,
+    PRETOK_TEKKEN,
     TokenId,
     TokenIdPtr,
     ZTOK_ERR_BUFFER_TOO_SMALL,
@@ -430,6 +431,32 @@ class Pipeline:
         )
 
     @classmethod
+    def from_tekken(
+        cls,
+        path: Union[str, os.PathLike],
+        *,
+        normalizer: int = NORMALIZER_IDENTITY,
+        pre_tokenizer: int = PRETOK_TEKKEN,
+        decoder: int = DECODER_CONCAT,
+    ) -> "Pipeline":
+        """Load a Mistral Tekken ``tekken.json`` vocab (Nemo / Pixtral /
+        Devstral / Magistral, etc.).
+
+        The loader lowers Tekken's base64 byte vocab into a BPE with the
+        special tokens packed into the bottom of the id space. The default
+        pre-tokenizer is the Tekken pattern (``PRETOK_TEKKEN``) — NOT
+        cl100k — and the default decoder is concat (pieces are raw bytes).
+        """
+
+        return cls._from_file_with_cfg(
+            "ztok_pipeline_new_tekken_from_file",
+            path,
+            normalizer=normalizer,
+            pre_tokenizer=pre_tokenizer,
+            decoder=decoder,
+        )
+
+    @classmethod
     def from_path(
         cls,
         path: Union[str, os.PathLike],
@@ -444,6 +471,7 @@ class Pipeline:
         - ``tokenizer.json`` → BPE (HF JSON)
         - ``.model``       → SentencePiece Unigram (``unk_id`` defaults to 0)
         - ``.ztm``         → TokenMonster
+        - ``tekken.json``  → Mistral Tekken (Nemo / Pixtral / Devstral)
         """
 
         fmt = _detect_format(path)
@@ -457,6 +485,8 @@ class Pipeline:
             return cls.from_monster(path, normalizer=normalizer)
         if fmt == "rwkv":
             return cls.from_rwkv(path, normalizer=normalizer)
+        if fmt == "tekken":
+            return cls.from_tekken(path, normalizer=normalizer)
         raise ZtokInvalidInputError(
             f"could not auto-detect tokenizer format for {path!r}; "
             "use a specific from_* constructor instead"
@@ -1074,5 +1104,6 @@ __all__ = [
     "OVERLAY_USER_BASE",
     "PRETOK_CL100K",
     "PRETOK_IDENTITY",
+    "PRETOK_TEKKEN",
     "version",
 ]

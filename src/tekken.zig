@@ -2002,6 +2002,51 @@ test "encodeAudio errors when audio config present but specials missing" {
     );
 }
 
+test "golden parity: real mistral-nemo tekken.json encodes known inputs" {
+    // End-to-end parity gate against the real 130k-token Tekken file:
+    // run the Tekken pre-tokenizer (`pretok` == tekken_pretok) over each
+    // input, feed each span through the lowered `Bpe` merge loop, and
+    // assert the concatenated id stream matches a captured golden. This
+    // is exactly the path `ztok_pipeline_new_tekken_from_file` wires
+    // (identity normalizer + tekken pretok + concat decoder).
+    //
+    // Goldens were captured from this same loader (no external reference
+    // is bundled). They lock the id-shift convention (special tokens in
+    // [0, 1000), regular vocab shifted up by num_special_tokens) plus the
+    // tekken pattern split + BPE merge against regressions.
+    //
+    // Skip cleanly when the (license-encumbered, 14MB) fixture is absent.
+    const path = "bench/vocabs/mistral_nemo_tekken.json";
+    const io = std.Io.Threaded.global_single_threaded.io();
+    std.Io.Dir.cwd().access(io, path, .{}) catch return error.SkipZigTest;
+
+    var tk = try loadTekkenFile(testing.allocator, path);
+    defer tk.deinit();
+
+    const Case = struct { input: []const u8, ids: []const TokenId };
+    const cases = [_]Case{
+        .{ .input = "Hello, world!", .ids = &.{ 22177, 1044, 4304, 1033 } },
+        .{ .input = "The quick brown fox", .ids = &.{ 1784, 7586, 22980, 94137 } },
+        .{ .input = " and the", .ids = &.{ 1321, 1278 } },
+    };
+
+    for (cases) |c| {
+        const spans = try pretok.split(testing.allocator, c.input);
+        defer testing.allocator.free(spans);
+
+        var got: std.ArrayList(TokenId) = .empty;
+        defer got.deinit(testing.allocator);
+
+        var buf: [256]TokenId = undefined;
+        for (spans) |s| {
+            const piece = c.input[s.start..s.end];
+            const written = tk.bpe.encodeChunk(piece, &buf);
+            try got.appendSlice(testing.allocator, written);
+        }
+        try testing.expectEqualSlices(TokenId, c.ids, got.items);
+    }
+}
+
 test {
     // Pull in the Tekken pre-tokenizer's unit tests.
     _ = pretok;

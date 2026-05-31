@@ -34,6 +34,7 @@ const Unigram = @import("unigram.zig").Unigram;
 const WordPiece = @import("wordpiece.zig").WordPiece;
 const Monster = @import("monster.zig").Monster;
 const RwkvWorld = @import("rwkv_world.zig").RwkvWorld;
+const TekkenModel = @import("tekken.zig").TekkenModel;
 const monster_io = @import("monster_io.zig");
 const sp_model = @import("sp_model.zig");
 const auto_detect = @import("auto_detect.zig");
@@ -78,7 +79,7 @@ const Config = extern struct {
 
 // --- handle ----------------------------------------------------------
 
-const HandleKind = enum(u8) { byte_id, bpe, unigram, wordpiece, monster, rwkv_world };
+const HandleKind = enum(u8) { byte_id, bpe, unigram, wordpiece, monster, rwkv_world, tekken };
 
 const ModelStorage = union(HandleKind) {
     byte_id: void,
@@ -87,6 +88,11 @@ const ModelStorage = union(HandleKind) {
     wordpiece: WordPiece,
     monster: Monster,
     rwkv_world: RwkvWorld,
+    // Tekken lowers its byte vocab into a `Bpe`; we keep the whole loaded
+    // model so its `specials` / image / audio config and pattern stay
+    // owned for the handle's lifetime. `modelFromStorage` references the
+    // inner `.bpe` for the merge loop.
+    tekken: TekkenModel,
 };
 
 // Wraps the Pipeline plus the heap-owned model+vocab. The Pipeline's
@@ -129,6 +135,7 @@ fn pretokFromKind(k: c_uint) ?PreTokenizer {
     return switch (k) {
         0 => .identity,
         1 => .cl100k,
+        2 => .tekken,
         else => null,
     };
 }
@@ -219,6 +226,7 @@ fn modelFromStorage(s: *ModelStorage) Model {
         .wordpiece => .{ .wordpiece = &s.wordpiece },
         .monster => .{ .monster = &s.monster },
         .rwkv_world => .{ .rwkv_world = &s.rwkv_world },
+        .tekken => .{ .bpe = &s.tekken.bpe },
     };
 }
 
@@ -230,6 +238,7 @@ fn freeHandle(h: *PipelineHandle) void {
         .wordpiece => |*w| w.deinit(),
         .monster => |*m| m.deinit(),
         .rwkv_world => |*r| r.deinit(),
+        .tekken => |*t| t.deinit(),
     }
     h.vocab.deinit();
     gpa.destroy(h);
@@ -558,6 +567,51 @@ export fn ztok_pipeline_new_rwkv_from_file(
 
     const h = newHandle(.rwkv_world, n, pt, d, Vocab.empty(gpa), .{ .rwkv_world = r }) catch |e| {
         r.deinit();
+        setStatus(out_status, mapErr(e));
+        return null;
+    };
+    setStatus(out_status, ZTOK_OK);
+    return ptrFromHandle(h);
+}
+
+// Mistral Tekken tokenizer from a `tekken.json` file (Nemo / Pixtral /
+// Devstral / Magistral, etc.). The loader lowers Tekken's base64 byte
+// vocab into a `Bpe` with special tokens packed into the bottom of the id
+// space (see tekken.zig). Defaults: identity normalizer, Tekken pre-
+// tokenizer (kind 2 — the hand-written `tekken_pretok` pattern, NOT
+// cl100k), concat decoder (pieces are raw bytes). Caller overrides via cfg.
+export fn ztok_pipeline_new_tekken_from_file(
+    path_c: ?[*:0]const u8,
+    cfg_or_null: ?*const Config,
+    out_status: ?*c_int,
+) ?*Pipeline {
+    const path_z = path_c orelse {
+        setStatus(out_status, ZTOK_ERR_INVALID_INPUT);
+        return null;
+    };
+    const path = std.mem.span(path_z);
+
+    const cfg = effectiveConfig(cfg_or_null, 2);
+    const n = normalizerFromKind(cfg.normalizer) orelse {
+        setStatus(out_status, ZTOK_ERR_INVALID_INPUT);
+        return null;
+    };
+    const pt = pretokFromKind(cfg.pre_tokenizer) orelse {
+        setStatus(out_status, ZTOK_ERR_INVALID_INPUT);
+        return null;
+    };
+    const d = decoderFromKind(cfg.decoder) orelse {
+        setStatus(out_status, ZTOK_ERR_INVALID_INPUT);
+        return null;
+    };
+
+    var t = @import("tekken.zig").loadTekkenFile(gpa, path) catch |e| {
+        setStatus(out_status, mapErr(e));
+        return null;
+    };
+
+    const h = newHandle(.tekken, n, pt, d, Vocab.empty(gpa), .{ .tekken = t }) catch |e| {
+        t.deinit();
         setStatus(out_status, mapErr(e));
         return null;
     };
