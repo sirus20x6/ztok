@@ -214,6 +214,32 @@ export class Pipeline {
         maxTokens: number,
         opts?: ChunkOptions
     ): Chunk[];
+
+    /**
+     * Compute the tokenizer fingerprint: a deterministic 32-byte SHA-256
+     * digest over the pipeline's encoding behavior on a fixed canonical
+     * input set plus a model-kind tag and vocab size. Two pipelines that
+     * return equal fingerprints produce bit-identical id streams for any
+     * input — use it as a cache key, KV-store discriminator, or
+     * training-pipeline guard.
+     */
+    fingerprint(): Fingerprint;
+}
+
+/**
+ * 32-byte deterministic tokenizer fingerprint. Two pipelines that return
+ * equal fingerprints produce bit-identical id streams for any input.
+ */
+export class Fingerprint {
+    /** Fixed digest size in bytes (32). */
+    static readonly SIZE: 32;
+    /** Raw 32 fingerprint bytes (a fresh copy). */
+    readonly bytes: Buffer;
+    /** Lowercase 64-char hexadecimal form, no separators. */
+    hex(): string;
+    /** Structural equality against another Fingerprint. */
+    equals(other: Fingerprint): boolean;
+    toString(): string;
 }
 
 /**

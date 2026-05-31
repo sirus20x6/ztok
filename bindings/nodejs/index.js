@@ -155,6 +155,46 @@ class BatchPool {
     }
 }
 
+// --- Fingerprint ---
+
+/**
+ * 32-byte deterministic tokenizer fingerprint. Two pipelines that return
+ * equal fingerprints produce bit-identical id streams for any input.
+ * Mirrors the dotnet/java value type: raw `bytes` plus a `hex()` helper.
+ */
+class Fingerprint {
+    constructor(buf) {
+        if (!Buffer.isBuffer(buf) || buf.length !== Fingerprint.SIZE) {
+            throw new ZtokInvalidInputError(
+                `fingerprint must be exactly ${Fingerprint.SIZE} bytes`
+            );
+        }
+        // Defensive copy so the caller can't mutate our backing store.
+        this._bytes = Buffer.from(buf);
+        Object.freeze(this);
+    }
+
+    /** Raw 32 fingerprint bytes (a fresh copy). */
+    get bytes() {
+        return Buffer.from(this._bytes);
+    }
+
+    /** Lowercase 64-char hexadecimal form, no separators. */
+    hex() {
+        return this._bytes.toString('hex');
+    }
+
+    /** Structural equality against another Fingerprint. */
+    equals(other) {
+        return other instanceof Fingerprint && this._bytes.equals(other._bytes);
+    }
+
+    toString() {
+        return `Fingerprint(${this.hex()})`;
+    }
+}
+Fingerprint.SIZE = 32;
+
 // --- Pipeline ---
 
 function makeConfig({
@@ -777,6 +817,27 @@ class Pipeline {
             try { lib.ztok_chunks_free(recs, got); } catch (_) { /* ignore */ }
         }
     }
+
+    // --- fingerprint ---
+
+    /**
+     * Compute the tokenizer fingerprint: a deterministic 32-byte SHA-256
+     * digest over the pipeline's encoding behavior on a fixed canonical
+     * input set plus a model-kind tag and vocab size. Two pipelines that
+     * return equal fingerprints produce bit-identical id streams for any
+     * input — use it as a cache key, KV-store discriminator, or
+     * training-pipeline guard.
+     *
+     * @returns {Fingerprint}
+     */
+    fingerprint() {
+        this._check();
+        const lib = ffi.getLib();
+        const out = Buffer.alloc(Fingerprint.SIZE);
+        const rc = lib.ztok_fingerprint(this._handle, out);
+        raiseForStatus(rc, 'ztok_fingerprint');
+        return new Fingerprint(out);
+    }
 }
 
 function materializeAndFreeIds(lib, ptr, n) {
@@ -918,6 +979,7 @@ function hashNgramsBatch(pool, streams, n, heads) {
 
 module.exports = {
     Pipeline,
+    Fingerprint,
     BatchPool,
     version,
     hashNgrams,

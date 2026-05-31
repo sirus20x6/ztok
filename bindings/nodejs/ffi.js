@@ -191,6 +191,13 @@ function getLib() {
     );
     const ztok_chunks_free = lib.func('void ztok_chunks_free(ztok_chunk_rec* chunks, size_t n)');
 
+    // --- fingerprint ---
+    // ztok_status ztok_fingerprint(ztok_pipeline*, uint8_t out_32[32]).
+    // out_32 is a caller-owned 32-byte buffer koffi writes back into.
+    const ztok_fingerprint = lib.func(
+        'int ztok_fingerprint(void* p, _Out_ uint8_t* out_32)'
+    );
+
     // --- auto-detect ---
     const ztok_auto_detect = lib.func('uint32_t ztok_auto_detect(const char* path)');
 
@@ -229,6 +236,7 @@ function getLib() {
         ztok_u64s_free,
         ztok_chunk,
         ztok_chunks_free,
+        ztok_fingerprint,
         ztok_encode,
         ztok_decode,
         ztok_encode_batch,

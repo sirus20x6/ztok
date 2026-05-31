@@ -31,6 +31,7 @@ from ctypes import (
     c_char_p,
     c_int,
     c_size_t,
+    c_uint8,
     c_uint32,
     c_uint64,
     c_void_p,
@@ -944,6 +945,23 @@ class Pipeline:
             # Release each record's ztok-allocated id buffer. The recs
             # array itself is Python-owned.
             lib.ztok_chunks_free(recs, c_size_t(out_len.value))
+
+    def fingerprint(self) -> bytes:
+        """Compute the tokenizer fingerprint: a deterministic 32-byte
+        SHA-256 digest over the pipeline's encoding behavior on a fixed
+        canonical input set plus a model-kind tag and vocab size.
+
+        Two pipelines that return the same 32 bytes will produce
+        bit-identical id streams for ANY input — use it as a cache key,
+        KV-store discriminator, or training-pipeline guard. The returned
+        ``bytes`` object's :meth:`bytes.hex` gives the printable form.
+        """
+
+        lib = _get_lib()
+        out = (c_uint8 * 32)()
+        rc = lib.ztok_fingerprint(self._raw(), ctypes.byref(out))
+        _raise_for_status(rc, "ztok_fingerprint")
+        return bytes(out)
 
 
 def _Pipeline_free(lib: ctypes.CDLL, handle: int) -> None:
