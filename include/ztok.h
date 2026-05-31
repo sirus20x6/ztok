@@ -278,24 +278,69 @@ void ztok_ids_free(ztok_token_id* ids);
  * `heads` hashes for window position 0 come first, then position 1, etc.
  * Raw u64 hashes are emitted; mask each to your table width
  * (hash & ((1<<bits)-1)). The number of window positions for an
- * `n_ids`-long stream is (n_ids - n + 1), or 0 if shorter than n. */
+ * `n_ids`-long stream is (n_ids - n + 1), or 0 if shorter than n.
+ *
+ * The two n-gram functions return their u64 hashes through buffers with
+ * OPPOSITE ownership — read the per-function notes below carefully:
+ *   - ztok_ngram_hash       writes into a CALLER-owned buffer (you alloc
+ *                           and free it; ztok never owns it).
+ *   - ztok_ngram_hash_batch returns ZTOK-owned buffers that MUST be
+ *                           released with ztok_u64s_free (NOT free(),
+ *                           NOT ztok_ids_free).
+ * Both surface the same C type (uint64_t*), so the compiler cannot catch
+ * a mis-free; the asymmetry is enforced only by this contract.
+ *
+ * Forward-compat note: the bare (struct-less) uint64_t* return shape of
+ * these two functions is INTENTIONALLY FROZEN. Any future variant that
+ * needs per-window or per-head metadata will ship as a new symbol (e.g.
+ * a struct-returning ztok_ngram_hash_ex), never by mutating the shape or
+ * ownership of the existing returns. Do not assume these grow fields. */
 
 /* Hash every length-`n` window of `ids` under `heads` hash functions.
- * `out` is a caller-owned buffer of `out_cap` uint64_t entries. On
- * success writes positions*heads hashes and sets *out_len to that count.
- * If `out` is NULL or too small, sets *out_len to the required count and
- * returns ZTOK_BUFFER_TOO_SMALL without writing. A stream shorter than
- * one window (or n/heads == 0) needs 0 entries and returns ZTOK_OK. */
+ * `out` is a CALLER-OWNED buffer of `out_cap` uint64_t entries — ztok
+ * never allocates or owns it, so there is nothing to free on the ztok
+ * side (free your own buffer however you allocated it). On success
+ * writes positions*heads hashes and sets *out_len to that count.
+ *
+ * Sizing/NULL convention (note: this DIFFERS from ztok_encode):
+ *   - If the required count is 0 (stream shorter than one window, or
+ *     n==0 / heads==0), sets *out_len=0 and returns ZTOK_OK even when
+ *     `out` is NULL — an empty result is a success, not a sizing error.
+ *   - Otherwise, if `out` is NULL or `out_cap` is too small, sets
+ *     *out_len to the required count and returns ZTOK_BUFFER_TOO_SMALL
+ *     without writing.
+ * This is deliberately unlike ztok_encode, where a NULL `out` ALWAYS
+ * returns ZTOK_BUFFER_TOO_SMALL (its sizing query never returns OK).
+ * Do not port the ztok_encode "NULL == always TOO_SMALL" assumption to
+ * this function. */
 ztok_status ztok_ngram_hash(
     const ztok_token_id* ids, size_t n_ids,
     uint32_t n, uint32_t heads,
     uint64_t* out, size_t out_cap, size_t* out_len
 );
 
-/* Hash `n_docs` id streams in parallel across `pool`. Each out_hashes[i]
- * is set to a ztok-allocated uint64_t buffer (free with ztok_u64s_free)
- * holding the row-major hashes for doc i, with out_lens[i] its u64
- * count. A stream shorter than one window yields a NULL buffer and 0. */
+/* Hash `n_docs` id streams in parallel across `pool`.
+ *
+ * OWNERSHIP (read this): on a ZTOK_OK return each out_hashes[i] is set to
+ * a ZTOK-OWNED, header-prefixed uint64_t buffer holding the row-major
+ * hashes for doc i, and out_lens[i] to its u64 count. Each non-NULL
+ * out_hashes[i] MUST be released with ztok_u64s_free — and ONLY with
+ * ztok_u64s_free. These buffers carry a length header that ztok_u64s_free
+ * recovers; passing one to plain free() or to ztok_ids_free (which expects
+ * the unrelated TokenId header) is undefined behavior and silently
+ * corrupts the heap. This is the key asymmetry with ztok_ngram_hash,
+ * whose `out` is caller-owned and never freed through ztok. A doc stream
+ * shorter than one window yields out_hashes[i]==NULL and out_lens[i]==0
+ * (skip freeing the NULL slots — ztok_u64s_free(NULL) is also a no-op).
+ *
+ * On any NON-OK return, every out_hashes[i] is NULL and every out_lens[i]
+ * is 0: ztok has already freed any buffers it allocated, so the caller
+ * frees NOTHING (do not call ztok_u64s_free on a failed batch).
+ *
+ * If n_docs==0 the call returns ZTOK_OK and leaves the out_hashes /
+ * out_lens arrays UNTOUCHED (it writes neither — nothing to free).
+ * (Contrast ztok_ngram_hash, which always writes *out_len, including 0
+ * for the empty case.) */
 ztok_status ztok_ngram_hash_batch(
     ztok_batch_pool* pool,
     const ztok_token_id* const* id_arrays, const size_t* id_lens, size_t n_docs,
@@ -303,7 +348,10 @@ ztok_status ztok_ngram_hash_batch(
     uint64_t** out_hashes, size_t* out_lens
 );
 
-/* Free a uint64_t buffer returned by ztok_ngram_hash_batch. */
+/* Free a uint64_t buffer returned by ztok_ngram_hash_batch (and ONLY such
+ * a buffer). NULL is a safe no-op. Never pass a buffer here that you
+ * allocated yourself for ztok_ngram_hash, and never free a batch buffer
+ * with free()/ztok_ids_free — the ownership/header mismatch is UB. */
 void ztok_u64s_free(uint64_t* hashes);
 
 /* --- chunking ----------------------------------------------------- */
