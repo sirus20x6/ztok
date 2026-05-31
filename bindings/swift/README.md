@@ -66,7 +66,7 @@ print("\(ids.count) ids -> \(text)")
 | `tokenizer.json` (HF JSON) | `Pipeline.fromHfJson(path:)`                   |
 | `.model` (SentencePiece)   | `Pipeline.fromSentencePiece(path:unkId:)`      |
 | `.ztm` (TokenMonster)      | `Pipeline.fromMonster(path:)`                  |
-| `tekken.json`              | routed through `Pipeline.fromHfJson(path:)`    |
+| `tekken.json` (Mistral)    | `Pipeline.fromTekken(path:)`                   |
 
 For WordPiece (which lives inside `tokenizer.json` but needs a specific
 unknown-token id) call `Pipeline.fromWordPiece(path:unkId:)` directly —
@@ -144,6 +144,7 @@ bit-identical id streams for any input.
 | `Pipeline.fromWordPiece(path:unkId:config:)`    | WordPiece from `tokenizer.json` (requires `unkId`).           |
 | `Pipeline.fromSentencePiece(path:unkId:config:)`| Unigram from SentencePiece `.model`.                          |
 | `Pipeline.fromMonster(path:config:)`            | TokenMonster from `.ztm`.                                     |
+| `Pipeline.fromTekken(path:config:)`             | Mistral Tekken from `tekken.json`.                           |
 | `pipeline.encode(_:)` / `.encodeBytes(_:)`      | Encode a string / bytes.                                      |
 | `pipeline.decode(_:)` / `.decodeBytes(_:)`      | Decode ids to string / raw bytes.                             |
 | `pipeline.fingerprint()`                        | 32-byte deterministic tokenizer fingerprint.                  |

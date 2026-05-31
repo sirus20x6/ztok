@@ -95,6 +95,7 @@ pipeline is yielded and closed on the way out):
 - `Ztok::Pipeline.from_wordpiece(path, unk_id:, ...)` — WordPiece from HF `tokenizer.json`.
 - `Ztok::Pipeline.from_sentencepiece(path, unk_id: 0, ...)` — SentencePiece `.model` (Unigram).
 - `Ztok::Pipeline.from_monster(path, ...)` — ztok `.ztm` TokenMonster vocab.
+- `Ztok::Pipeline.from_tekken(path, ...)` — Mistral Tekken `tekken.json` vocab (Nemo / Pixtral / Devstral).
 - `Ztok::Pipeline.from_path(path, unk_id: 0, ...)` — auto-detect via the
   C ABI's `ztok_auto_detect` and dispatch to the right loader.
 

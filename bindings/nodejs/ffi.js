@@ -28,6 +28,7 @@ const NORMALIZER_BYTE_LEVEL = 5;
 
 const PRETOK_IDENTITY = 0;
 const PRETOK_CL100K = 1;
+const PRETOK_TEKKEN = 2;
 
 const MODEL_BYTE_ID = 0;
 
@@ -69,6 +70,7 @@ const FORMAT_CODE_TO_NAME = {
     [FORMAT_HF_JSON]: 'hf_json',
     [FORMAT_SP_MODEL]: 'sentencepiece',
     [FORMAT_ZTM]: 'ztm',
+    [FORMAT_TEKKEN]: 'tekken',
     [FORMAT_RWKV]: 'rwkv',
 };
 
@@ -113,6 +115,9 @@ function getLib() {
     );
     const ztok_pipeline_new_rwkv_from_file = lib.func(
         'void* ztok_pipeline_new_rwkv_from_file(const char* path, ztok_pipeline_config* cfg, _Out_ int* status)'
+    );
+    const ztok_pipeline_new_tekken_from_file = lib.func(
+        'void* ztok_pipeline_new_tekken_from_file(const char* path, ztok_pipeline_config* cfg, _Out_ int* status)'
     );
 
     // --- encode / decode ---
@@ -218,6 +223,7 @@ function getLib() {
         ztok_pipeline_new_unigram_from_sp_model,
         ztok_pipeline_new_monster_from_file,
         ztok_pipeline_new_rwkv_from_file,
+        ztok_pipeline_new_tekken_from_file,
         ztok_ngram_hash,
         ztok_ngram_hash_batch,
         ztok_u64s_free,
@@ -267,6 +273,7 @@ module.exports = {
     NORMALIZER_BYTE_LEVEL,
     PRETOK_IDENTITY,
     PRETOK_CL100K,
+    PRETOK_TEKKEN,
     MODEL_BYTE_ID,
     DECODER_CONCAT,
     DECODER_WORDPIECE,

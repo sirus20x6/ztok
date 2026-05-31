@@ -92,10 +92,10 @@ public final class Pipeline: @unchecked Sendable {
         switch fmt {
         case .tiktoken:
             return try fromTiktoken(path: path)
-        case .hfJson, .tekken:
-            // Tekken is BPE under the HF JSON loader in the other
-            // bindings; route it through fromHfJson for symmetry.
+        case .hfJson:
             return try fromHfJson(path: path)
+        case .tekken:
+            return try fromTekken(path: path)
         case .sentencePiece:
             return try fromSentencePiece(path: path)
         case .ztm:
@@ -190,6 +190,24 @@ public final class Pipeline: @unchecked Sendable {
             op: "ztok_pipeline_new_rwkv_from_file"
         ) { cPath, cfgPtr, statusPtr in
             ztok_pipeline_new_rwkv_from_file(cPath, cfgPtr, statusPtr)
+        }
+    }
+
+    /// Load a Mistral Tekken `tekken.json` vocab (Nemo / Pixtral /
+    /// Devstral / Magistral, etc.). The loader lowers Tekken's base64
+    /// byte vocab into a BPE with the special tokens packed into the
+    /// bottom of the id space. The default pre-tokenizer is the Tekken
+    /// pattern (`.tekken`) — NOT cl100k — and the default decoder is
+    /// concat (pieces are raw bytes).
+    public static func fromTekken(path: String, config: PipelineConfig? = nil) throws -> Pipeline {
+        let cfg = config ?? PipelineConfig(
+            normalizer: .identity, preTokenizer: .tekken, decoder: .concat)
+        return try loadFile(
+            path: path,
+            config: cfg,
+            op: "ztok_pipeline_new_tekken_from_file"
+        ) { cPath, cfgPtr, statusPtr in
+            ztok_pipeline_new_tekken_from_file(cPath, cfgPtr, statusPtr)
         }
     }
 

@@ -145,6 +145,17 @@ ztok_pipeline* ztok_pipeline_new_rwkv_from_file(
     ztok_status* out_status
 );
 
+/* Mistral Tekken loader. Reads a `tekken.json` file (Nemo / Pixtral /
+ * Devstral / Magistral, etc.) and lowers its base64 byte vocab into a
+ * BPE with the special tokens packed into the bottom of the id space.
+ * The pipeline runs identity normalizer + the Tekken pre-tokenizer
+ * (NOT cl100k) + concat decoder. */
+ztok_pipeline* ztok_pipeline_new_tekken_from_file(
+    const char* path,
+    const ztok_pipeline_config* cfg_or_null,
+    ztok_status* out_status
+);
+
 /* --- encode / decode --------------------------------------------- */
 
 /* Encode: writes ids directly into the caller buffer. *out_len receives
