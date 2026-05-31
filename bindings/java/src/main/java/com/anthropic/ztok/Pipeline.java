@@ -174,6 +174,21 @@ public final class Pipeline implements AutoCloseable {
     }
 
     /**
+     * Load a Mistral Tekken {@code tekken.json} vocab (Nemo / Pixtral /
+     * Devstral / Magistral, etc.). The loader lowers Tekken's base64 byte
+     * vocab into a BPE with the special tokens packed into the bottom of
+     * the id space. The default pre-tokenizer is the Tekken pattern
+     * ({@code PRETOK_TEKKEN}) — NOT cl100k — and the decoder is concat
+     * (pieces are raw bytes).
+     */
+    public static Pipeline fromTekken(Path path) {
+        return fromFile(Native.ZTOK_PIPELINE_NEW_TEKKEN_FROM_FILE, path,
+                        Native.NORMALIZER_IDENTITY, Native.PRETOK_TEKKEN,
+                        Native.MODEL_BYTE_ID, Native.DECODER_CONCAT,
+                        "ztok_pipeline_new_tekken_from_file");
+    }
+
+    /**
      * Auto-detect the file format and dispatch to the right loader. The
      * lowercase name matches the API used in the Python / Node bindings:
      * Python's {@code Pipeline.from_path}, Node's {@code Pipeline.fromPath},
@@ -187,9 +202,7 @@ public final class Pipeline implements AutoCloseable {
             case HF_JSON -> fromHfJson(path);
             case SENTENCEPIECE -> fromSentencePiece(path);
             case ZTM -> fromMonster(path);
-            // Tekken is BPE under HF_JSON loader in the other bindings —
-            // route it through fromHfJson for symmetry.
-            case TEKKEN -> fromHfJson(path);
+            case TEKKEN -> fromTekken(path);
             case RWKV -> fromRwkv(path);
             case UNKNOWN -> throw new ZtokException.InvalidInput(
                 "could not auto-detect tokenizer format for " + path
