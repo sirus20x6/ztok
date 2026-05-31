@@ -50,6 +50,8 @@ public enum Normalizer: UInt32, Sendable {
 public enum PreTokenizer: UInt32, Sendable {
     case identity = 0
     case cl100k = 1
+    /// Mistral Tekken pattern (used by `Pipeline.fromTekken`).
+    case tekken = 2
 }
 
 /// Decoder kind (mirrors `ztok_decoder_kind`).

@@ -150,6 +150,23 @@ module Ztok
       wrap_or_yield(pipe, &block)
     end
 
+    # Load a Mistral Tekken tekken.json vocab (Nemo / Pixtral / Devstral /
+    # Magistral, etc.). The loader lowers Tekken's base64 byte vocab into a
+    # BPE with the special tokens packed into the bottom of the id space.
+    # The default pre-tokenizer is the Tekken pattern (PRETOK_TEKKEN) — NOT
+    # cl100k — and the default decoder is concat (pieces are raw bytes).
+    def self.from_tekken(path,
+                         normalizer: FFI::NORMALIZER_IDENTITY,
+                         pre_tokenizer: FFI::PRETOK_TEKKEN,
+                         decoder: FFI::DECODER_CONCAT,
+                         &block)
+      pipe = from_file_with_cfg(:ztok_pipeline_new_tekken_from_file, path,
+                                normalizer: normalizer,
+                                pre_tokenizer: pre_tokenizer,
+                                decoder: decoder)
+      wrap_or_yield(pipe, &block)
+    end
+
     # Auto-detect the file format and dispatch to the right loader:
     #
     #   .tiktoken            -> BPE + cl100k pre-tokenizer
@@ -181,6 +198,9 @@ module Ztok
         when :rwkv
           from_rwkv(path, normalizer: normalizer,
                           decoder: decoder || FFI::DECODER_CONCAT)
+        when :tekken
+          from_tekken(path, normalizer: normalizer,
+                            decoder: decoder || FFI::DECODER_CONCAT)
         else
           raise InvalidInputError,
                 "could not auto-detect tokenizer format for #{path.inspect}; " \

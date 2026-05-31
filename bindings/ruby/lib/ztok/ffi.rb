@@ -37,6 +37,7 @@ module Ztok
 
     PRETOK_IDENTITY = 0
     PRETOK_CL100K   = 1
+    PRETOK_TEKKEN   = 2
 
     MODEL_BYTE_ID = 0
 
@@ -146,6 +147,8 @@ module Ztok
     attach_function :ztok_pipeline_new_monster_from_file,
                     [:string, :pointer, :pointer], :pointer
     attach_function :ztok_pipeline_new_rwkv_from_file,
+                    [:string, :pointer, :pointer], :pointer
+    attach_function :ztok_pipeline_new_tekken_from_file,
                     [:string, :pointer, :pointer], :pointer
 
     # --- encode / decode ---------------------------------------------

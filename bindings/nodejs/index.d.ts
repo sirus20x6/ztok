@@ -139,12 +139,20 @@ export class Pipeline {
     static fromRWKV(path: string, opts?: PipelineLoadOptions): Pipeline;
 
     /**
+     * Load a Mistral Tekken `tekken.json` vocab (Nemo / Pixtral /
+     * Devstral / Magistral, etc.). Lowered into a BPE with the Tekken
+     * pre-tokenizer (PRETOK_TEKKEN) and a concat decoder by default.
+     */
+    static fromTekken(path: string, opts?: PipelineLoadOptions): Pipeline;
+
+    /**
      * Auto-detect the file format and dispatch to the right loader.
      *   - `.tiktoken`        -> BPE + cl100k pre-tokenizer
      *   - `tokenizer.json`   -> BPE (HF JSON)
      *   - `.model`           -> SentencePiece Unigram
      *   - `.ztm`             -> TokenMonster
      *   - RWKV World vocab   -> RWKV greedy byte trie
+     *   - `tekken.json`      -> Mistral Tekken
      */
     static fromPath(
         path: string,
@@ -249,6 +257,7 @@ export const NORMALIZER_BYTE_LEVEL: 5;
 
 export const PRETOK_IDENTITY: 0;
 export const PRETOK_CL100K: 1;
+export const PRETOK_TEKKEN: 2;
 
 export const DECODER_CONCAT: 0;
 export const DECODER_WORDPIECE: 1;

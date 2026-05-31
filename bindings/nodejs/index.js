@@ -294,11 +294,34 @@ class Pipeline {
     }
 
     /**
+     * Load a Mistral Tekken `tekken.json` vocab (Nemo / Pixtral / Devstral
+     * / Magistral, etc.).
+     *
+     * The loader lowers Tekken's base64 byte vocab into a BPE with the
+     * special tokens packed into the bottom of the id space. The default
+     * pre-tokenizer is the Tekken pattern (PRETOK_TEKKEN) — NOT cl100k —
+     * and the default decoder is concat (pieces are raw bytes).
+     */
+    static fromTekken(filePath, opts = {}) {
+        return Pipeline._fromFileWithCfg(
+            'ztok_pipeline_new_tekken_from_file',
+            filePath,
+            {
+                normalizer: opts.normalizer ?? ffi.NORMALIZER_IDENTITY,
+                pre_tokenizer: opts.preTokenizer ?? ffi.PRETOK_TEKKEN,
+                model: ffi.MODEL_BYTE_ID,
+                decoder: opts.decoder ?? ffi.DECODER_CONCAT,
+            }
+        );
+    }
+
+    /**
      * Auto-detect the file format and dispatch to the right loader.
      * - .tiktoken          -> BPE + cl100k pre-tokenizer
      * - tokenizer.json     -> BPE (HF JSON)
      * - .model             -> SentencePiece Unigram (unkId defaults to 0)
      * - .ztm               -> TokenMonster
+     * - tekken.json        -> Mistral Tekken (Nemo / Pixtral / Devstral)
      */
     static fromPath(filePath, opts = {}) {
         const fmt = ffi.detectFormat(filePath);
@@ -313,6 +336,8 @@ class Pipeline {
                 return Pipeline.fromMonster(filePath, opts);
             case 'rwkv':
                 return Pipeline.fromRWKV(filePath, opts);
+            case 'tekken':
+                return Pipeline.fromTekken(filePath, opts);
             default:
                 throw new ZtokInvalidInputError(
                     `could not auto-detect tokenizer format for ${filePath}; ` +
@@ -915,6 +940,7 @@ module.exports = {
     NORMALIZER_BYTE_LEVEL: ffi.NORMALIZER_BYTE_LEVEL,
     PRETOK_IDENTITY: ffi.PRETOK_IDENTITY,
     PRETOK_CL100K: ffi.PRETOK_CL100K,
+    PRETOK_TEKKEN: ffi.PRETOK_TEKKEN,
     DECODER_CONCAT: ffi.DECODER_CONCAT,
     DECODER_WORDPIECE: ffi.DECODER_WORDPIECE,
     DECODER_BYTE_LEVEL: ffi.DECODER_BYTE_LEVEL,

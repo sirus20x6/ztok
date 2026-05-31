@@ -44,6 +44,7 @@ pipe.close();
 | `tokenizer.json` (HF JSON) | `Pipeline.fromHfJson(...)`                   |
 | `.model` (SentencePiece)   | `Pipeline.fromSentencePiece(..., { unkId })` |
 | `.ztm` (TokenMonster)      | `Pipeline.fromMonster(...)`                  |
+| `tekken.json` (Mistral)    | `Pipeline.fromTekken(...)`                   |
 
 You can also call the loaders directly when you want to pin the
 pre-tokenizer / decoder, or set an `unkId` for SP / WordPiece models.
@@ -98,6 +99,7 @@ precise types (`Uint32Array` for ids, `Buffer` for raw decoded bytes,
 | `ztok.Pipeline.fromWordPiece(path, { unkId })` | WordPiece from a HuggingFace `tokenizer.json`.              |
 | `ztok.Pipeline.fromSentencePiece(path, opts?)` | Unigram from a SentencePiece `.model`.                      |
 | `ztok.Pipeline.fromMonster(path, opts?)`     | TokenMonster from a `.ztm` file.                              |
+| `ztok.Pipeline.fromTekken(path, opts?)`      | Mistral Tekken from a `tekken.json` file.                    |
 | `Pipeline.encode(text)` / `.decode(ids)`     | Encode / decode a single string (UTF-8).                      |
 | `Pipeline.decodeBytes(ids)`                  | Decode to raw `Buffer` (no UTF-8 round-trip).                 |
 | `Pipeline.encodeBatch(pool, inputs)`         | Multithreaded batch encode via a persistent pool.             |
