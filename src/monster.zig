@@ -1567,7 +1567,11 @@ pub const Monster = struct {
             //                         then a DEL marker, then the lilbuf-
             //                         prefixed lookahead. Also sets
             //                         forward_delete=1 for next iteration.
-            const Emit = enum { normal, del_before_first, first_del_second };
+            //   del_then_seed     — emit [DEL] (0 input bytes), advance 0,
+            //                       and seed the continuation as next iter's
+            //                       greedy (TM-Go score2 `case`: bare DEL +
+            //                       `goto checkpoint`).
+            const Emit = enum { normal, del_before_first, first_del_second, del_then_seed };
             var best_first_id: u32 = undefined;
             var best_advance: u32 = undefined;
             var best_second_id: u32 = NO_TOKEN;
@@ -2142,6 +2146,92 @@ pub const Monster = struct {
 
                 // gap #2 REVERTED: score-b folded inline above; no
                 // post-loop reconciliation needed.
+
+                // === TM-Go score2 bare-DEL twin-split at an alias position ===
+                // The residual: ztok's greedy here is a BARE v2 alias (e.g.
+                // `Ex`=722 reached via alias_lens_by_id). TM-Go, at this same
+                // input position, has TWO twin info entries and its score2
+                // emits the bare DEL (`\x7f`, 0-marker form, real length 1),
+                // `goto checkpoint`, and re-greedy-matches the longer
+                // space/marker-prefixed continuation (` Exp…`=4192) next iter.
+                // ztok has no branch that does this, so it stays combined.
+                // Inject TM's score2 as an explicit competing branch, scored
+                // with bare-DEL flags for the first token (DEL: real len 1)
+                // and a lilbuf-space longest-match continuation as the second.
+                // On win: emit [DEL] (0 input bytes), advance 0, and seed the
+                // continuation as next iter's greedy (TM's `goto checkpoint`),
+                // so the byte stream becomes [\x7f][ Exp…] exactly as TM-Go.
+                if (use_lilbuf and use_goto_checkpoint and
+                    greedy_from_bare_alias and
+                    self.delete_token_id != NO_TOKEN and
+                    self.lilbuf_marker_byte == 0x7F and
+                    self.has_space_prefix_tokens and
+                    i + 1 < chunk.len and
+                    isAsciiLetter(chunk[i]))
+                {
+                    // TM score2 first token = bare DEL covering exactly the
+                    // ONE real byte at chunk[i] (TM: original.length(1) -
+                    // forwardDelete). The continuation is the longest
+                    // space-prefixed match STARTING AT chunk[i] (the synthetic
+                    // ` ` stands in for the word boundary the normalizer
+                    // omitted at this intra-word camelCase seam). lilbuf-space
+                    // returns total = real_bytes + 1 (synthetic space).
+                    var d_sp_total: u32 = 0;
+                    const d_sp_id = self.lilbufSpaceLongestMatch(use_mask, chunk[i..], &d_sp_total);
+                    if (d_sp_id != NO_TOKEN and d_sp_total >= 3) {
+                        const d_sp_real: u32 = d_sp_total - 1; // real bytes covered by ` Exp…`
+                        // The continuation must cover STRICTLY MORE real bytes
+                        // than the bare-alias greedy (TM only splits when the
+                        // space-prefixed twin reaches further than the combined
+                        // `\x7f Ex` form). greedy_len_i is the bare alias real
+                        // length. Require the continuation to extend past it,
+                        // else the split is a no-op or a regression.
+                        if (@as(i32, @intCast(d_sp_real)) > greedy_len_i) {
+                            // First-token = bare DEL: real len 1, flags are the
+                            // DEL piece's own stored flags/nwords (read from the
+                            // vocab so a vocab that stores DEL differently stays
+                            // correct).
+                            const d_first_flag: u8 = self.flags[self.delete_token_id];
+                            const d_first_nw: i32 = @intCast(self.nwords_score[self.delete_token_id]);
+                            // Second = the space-prefixed continuation; use its
+                            // stored flags/nwords (it BEGINS with the synthetic
+                            // space). score2 form (NOT score-b): KEEP the
+                            // begins-space bonus and pay no extra-token penalty —
+                            // TM's score2 case emits only the bare DEL this iter;
+                            // the continuation is a normal greedy emit next iter.
+                            const d_sec_flag: u8 = self.flags[d_sp_id];
+                            const d_sec_nw: i32 = @intCast(self.nwords_score[d_sp_id]);
+                            const d_tail: usize = i + d_sp_real;
+                            const d_next_bb: u8 = if (d_tail >= chunk.len) 0 else self.begin_byte[chunk[d_tail]];
+                            // is_alt=true so TM's score2 length deductions vs
+                            // greedy_len_i apply (branch_len = 1 + d_sp_real vs
+                            // the bare-alias greedy_len_i; LessThan ⇒ -100,
+                            // Equal ⇒ -10000).
+                            const d_score = tmScore(
+                                1, // bare DEL real length
+                                @as(i32, @intCast(d_sp_real)),
+                                d_first_flag,
+                                d_sec_flag,
+                                d_first_nw,
+                                d_sec_nw,
+                                d_next_bb,
+                                true, // is_alt — apply score2 length deductions
+                                greedy_len_i,
+                                0, // score2 (NOT score-b): no extra-token penalty
+                                false, // keep begins-space bonus (score2, not score-b)
+                            );
+                            if (d_score > best_score) {
+                                best_score = d_score;
+                                best_first_id = self.delete_token_id; // bare \x7f, emitted first
+                                best_advance = 0; // DEL covers 0 input bytes
+                                best_second_id = d_sp_id; // continuation, seeded next iter
+                                best_lb_real = d_sp_real; // real bytes the continuation covers
+                                best_emit = .del_then_seed;
+                                winner_sets_fd = false; // score2, NOT score-b: forward_delete stays 0
+                            }
+                        }
+                    }
+                }
             }
 
             // 7th branch (path b): lilbuf (synthetic `\x7f ` prefix).
@@ -2672,6 +2762,7 @@ pub const Monster = struct {
                 .normal => "normal",
                 .del_before_first => "del_before_first",
                 .first_del_second => "first_del_second",
+                .del_then_seed => "del_then_seed",
             }, best_first_id, best_second_id, best_score, best_advance - seed_advance_adj);
 
             switch (best_emit) {
@@ -2743,6 +2834,25 @@ pub const Monster = struct {
                         out[write] = best_second_id;
                         write += 1;
                         i += alt_first_advance + lb_real_emit;
+                    }
+                },
+                .del_then_seed => {
+                    // TM-Go score2 `case`: emit bare DEL (0 input bytes),
+                    // advance 0, and seed the continuation as next iter's
+                    // greedy (TM's `goto checkpoint`). Mirrors the
+                    // first_del_second goto-checkpoint seeding but with NO
+                    // alt-first token (DEL is emitted alone this iter).
+                    std.debug.assert(write < out.len);
+                    out[write] = self.delete_token_id;
+                    write += 1;
+                    // i unchanged (DEL covers 0 input bytes); seed the
+                    // space-prefixed continuation so the next iteration
+                    // replays it as the synthetic greedy and runs its own
+                    // alt ladder, yielding [\x7f][ Exp…] exactly as TM-Go.
+                    if (best_lb_real > 0) {
+                        next_forward_lilbuf = true;
+                        next_seed_id = best_second_id;
+                        next_seed_real_len = best_lb_real;
                     }
                 },
             }
