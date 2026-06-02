@@ -12,6 +12,7 @@ const std = @import("std");
 const Span = @import("token.zig").Span;
 const cl100k = @import("cl100k.zig");
 const cl100k_split = cl100k.split;
+const o200k = @import("o200k.zig");
 const tekken_pretok = @import("tekken_pretok.zig");
 const hf_bytelevel = @import("hf_bytelevel_pretok.zig");
 
@@ -36,6 +37,10 @@ pub const PreTokenizer = union(enum) {
     identity,
     /// tiktoken's cl100k_base regex.
     cl100k,
+    /// tiktoken's o200k_base / o200k_harmony (GPT-OSS) regex. Case-aware
+    /// letter runs, contraction suffixes, and a `/`-tolerant punctuation
+    /// tail — see `o200k.zig`.
+    o200k,
     /// Mistral Tekken's pre-tokenization pattern (a hand-written matcher
     /// for the `config.pattern` PCRE the Tekken loader ships — NOT cl100k;
     /// see `tekken_pretok.zig`). Splits into byte spans; the raw bytes are
@@ -79,6 +84,10 @@ pub const PreTokenizer = union(enum) {
         return switch (self) {
             .identity => findCodepointSafeCut(input, desired, window),
             .cl100k => cl100k.findSafeCut(input, desired, window),
+            // o200k's whitespace/newline reflow boundaries are the same as
+            // cl100k's (`\s*[\r\n]+`, `\s+(?!\S)`, `\s+` are identical), so
+            // the `\n`-before-non-ws cut rule is equally safe here.
+            .o200k => cl100k.findSafeCut(input, desired, window),
             // Tekken's pattern never reflows across a `\n`-before-non-ws
             // boundary (same conservative rule as the HF pretoks), so we
             // reuse `cl100k.findSafeCut` for chunked splitting.
@@ -93,7 +102,7 @@ pub const PreTokenizer = union(enum) {
     /// those in U+0100..U+0142 take 2 UTF-8 bytes, so the factor is 2.
     pub fn maxByteExpansion(self: PreTokenizer) usize {
         return switch (self) {
-            .identity, .cl100k, .tekken => 1,
+            .identity, .cl100k, .o200k, .tekken => 1,
             .hf_byte_level => 2,
             .chain => |c| c.maxByteExpansion(),
         };
@@ -112,6 +121,10 @@ pub const PreTokenizer = union(enum) {
             },
             .cl100k => {
                 const spans = try cl100k_split(allocator, input);
+                return .{ .data = input, .owned_data = false, .spans = spans };
+            },
+            .o200k => {
+                const spans = try o200k.split(allocator, input);
                 return .{ .data = input, .owned_data = false, .spans = spans };
             },
             .tekken => {

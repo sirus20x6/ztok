@@ -88,8 +88,12 @@ pub const vocab_viz = @import("vocab_viz.zig");
 
 // Pre-tokenizers
 pub const cl100k = @import("cl100k.zig");
+pub const o200k = @import("o200k.zig");
 pub const hf_bytelevel_pretok = @import("hf_bytelevel_pretok.zig");
 pub const hf_regex = @import("hf_regex.zig");
+
+// Tokenizer loaders
+pub const o200k_harmony = @import("o200k_harmony.zig");
 
 // Capcode
 pub const capcode = @import("capcode.zig");
@@ -216,6 +220,8 @@ test {
     _ = vocab_continued_pretrain;
     _ = vocab_viz;
     _ = cl100k;
+    _ = o200k;
+    _ = o200k_harmony;
     _ = hf_bytelevel_pretok;
     _ = hf_regex;
     _ = capcode;
