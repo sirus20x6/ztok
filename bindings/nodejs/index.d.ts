@@ -274,7 +274,7 @@ export function hashNgramsBatch(
     heads: number
 ): BigUint64Array[];
 
-/** Returns the libztok version string (e.g. "1.19.0"). */
+/** Returns the libztok version string (e.g. "1.28.0"). */
 export function version(): string;
 
 /** Auto-detect the on-disk tokenizer format of `path`. Best-effort. */

@@ -128,6 +128,36 @@ All errors derive from `ZtokError`. Status codes map to subclasses:
 Library-load failures throw `ZtokLibraryNotFoundError` (distinct because they
 happen at module import, before any pipeline exists).
 
+## New in 1.28 — token-window chunking, n-gram hashing, RWKV
+
+**Token-window chunking** for late-chunking embedding pipelines:
+
+```js
+const pipe = ztok.Pipeline.byteId();
+for (const ch of pipe.chunk('the quick brown fox', { maxTokens: 8, overlap: 2 })) {
+    console.log(ch.ids, ch.byteStart, ch.byteEnd, ch.tokenStart, ch.tokenEnd);
+}
+pipe.close();
+```
+
+**Engram n-gram hashing** — deterministic multi-head token-n-gram hashes
+(row-major `[position][head]`, raw u64; mask to your table width):
+
+```js
+const ids = new Uint32Array([10, 20, 30, 40, 50]);
+const hashes = ztok.hashNgrams(ids, 3, 4);  // BigUint64Array
+// hashes.length === (ids.length - n + 1) * heads === 12
+```
+
+**RWKV "World" tokenizer** — greedy longest-match byte trie (no normalizer
+or pre-tokenizer; byte-lossless):
+
+```js
+const pipe = ztok.Pipeline.fromRWKV('rwkv_vocab_v20230424.txt');
+const ids = pipe.encode('hello world');
+pipe.close();
+```
+
 ## Notes on the C ABI
 
 - This is a *thin* wrapper. The C library owns every id buffer and vocab

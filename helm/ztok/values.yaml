@@ -19,7 +19,7 @@ image:
   repository: ghcr.io/sirus20x6/ztok
   # -- Image tag. Pinning to an exact version (not `latest`) is
   # strongly recommended in production so rollbacks are deterministic.
-  tag: 1.22.0
+  tag: 1.28.0
   # -- Image pull policy. `IfNotPresent` is the right default for
   # pinned tags; switch to `Always` if you use mutable tags like
   # `main` or `nightly`.

@@ -103,6 +103,37 @@ try (Pipeline pipe = Pipeline.byteId();
 }
 ```
 
+## New in 1.28 — token-window chunking, n-gram hashing, RWKV
+
+**Token-window chunking** for late-chunking embedding pipelines:
+
+```java
+try (Pipeline pipe = Pipeline.byteId()) {
+    for (Chunk ch : pipe.chunk("the quick brown fox", 8, 2)) {
+        System.out.printf("ids=%d bytes=%d..%d toks=%d..%d%n",
+            ch.ids.length, ch.byteStart, ch.byteEnd, ch.tokenStart, ch.tokenEnd);
+    }
+}
+```
+
+**Engram n-gram hashing** — deterministic multi-head token-n-gram hashes
+(row-major `[position][head]`, raw u64 in `long`s; mask to your table width):
+
+```java
+int[] ids = {10, 20, 30, 40, 50};
+long[] hashes = Engram.hashNGrams(ids, 3, 4);  // unsigned bits
+// hashes.length == (ids.length - n + 1) * heads == 12
+```
+
+**RWKV "World" tokenizer** — greedy longest-match byte trie (no normalizer
+or pre-tokenizer; byte-lossless):
+
+```java
+try (Pipeline pipe = Pipeline.fromRwkv(java.nio.file.Path.of("rwkv_vocab_v20230424.txt"))) {
+    int[] ids = pipe.encode("hello world");
+}
+```
+
 ## Threading
 
 `Pipeline` is **thread-safe** for `encode` / `decode` / `encodeBatch` /

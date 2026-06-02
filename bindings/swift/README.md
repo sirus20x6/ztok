@@ -189,6 +189,36 @@ do {
 | post-`close()` call           | `.closed(op:)`                        |
 | non-UTF-8 decoded bytes       | `.invalidUtf8`                        |
 
+## New in 1.28 — token-window chunking, n-gram hashing, RWKV
+
+**Token-window chunking** for late-chunking embedding pipelines:
+
+```swift
+let pipe = try Pipeline.byteId()
+defer { pipe.close() }
+for ch in try pipe.chunk("the quick brown fox", maxTokens: 8, overlap: 2) {
+    print("\(ch.ids) bytes=\(ch.byteStart)..\(ch.byteEnd) toks=\(ch.tokenStart)..\(ch.tokenEnd)")
+}
+```
+
+**Engram n-gram hashing** — deterministic multi-head token-n-gram hashes
+(row-major `[position][head]`, raw u64; mask to your table width):
+
+```swift
+let ids: [UInt32] = [10, 20, 30, 40, 50]
+let hashes = try Engram.hashNGrams(ids, n: 3, heads: 4)
+// hashes.count == (ids.count - n + 1) * heads == 12
+```
+
+**RWKV "World" tokenizer** — greedy longest-match byte trie (no normalizer
+or pre-tokenizer; byte-lossless):
+
+```swift
+let pipe = try Pipeline.fromRwkv(path: "rwkv_vocab_v20230424.txt")
+defer { pipe.close() }
+let ids = try pipe.encode("hello world")
+```
+
 ## Wrapped C ABI surface
 
 Every function declared in `include/ztok.h` for libztok 1.24 is wrapped:

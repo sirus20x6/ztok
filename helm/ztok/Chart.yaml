@@ -8,7 +8,7 @@ type: application
 version: 0.1.0
 # appVersion tracks the ztok binary inside the published image. Keep
 # in sync with .image.tag default in values.yaml.
-appVersion: "1.22.0"
+appVersion: "1.28.0"
 kubeVersion: ">=1.23.0-0"
 home: https://github.com/sirus20x6/ztok
 sources:

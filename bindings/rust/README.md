@@ -137,6 +137,40 @@ a fresh worker pool every invocation). Use `BatchPool` instead — it
 reuses arenas + worker threads across calls and is the surface every
 other binding promotes as primary.
 
+## New in 1.28 — token-window chunking, n-gram hashing, RWKV
+
+**Token-window chunking** for late-chunking embedding pipelines:
+
+```rust
+use ztok::{ChunkBoundary, Pipeline};
+
+let pipe = Pipeline::byte_id()?;
+for ch in pipe.chunk("the quick brown fox", 8, 2, ChunkBoundary::Token)? {
+    println!("ids={:?} bytes={}..{} toks={}..{}",
+        ch.ids, ch.byte_start, ch.byte_end, ch.token_start, ch.token_end);
+}
+# Ok::<(), ztok::Error>(())
+```
+
+**Engram n-gram hashing** — deterministic multi-head token-n-gram hashes
+(row-major `[position][head]`, raw u64; mask to your table width):
+
+```rust
+let ids: Vec<u32> = vec![10, 20, 30, 40, 50];
+let hashes = ztok::hash_ngrams(&ids, 3, 4)?;
+// hashes.len() == (ids.len() - n + 1) * heads == 12
+# Ok::<(), ztok::Error>(())
+```
+
+**RWKV "World" tokenizer** — greedy longest-match byte trie (no normalizer
+or pre-tokenizer; byte-lossless):
+
+```rust
+let pipe = Pipeline::from_rwkv("rwkv_vocab_v20230424.txt")?;
+let ids = pipe.encode("hello world")?;
+# Ok::<(), ztok::Error>(())
+```
+
 ## MSRV
 
 **Rust 1.74** (current stable minus one minor). Conservative — the crate

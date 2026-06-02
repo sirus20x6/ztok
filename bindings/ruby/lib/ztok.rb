@@ -34,7 +34,7 @@ require_relative "ztok/stream_encoder"
 require_relative "ztok/pipeline"
 
 module Ztok
-  # Returns the libztok version string (e.g. "1.20.0") as reported by
+  # Returns the libztok version string (e.g. "1.28.0") as reported by
   # the loaded shared library — NOT the gem's bundled VERSION constant.
   # If they ever disagree, ztok.so was loaded from somewhere unexpected.
   def self.version

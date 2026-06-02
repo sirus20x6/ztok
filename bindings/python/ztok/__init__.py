@@ -138,7 +138,7 @@ def _get_lib() -> ctypes.CDLL:
 
 
 def version() -> str:
-    """Return the libztok version string (e.g. ``"1.16.0"``)."""
+    """Return the libztok version string (e.g. ``"1.28.0"``)."""
 
     lib = _get_lib()
     raw = lib.ztok_version()

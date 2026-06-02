@@ -4,7 +4,7 @@
 //
 // Idiomatic Swift wrapper over the C ABI declared in `include/ztok.h`,
 // mirroring the surface of the Python / Node / Ruby / Go / Rust / .NET /
-// Java bindings. Targets libztok 1.24.
+// Java bindings. Targets libztok 1.28.
 //
 // Layout:
 //   Sources/CZtok   — C interop shim. The module.modulemap exposes

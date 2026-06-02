@@ -181,6 +181,38 @@ if errors.As(err, &iie) {
 `ErrClosed` is the sentinel returned by methods on a closed
 Pipeline/BatchPool — match with `errors.Is`.
 
+## New in 1.28 — token-window chunking, n-gram hashing, RWKV
+
+**Token-window chunking** for late-chunking embedding pipelines:
+
+```go
+pipe, _ := ztok.NewByteID(nil)
+defer pipe.Close()
+
+chunks, _ := pipe.Chunk("the quick brown fox", ztok.ChunkOptions{MaxTokens: 8, Overlap: 2})
+for _, c := range chunks {
+    fmt.Println(c.IDs, c.ByteStart, c.ByteEnd, c.TokenStart, c.TokenEnd)
+}
+```
+
+**Engram n-gram hashing** — deterministic multi-head token-n-gram hashes
+(row-major `[position][head]`, raw u64; mask to your table width):
+
+```go
+ids := []uint32{10, 20, 30, 40, 50}
+hashes, _ := ztok.HashNGrams(ids, 3, 4)
+// len(hashes) == (len(ids) - n + 1) * heads == 12
+```
+
+**RWKV "World" tokenizer** — greedy longest-match byte trie (no normalizer
+or pre-tokenizer; byte-lossless):
+
+```go
+pipe, _ := ztok.OpenRWKVWorld("rwkv_vocab_v20230424.txt")
+defer pipe.Close()
+ids, _ := pipe.Encode("hello world")
+```
+
 ## Notes on the C ABI
 
 - This is a *thin* wrapper. The C library owns every id buffer and

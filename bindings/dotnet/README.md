@@ -123,6 +123,33 @@ variant). Use `BatchPool` instead — it reuses arenas + worker threads
 across calls and is what every other binding offers as the primary
 batch surface.
 
+## New in 1.28 — token-window chunking, n-gram hashing, RWKV
+
+**Token-window chunking** for late-chunking embedding pipelines:
+
+```csharp
+using var pipe = Pipeline.ByteId();
+foreach (var ch in pipe.Chunk("the quick brown fox", maxTokens: 8, overlap: 2))
+    Console.WriteLine($"{string.Join(',', ch.Ids)} bytes={ch.ByteStart}..{ch.ByteEnd} toks={ch.TokenStart}..{ch.TokenEnd}");
+```
+
+**Engram n-gram hashing** — deterministic multi-head token-n-gram hashes
+(row-major `[position][head]`, raw u64; mask to your table width):
+
+```csharp
+uint[] ids = { 10, 20, 30, 40, 50 };
+ulong[] hashes = Engram.HashNGrams(ids, n: 3, heads: 4);
+// hashes.Length == (ids.Length - n + 1) * heads == 12
+```
+
+**RWKV "World" tokenizer** — greedy longest-match byte trie (no normalizer
+or pre-tokenizer; byte-lossless):
+
+```csharp
+using var pipe = Pipeline.FromRwkv("rwkv_vocab_v20230424.txt");
+uint[] ids = pipe.Encode("hello world");
+```
+
 ## Threading
 
 - `Pipeline.Encode`, `Pipeline.Decode`, and `Pipeline.Fingerprint` are

@@ -47,7 +47,7 @@ import (
 // stream that has already been closed.
 var ErrClosed = errors.New("ztok: handle is closed")
 
-// Version returns the libztok version string (e.g. "1.20.0").
+// Version returns the libztok version string (e.g. "1.28.0").
 func Version() string {
 	raw := C.ztok_version()
 	if raw == nil {

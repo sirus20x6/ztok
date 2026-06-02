@@ -41,7 +41,7 @@ const Bpe = @import("bpe.zig").Bpe;
 // doesn't break us.
 const gpa: std.mem.Allocator = std.heap.wasm_allocator;
 
-const VERSION = "1.16.0-wasm";
+const VERSION = "1.28.0-wasm";
 
 // --- status codes -----------------------------------------------------
 // Mirrors `c_api.zig`'s codes so JS can rely on the same constants.

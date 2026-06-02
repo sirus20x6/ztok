@@ -616,7 +616,7 @@ public final class Pipeline: @unchecked Sendable {
 // MARK: - free functions
 
 extension Pipeline {
-    /// Return libztok's version string (e.g. `"1.24.0"`).
+    /// Return libztok's version string (e.g. `"1.28.0"`).
     public static func version() -> String {
         guard let raw = ztok_version() else { return Pipeline.unknownVersion }
         return String(cString: raw)
