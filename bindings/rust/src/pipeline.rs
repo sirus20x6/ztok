@@ -820,7 +820,7 @@ impl Drop for Pipeline {
     }
 }
 
-/// Return libztok's version string (e.g. `"1.22.0"`).
+/// Return libztok's version string (e.g. `"1.28.0"`).
 pub fn version() -> Result<String> {
     let raw = unsafe { sys::ztok_version() };
     if raw.is_null() {

@@ -16,7 +16,7 @@ import java.nio.file.Path;
 public final class Ztok {
     private Ztok() {}
 
-    /** libztok version string (e.g. "1.23.0"). */
+    /** libztok version string (e.g. "1.28.0"). */
     public static String version() {
         try {
             MemorySegment ptr = (MemorySegment) Native.ZTOK_VERSION.invoke();

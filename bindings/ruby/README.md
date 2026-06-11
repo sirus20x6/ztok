@@ -14,7 +14,7 @@ ids  = pipe.encode("hello world")                  # => Array<Integer>
 text = pipe.decode(ids)                            # => "hello world"
 pipe.close
 
-puts Ztok.version # => "1.20.0"
+puts Ztok.version # => "1.28.0"
 ```
 
 Block-form auto-closes (recommended):
@@ -134,6 +134,36 @@ Instance methods:
   - `Ztok::InvalidInputError` — `ZTOK_ERR_INVALID_INPUT` (status 2).
   - `Ztok::BufferTooSmallError` — `ZTOK_ERR_BUFFER_TOO_SMALL` (status 3).
   - `Ztok::InternalError` — `ZTOK_ERR_INTERNAL` (status 99) + unknown codes.
+
+## New in 1.28 — token-window chunking, n-gram hashing, RWKV
+
+**Token-window chunking** for late-chunking embedding pipelines:
+
+```ruby
+Ztok::Pipeline.byte_id do |pipe|
+  pipe.chunk("the quick brown fox", max_tokens: 8, overlap: 2).each do |ch|
+    puts "#{ch.ids.inspect} bytes=#{ch.byte_start}..#{ch.byte_end} toks=#{ch.token_start}..#{ch.token_end}"
+  end
+end
+```
+
+**Engram n-gram hashing** — deterministic multi-head token-n-gram hashes
+(row-major `[position][head]`, raw u64; mask to your table width):
+
+```ruby
+ids = [10, 20, 30, 40, 50]
+hashes = Ztok.ngram_hash(ids, n: 3, heads: 4)
+# hashes.length == (ids.length - n + 1) * heads == 12
+```
+
+**RWKV "World" tokenizer** — greedy longest-match byte trie (no normalizer
+or pre-tokenizer; byte-lossless):
+
+```ruby
+Ztok::Pipeline.from_rwkv("rwkv_vocab_v20230424.txt") do |pipe|
+  ids = pipe.encode("hello world")
+end
+```
 
 ## Tests
 

@@ -138,7 +138,7 @@ public enum OverlayDomain : uint
 public static class ZtokLibrary
 {
     /// <summary>
-    /// libztok version string (e.g. <c>"1.23.0"</c>).
+    /// libztok version string (e.g. <c>"1.28.0"</c>).
     /// </summary>
     public static string Version
     {

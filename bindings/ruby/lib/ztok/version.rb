@@ -5,5 +5,5 @@ module Ztok
   # runtime `Ztok.version` value is read straight from `ztok_version()`
   # in the loaded shared library; this constant is the gem-side
   # advertisement.
-  VERSION = "1.20.0"
+  VERSION = "1.21.0"
 end

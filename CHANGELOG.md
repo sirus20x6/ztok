@@ -12,6 +12,114 @@ Headline numbers throughout this changelog come from `bench/RESULTS.md`
 (AMD EPYC 7473X reference box: 24 physical / 48 SMT cores, ReleaseFast,
 10 MB mixed-text corpus, unless noted otherwise).
 
+## [1.28.0] — 2026-05-29
+
+**Headline: three architecture-driven features across every binding, plus
+a GPT-OSS tokenizer and tighter TokenMonster parity.** Ships three
+additions targeting 2026-era model families — Engram-style deterministic
+n-gram hashing, the RWKV "World" greedy byte tokenizer, and token-window
+chunking — rolled through all 8 language bindings in one release. The Zig
+core additionally gains the o200k_harmony (GPT-OSS) tiktoken loader and a
+tighter-still bit-for-bit TokenMonster-Go encode path. The chunking
+algorithm was already in Zig but invisible to FFI consumers; n-gram
+hashing and RWKV are new surfaces. Includes a build-system fix that
+unbroke pkg-config consumers of relative-prefix installs. **1148/1152
+tests** (4 skipped).
+
+### Added
+
+- **Engram n-gram hashing** — `ngram.zig` emits deterministic multi-head
+  token-n-gram hashes (row-major `[position][head]`, raw u64, caller
+  masks to its table width), shaped for DeepSeek Engram's
+  conditional-memory addressing. C ABI: `ztok_ngram_hash` /
+  `ztok_ngram_hash_batch` + `ztok_u64s_free`. Operates on raw token ids
+  — no Pipeline handle needed. Batch path fans out across a
+  `BatchPool`, mirroring `encodeBatch`.
+- **RWKV "World" tokenizer** — `rwkv_world.zig`: greedy longest-match
+  byte trie with O(1) first-byte dispatch, loaded from
+  `rwkv_vocab_v20230424.txt`. No pre-tokenizer/normalizer (every byte
+  0..255 is a token, so encode never fails). C ABI:
+  `ztok_pipeline_new_rwkv_from_file`; `ztok_format` gains
+  `ZTOK_FORMAT_RWKV = 6`; auto-detect sniffs the
+  `<id> <python-repr> <byte-len>` line shape. Vocab fixture vendored at
+  `bench/vocabs/rwkv_vocab_v20230424.txt` (391 KB, 65529 entries).
+  Opens ztok to the RWKV / RWKV-8 ROSA ecosystem.
+- **o200k_harmony (GPT-OSS) tokenizer** — `o200k.zig` is a hand-written
+  case-aware GPT-4o-class pre-tokenizer (`\p{Lu}*\p{Ll}+` / `\p{Lu}+\p{Ll}*`
+  letter runs, `\p{M}` marks, case-insensitive contractions, a `/`-tail,
+  `\p{N}{1,3}` digit groups); `o200k_harmony.zig` loads the
+  `o200k_harmony.tiktoken` ranks plus the 1091 Harmony special tokens from
+  `meta.json` (registered as atomic added tokens, scanned ahead of
+  pretok+BPE). Encode is bit-exact to tiktoken 0.12.0 across all 6 goldens
+  and novel cross-checks. Zig core only for now (not yet fanned out to the
+  language bindings); decode of the special ids is out of scope — the
+  loader is encode-only by design.
+- **Token-window chunking through the C ABI** — `ztok_chunk` /
+  `ztok_chunks_free` + `ztok_chunk_rec` + `ztok_chunk_boundary` enum:
+  emits records carrying `ids`, `byte_start/end`, `token_start/end` for
+  late-chunking embedding pipelines. The chunker existed in Zig since
+  1.25; this exposes it to every FFI binding.
+- **`chunk.chunkIds`** — windows over an already-encoded `[]TokenId`
+  (with optional `[]Span`) without re-tokenizing. Pure late-chunking
+  entry, useful when ids and the model are decoupled.
+- **All three features in every binding** — Python, Rust, Node.js,
+  .NET, Java, Ruby, Swift, and Go now expose n-gram hashing, chunking,
+  and `from_rwkv`. Each port carries its own test suite mirroring the
+  Python reference. Swift remains written+reviewed but not
+  compile-tested (no `swift` toolchain in the dev env, matching the
+  binding's standing constraint).
+- **RWKV bit-parity gate** — `src/rwkv_world.zig` has a permanent in-
+  tree test that loads the canonical vocab fixture (skips if absent)
+  and checks 8 golden encodings + a no-UNK round-trip.
+  `bench/rwkv_parity.py` is a clean-room reference implementation for
+  out-of-band verification; 19/19 cases (samples + 5 corpora) match.
+- **`ztok tokenize-dataset`** CLI — corpus → packed token arrays
+  (uint16/uint32) for training-time consumers, with deterministic
+  sharding and a manifest sidecar.
+
+### Fixed
+
+- **Relative-prefix pkg-config / CMake exports** — `zig build -p <rel>`
+  baked the verbatim relative path into `ztok.pc` (`prefix=prefix`),
+  emitting relative `-Lprefix/lib -Iprefix/include` that only resolved
+  when the compiler ran from the one directory containing the install
+  tree. cgo consumers picking ztok up via `PKG_CONFIG_PATH` from
+  elsewhere — i.e. the documented Go workflow — failed to find the
+  header/lib; the CMake imported-target file had the same flaw.
+  `emitConsumerConfigs` now absolutizes a relative prefix against the
+  build root (the same mechanism std uses for the default `zig-out`).
+- **vscode-ztok**: pinned `serialize-javascript` to `>=7.0.5` to clear
+  a transitive advisory.
+
+### Changed
+
+- **Tighter TokenMonster-Go parity** — a new score2 `.del_then_seed` emit
+  branch handles the bare-DELETE twin-split at camelCase alias seams,
+  lifting nocapcode×english encode equivalence 92→93% on the 4-cell
+  100-line gate with zero regression (matrix now 93/93/96/96). The
+  remaining diffs are a known handful of capcode-marker lines at/near the
+  `.ztm` v3 format's practical ceiling.
+- CI: Go cgo binding now resolves libztok through pkg-config
+  end-to-end. macOS leg is non-blocking with a 30-minute cap so a
+  flaky runner doesn't gate the matrix.
+- Docs: README throughput chart split as a range across two corpora,
+  plus a ztok-vs-the-field single-thread comparison.
+
+### Binding versions
+
+Each binding minor-bumps for the three new public APIs:
+
+| Binding | Was → Now |
+|---|---|
+| Python  | 1.16.0 → 1.17.0 |
+| Node.js | 1.19.0 → 1.20.0 |
+| Ruby    | 1.20.0 → 1.21.0 |
+| Rust    | 1.22.0 → 1.23.0 |
+| .NET    | 1.23.0 → 1.24.0 |
+| Java    | 1.23.0 → 1.24.0 |
+| Swift   | (no manifest version; `Package.swift` comment retargets to 1.28) |
+| Go      | tracked via git tags only |
+
 ## [1.27.0] — 2026-05-21
 
 **Headline: the first public release.** Completes overlays across all 8

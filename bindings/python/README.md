@@ -63,7 +63,7 @@ pool owns persistent worker threads + arenas.
 
 | Symbol                                  | Purpose                                                     |
 |-----------------------------------------|-------------------------------------------------------------|
-| `ztok.version()`                        | Returns the libztok version string (e.g. `"1.16.0"`).       |
+| `ztok.version()`                        | Returns the libztok version string (e.g. `"1.28.0"`).       |
 | `ztok.Pipeline.byte_id(...)`            | Baseline byte_id pipeline (one id per input byte).          |
 | `ztok.Pipeline.from_path(path)`         | Auto-detect format and dispatch to the right loader.        |
 | `ztok.Pipeline.from_tiktoken(path, cl100k=True)` | Byte-level BPE from a `.tiktoken` file.            |
@@ -90,6 +90,33 @@ All errors derive from `ZtokError`. Status codes map to subclasses:
 | `ZTOK_ERR_INVALID_INPUT`      | `ZtokInvalidInputError`           |
 | `ZTOK_ERR_BUFFER_TOO_SMALL`   | `ZtokBufferTooSmallError`         |
 | `ZTOK_ERR_INTERNAL` / unknown | `ZtokInternalError`               |
+
+## New in 1.28 — token-window chunking, n-gram hashing, RWKV
+
+**Token-window chunking** for late-chunking embedding pipelines:
+
+```python
+with ztok.Pipeline.byte_id() as pipe:
+    for ch in pipe.chunk("the quick brown fox", max_tokens=8, overlap=2):
+        print(ch.ids, ch.byte_start, ch.byte_end, ch.token_start, ch.token_end)
+```
+
+**Engram n-gram hashing** — deterministic multi-head token-n-gram hashes
+(row-major `[position][head]`, raw u64; mask to your table width):
+
+```python
+ids = [10, 20, 30, 40, 50]
+hashes = ztok.ngram_hash(ids, n=3, heads=4)
+# len(hashes) == (len(ids) - n + 1) * heads == 12
+```
+
+**RWKV "World" tokenizer** — greedy longest-match byte trie (no normalizer
+or pre-tokenizer; byte-lossless):
+
+```python
+with ztok.Pipeline.from_rwkv("rwkv_vocab_v20230424.txt") as pipe:
+    ids = pipe.encode("hello world")
+```
 
 ## Notes on the C ABI
 
