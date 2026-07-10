@@ -21,6 +21,7 @@ pub const decoder = @import("decoder.zig");
 pub const pipeline = @import("pipeline.zig");
 pub const fingerprint = @import("fingerprint.zig");
 pub const thread_pool = @import("thread_pool.zig");
+pub const connection_pool = @import("connection_pool.zig");
 pub const trace = @import("trace.zig");
 pub const ngram = @import("ngram.zig");
 
@@ -173,6 +174,7 @@ test {
     _ = model;
     _ = decoder;
     _ = thread_pool;
+    _ = connection_pool;
     _ = ngram;
     _ = pipeline;
     _ = fingerprint;

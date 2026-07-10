@@ -2,12 +2,12 @@
 """Render the ztok-vs-the-field chart (docs/competitors.png).
 
 Single-thread encode throughput, ztok vs each reference library on *that
-library's own vocab*, over the same 9.06 MB corpus, same machine. Each
-pair is id-matched (ztok and the competitor emit the same token count on
-the corpus, within chunk-seam noise), so every bar pair is a true
-like-for-like comparison — same vocab, same algorithm, same bytes.
+library's own vocab*, over the same 9.06 MB corpus, same machine. Token
+counts are exact for cl100k and Llama-2 BPE and differ by less than 0.1%
+for GPT-2 and T5 Unigram. Every value is the median of three independent
+warm-loop runs.
 
-Measured 2026-05-22 on the reference box (AMD EPYC 7473X, 24c/48t),
+Measured 2026-07-10 on the reference box (AMD EPYC 7473X, 24c/48t),
 ReleaseFast, warm loop (8 iters).
 
 ztok side:   tiktoken/cl100k + HF/gpt2 via `ztok bench --corpus-file`;
@@ -17,21 +17,20 @@ competitor:  bench/bench_competitors.py --lib {tiktoken,hf,sentencepiece}
 Regenerate with:  python3 docs/competitors_chart.py
 """
 
+import json
+from pathlib import Path
+
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 
-# (label, ztok MB/s, competitor MB/s) — single-thread, id-matched.
-rows = [
-    ("tiktoken\n(cl100k)", 19.6, 10.4),
-    ("HF tokenizers\n(gpt2)", 4.8, 1.5),
-    ("SentencePiece\nBPE (llama2)", 3.0, 1.5),
-    ("SentencePiece\nUnigram (t5)", 16.7, 10.3),
-]
-labels = [r[0] for r in rows]
-ztok = [r[1] for r in rows]
-comp = [r[2] for r in rows]
+HERE = Path(__file__).resolve().parent
+DATA = json.loads((HERE / "benchmark_data.json").read_text())
+rows = DATA["single_thread_competitors"]
+labels = [r["label"] for r in rows]
+ztok = [r["ztok_median_mb_s"] for r in rows]
+comp = [r["reference_median_mb_s"] for r in rows]
 
 x = np.arange(len(rows))
 w = 0.38
@@ -60,12 +59,12 @@ ax.spines[["top", "right"]].set_visible(False)
 ax.tick_params(labelsize=10)
 ax.legend(loc="upper right", fontsize=11, frameon=False)
 ax.text(0.5, -0.26,
-        "ReleaseFast, AMD EPYC 7473X, same 9 MB corpus & vocab per pair, warm loop (8 iters). "
-        "Each pair is id-matched.\n"
-        "Multithreaded gap is larger: vs tiktoken 3.8× and vs SentencePiece 3.3–5.6× at batch ×48 (see throughput.png).",
+        "ReleaseFast, AMD EPYC 7473X, same 9.06 MB corpus & vocab per pair, 8 iters/run, median of 3 runs.\n"
+        "Counts exact for cl100k/Llama-2 BPE; GPT-2/T5 differ <0.1%. cl100k scaling is shown in throughput.png.",
         transform=ax.transAxes, ha="center", va="top", fontsize=8.0,
         color="#718096", family="monospace")
 
 plt.tight_layout()
-fig.savefig("docs/competitors.png", dpi=150, bbox_inches="tight", facecolor="white")
-print("wrote docs/competitors.png")
+output = HERE / "competitors.png"
+fig.savefig(output, dpi=150, bbox_inches="tight", facecolor="white")
+print(f"wrote {output}")

@@ -536,7 +536,6 @@ const Shared = if (has_threads) struct {
 /// node that worker `i` is pinned to (and whose memory holds the
 /// worker's arena, when `mbind` succeeded). Length == `arenas.len`.
 /// All zeros when NUMA awareness is off or single-node.
-
 fn helperMain(shared: *Shared, worker_idx: usize) void {
     // Best-effort affinity pin. We do this on the worker thread
     // so the pin applies to its own TID (sched_setaffinity with
@@ -827,6 +826,20 @@ pub const BatchPool = struct {
     /// call once per batch from the worker thread.
     pub fn resetArena(self: *BatchPool, worker_idx: usize) std.mem.Allocator {
         _ = self.arenas[worker_idx].reset(.retain_capacity);
+        return self.arenas[worker_idx].allocator();
+    }
+
+    /// Reset every worker arena before publishing a batch whose outputs
+    /// themselves live in worker-local scratch until final aggregation.
+    /// Call only while no `runBatch` is active.
+    pub fn resetAllArenas(self: *BatchPool) void {
+        for (self.arenas) |*arena| _ = arena.reset(.retain_capacity);
+    }
+
+    /// Borrow one worker's arena without resetting it. This lets a worker
+    /// process multiple jobs in the same batch while keeping earlier
+    /// arena-backed partial outputs alive until aggregation completes.
+    pub fn arenaAllocator(self: *BatchPool, worker_idx: usize) std.mem.Allocator {
         return self.arenas[worker_idx].allocator();
     }
 

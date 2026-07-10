@@ -992,7 +992,7 @@ const Renderer = struct {
                 const n: i64 = @intCast(s.len);
                 const i: i64 = if (idx.int_v < 0) idx.int_v + n else idx.int_v;
                 if (i < 0 or i >= n) return error.UnknownVariable;
-                return Value{ .string_v = s[@intCast(i) .. @intCast(i + 1)] };
+                return Value{ .string_v = s[@intCast(i)..@intCast(i + 1)] };
             },
             else => return error.TypeMismatch,
         }
@@ -1975,9 +1975,7 @@ test "is string test" {
     defer extra.deinit();
     try extra.put("s", .{ .string_v = "hi" });
     try extra.put("n", .{ .int_v = 7 });
-    const out = try render(testing.allocator,
-        "{% if s is string %}1{% endif %}{% if n is string %}2{% else %}0{% endif %}",
-        .{ .messages = &.{}, .extra_vars = &extra });
+    const out = try render(testing.allocator, "{% if s is string %}1{% endif %}{% if n is string %}2{% else %}0{% endif %}", .{ .messages = &.{}, .extra_vars = &extra });
     defer testing.allocator.free(out);
     try testing.expectEqualStrings("10", out);
 }

@@ -34,43 +34,69 @@ pub const Decoder = union(enum) {
     ) ![]u8 {
         switch (self) {
             .concat => {
-                var out: std.ArrayList(u8) = .empty;
-                defer out.deinit(allocator);
-
                 var scratch: [1]u8 = undefined;
+                var total: usize = 0;
                 for (ids) |id| {
                     const bytes = m.idBytes(id, vocab, &scratch);
-                    try out.appendSlice(allocator, bytes);
+                    total = try std.math.add(usize, total, bytes.len);
                 }
-                return out.toOwnedSlice(allocator);
+                const out = try allocator.alloc(u8, total);
+                var offset: usize = 0;
+                for (ids) |id| {
+                    const bytes = m.idBytes(id, vocab, &scratch);
+                    @memcpy(out[offset .. offset + bytes.len], bytes);
+                    offset += bytes.len;
+                }
+                return out;
             },
             .wordpiece => |cfg| {
-                var out: std.ArrayList(u8) = .empty;
-                defer out.deinit(allocator);
-
                 var scratch: [1]u8 = undefined;
+                var total: usize = 0;
                 for (ids, 0..) |id, i| {
                     const bytes = m.idBytes(id, vocab, &scratch);
                     if (std.mem.startsWith(u8, bytes, cfg.continuing_subword_prefix)) {
-                        try out.appendSlice(allocator, bytes[cfg.continuing_subword_prefix.len..]);
+                        total = try std.math.add(usize, total, bytes.len - cfg.continuing_subword_prefix.len);
                     } else {
-                        if (i > 0) try out.appendSlice(allocator, cfg.word_separator);
-                        try out.appendSlice(allocator, bytes);
+                        if (i > 0) total = try std.math.add(usize, total, cfg.word_separator.len);
+                        total = try std.math.add(usize, total, bytes.len);
                     }
                 }
-                return out.toOwnedSlice(allocator);
+                const out = try allocator.alloc(u8, total);
+                var offset: usize = 0;
+                for (ids, 0..) |id, i| {
+                    const bytes = m.idBytes(id, vocab, &scratch);
+                    if (std.mem.startsWith(u8, bytes, cfg.continuing_subword_prefix)) {
+                        const piece = bytes[cfg.continuing_subword_prefix.len..];
+                        @memcpy(out[offset .. offset + piece.len], piece);
+                        offset += piece.len;
+                    } else {
+                        if (i > 0) {
+                            @memcpy(out[offset .. offset + cfg.word_separator.len], cfg.word_separator);
+                            offset += cfg.word_separator.len;
+                        }
+                        @memcpy(out[offset .. offset + bytes.len], bytes);
+                        offset += bytes.len;
+                    }
+                }
+                return out;
             },
             .byte_level => {
                 // First concatenate, then reverse the byte_to_unicode map.
-                var concat_buf: std.ArrayList(u8) = .empty;
-                defer concat_buf.deinit(allocator);
-
                 var scratch: [1]u8 = undefined;
+                var total: usize = 0;
                 for (ids) |id| {
                     const bytes = m.idBytes(id, vocab, &scratch);
-                    try concat_buf.appendSlice(allocator, bytes);
+                    total = try std.math.add(usize, total, bytes.len);
                 }
-                return byte_level.decodeMapped(allocator, concat_buf.items);
+                const concat_buf = try allocator.alloc(u8, total);
+                defer allocator.free(concat_buf);
+                var offset: usize = 0;
+                for (ids) |id| {
+                    const bytes = m.idBytes(id, vocab, &scratch);
+                    @memcpy(concat_buf[offset .. offset + bytes.len], bytes);
+                    offset += bytes.len;
+                }
+                return byte_level.decodeMapped(allocator, concat_buf);
             },
         }
     }

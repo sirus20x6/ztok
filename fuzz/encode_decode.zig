@@ -85,12 +85,12 @@ fn buildSyntheticBpe(a: std.mem.Allocator) !Bpe {
         rank += 1;
     }
     const extra = [_][]const u8{
-        "he",     "hel",   "hell",  "hello",
-        " w",     " wo",   " wor",  " worl",
-        " world", "the",   " the",  " quick",
-        " brown", " fox",  "foo",   "bar",
-        "baz",    "zig",   " zig",  "test",
-        " test",  "fuzz",  " fuzz",
+        "he",     "hel",  "hell",  "hello",
+        " w",     " wo",  " wor",  " worl",
+        " world", "the",  " the",  " quick",
+        " brown", " fox", "foo",   "bar",
+        "baz",    "zig",  " zig",  "test",
+        " test",  "fuzz", " fuzz",
     };
     for (extra) |bytes| {
         const encoded = b64.encode(&enc_buf, bytes);

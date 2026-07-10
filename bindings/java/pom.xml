@@ -21,7 +21,7 @@
 
     <groupId>com.anthropic</groupId>
     <artifactId>ztok</artifactId>
-    <version>1.24.0</version>
+    <version>1.28.0</version>
     <packaging>jar</packaging>
 
     <name>ztok</name>

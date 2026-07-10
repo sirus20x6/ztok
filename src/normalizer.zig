@@ -2335,9 +2335,9 @@ test "normalizeWithOrigin: byte_level — each input byte -> 1-2 output bytes sh
 test "normalizeWithOrigin: round-trip — every origin is a valid input offset" {
     const inputs = [_][]const u8{
         "hello",
-        "héllo",                       // mixed ASCII + 2-byte
-        "ﬁ",                            // ligature (NFKC expands)
-        "e\xCC\x81llo",                // decomposed é
+        "héllo", // mixed ASCII + 2-byte
+        "ﬁ", // ligature (NFKC expands)
+        "e\xCC\x81llo", // decomposed é
         "café\nworld",
         "the quick brown fox",
     };
@@ -2591,7 +2591,7 @@ test "sp_precompiled: maxByteExpansion cap holds for the full default profile" {
     // Mix ligatures, spaces, and ASCII to stress the cap.
     const inputs = [_][]const u8{
         "hello world",
-        "\xEF\xAC\x81 hello",  // ligature followed by space
+        "\xEF\xAC\x81 hello", // ligature followed by space
         " a ",
         "Hello, world!",
         "the quick brown fox jumps over the lazy dog",
@@ -2760,7 +2760,7 @@ test "capcode/nocapcode normalizers: origin map is consistent and every byte map
         "hello world",
         "Hello World",
         "abc 123 !!",
-        "caf\xC3\xA9",     // precomposed é
+        "caf\xC3\xA9", // precomposed é
         "a/b/c",
     };
     const variants = [_]Normalizer{
@@ -2781,7 +2781,6 @@ test "capcode/nocapcode normalizers: origin map is consistent and every byte map
         }
     }
 }
-
 
 test "capcode normalizer: .tm_printable marker_style emits 'C'/'W'/'D' instead of C0 controls" {
     // Same input, two marker styles, different output bytes.
@@ -2843,7 +2842,7 @@ test "capcode normalizer (.tm_printable): origin map still maps every byte into 
         "Hello World",
         "THIS is GPT-4.",
         "WORDword",
-        "Caf\xC3\xA9",       // precomposed é
+        "Caf\xC3\xA9", // precomposed é
     };
     const n: Normalizer = .{ .capcode = .{ .nfd = true, .marker_style = .tm_printable } };
     for (inputs) |inp| {
@@ -2894,14 +2893,14 @@ test "normalize == normalizeWithOrigin.bytes for every Normalizer variant" {
         "Hello World",
         "the quick brown FOX jumps over 100 LAZY dogs.",
         "abc 123",
-        "caf\xC3\xA9",                  // precomposed é
-        "\xEF\xAC\x81 hello",           // ligature ﬁ
+        "caf\xC3\xA9", // precomposed é
+        "\xEF\xAC\x81 hello", // ligature ﬁ
         "  multiple   spaces  trim  ",
-        "\xE2\x96\x81already-escaped",  // pre-U+2581
+        "\xE2\x96\x81already-escaped", // pre-U+2581
         " ",
         "",
         "ALL CAPS WITH NUMBERS 123 AND PUNC!",
-        "\xCE\xB1\xCE\xB2\xCE\xB3",      // αβγ
+        "\xCE\xB1\xCE\xB2\xCE\xB3", // αβγ
         // Mixed Japanese + ASCII (stresses the NF-stable run fast
         // path in unicode_norm.normalize).
         "\xE3\x81\x82\xE3\x81\x84 a/b",

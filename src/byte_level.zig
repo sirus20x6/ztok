@@ -204,16 +204,13 @@ pub fn splitAndMap(
     errdefer spans.deinit(allocator);
 
     if (mode == .none) {
-        const written = if (add_prefix_space and (input.len == 0 or input[0] != ' '))
-            blk: {
-                var tmp = try allocator.alloc(u8, input.len + 1);
-                defer allocator.free(tmp);
-                tmp[0] = ' ';
-                @memcpy(tmp[1..], input);
-                break :blk encodeBytes(tmp, mapped);
-            }
-        else
-            encodeBytes(input, mapped);
+        const written = if (add_prefix_space and (input.len == 0 or input[0] != ' ')) blk: {
+            var tmp = try allocator.alloc(u8, input.len + 1);
+            defer allocator.free(tmp);
+            tmp[0] = ' ';
+            @memcpy(tmp[1..], input);
+            break :blk encodeBytes(tmp, mapped);
+        } else encodeBytes(input, mapped);
         try spans.append(allocator, .{ .start = 0, .end = @intCast(written.len) });
         const shrunk = try allocator.realloc(mapped, written.len);
         return .{ .mapped = shrunk, .spans = try spans.toOwnedSlice(allocator) };

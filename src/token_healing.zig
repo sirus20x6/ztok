@@ -282,8 +282,8 @@ test "heal round-trip: decode(healed) ++ boundary == original bytes" {
     defer bpe.deinit();
 
     const ids = [_]TokenId{
-        bpe.by_bytes.get("h").?, bpe.by_bytes.get("e").?, bpe.by_bytes.get("l").?,
-        bpe.by_bytes.get("l").?, bpe.by_bytes.get("o").?, bpe.by_bytes.get(" ").?,
+        bpe.by_bytes.get("h").?,   bpe.by_bytes.get("e").?, bpe.by_bytes.get("l").?,
+        bpe.by_bytes.get("l").?,   bpe.by_bytes.get("o").?, bpe.by_bytes.get(" ").?,
         bpe.by_bytes.get("wor").?,
     };
 

@@ -18,20 +18,23 @@
 //!   /ztok.Tokenizer/Eval    -> EvalRequest    → EvalResponse
 //!   GET /health             -> {"ok":true}    (HTTP/1.1, JSON)
 //!
-//! Threading + security: identical to `cli_serve.zig` — same accept
-//! loop, same per-request handler. No auth/rate-limit knobs yet; add
-//! when the HTTP server gets a real bearer-token wrapper.
+//! Threading: independent connections run on a bounded persistent worker
+//! pool, while large individual encodes may fan out through `BatchPool`.
+//! No auth/rate-limit knobs yet.
 
 const std = @import("std");
 const Pipeline = @import("pipeline.zig").Pipeline;
+const ScratchArena = @import("pipeline.zig").ScratchArena;
 const TokenId = @import("token.zig").TokenId;
 const BatchPool = @import("thread_pool.zig").BatchPool;
+const connection_pool_mod = @import("connection_pool.zig");
 const proto_min = @import("proto_min.zig");
 const eval = @import("eval.zig");
 
 pub const default_host: []const u8 = "127.0.0.1";
 pub const default_port: u16 = 7891;
 pub const default_max_body_bytes: usize = 16 * 1024 * 1024;
+pub const default_max_connection_workers: usize = 32;
 
 const recv_buf_size: usize = 8192;
 const send_buf_size: usize = 16384;
@@ -47,6 +50,8 @@ pub const Options = struct {
     model_kind: ModelKind = .bpe,
     version: []const u8 = "0.0.0",
     log: bool = true,
+    connection_workers: u16 = 0,
+    connection_queue: u16 = 0,
 };
 
 /// gRPC status codes. Subset — the full table lives in
@@ -78,20 +83,48 @@ pub fn run(
         std.log.info("ztok grpc-serve: listening on http://{s}:{d} (gRPC-Web over HTTP/1.1)", .{ opts.host, opts.port });
     }
 
+    var pool_mutex: std.Io.Mutex = .init;
     var ctx: ServeCtx = .{
         .allocator = allocator,
         .io = io,
         .pipeline = pipeline,
         .pool = pool,
         .opts = opts,
+        .pool_mutex = &pool_mutex,
     };
 
-    serveLoop(&ctx, &server, 0) catch |err| {
+    const connection_workers = resolveConnectionWorkers(opts.connection_workers, pool.workerCount());
+    const queue_capacity = resolveConnectionQueue(opts.connection_queue, connection_workers);
+    var runtime = try ServeRuntime.init(allocator, &ctx, connection_workers);
+    defer runtime.deinit();
+    const connections = try ConnectionPool.init(
+        allocator,
+        io,
+        connection_workers,
+        queue_capacity,
+        &runtime,
+        ServeRuntime.handle,
+    );
+    defer connections.deinit();
+
+    serveLoop(&ctx, &server, 0, connections) catch |err| {
         if (err != error.AcceptLoopEnded) return err;
     };
 }
 
-fn serveLoop(ctx: *ServeCtx, server: *std.Io.net.Server, max_connections: usize) !void {
+const ConnectionPool = connection_pool_mod.BoundedPool(std.Io.net.Stream);
+
+fn resolveConnectionWorkers(configured: u16, tokenizer_workers: usize) usize {
+    if (configured != 0) return configured;
+    return @max(@as(usize, 1), @min(tokenizer_workers, default_max_connection_workers));
+}
+
+fn resolveConnectionQueue(configured: u16, workers: usize) usize {
+    if (configured != 0) return configured;
+    return workers * 2;
+}
+
+fn serveLoop(ctx: *ServeCtx, server: *std.Io.net.Server, max_connections: usize, connections: *ConnectionPool) !void {
     var n_handled: usize = 0;
     while (true) {
         var stream = server.accept(ctx.io) catch |err| switch (err) {
@@ -101,14 +134,45 @@ fn serveLoop(ctx: *ServeCtx, server: *std.Io.net.Server, max_connections: usize)
                 continue;
             },
         };
-        handleConnection(ctx, stream) catch |err| {
+        connections.submit(stream) catch |err| {
+            stream.close(ctx.io);
+            return err;
+        };
+        n_handled += 1;
+        if (max_connections != 0 and n_handled >= max_connections) {
+            connections.waitIdle();
+            return error.AcceptLoopEnded;
+        }
+    }
+}
+
+const ServeRuntime = struct {
+    allocator: std.mem.Allocator,
+    base: *ServeCtx,
+    scratches: []ScratchArena,
+
+    fn init(allocator: std.mem.Allocator, base: *ServeCtx, workers: usize) !ServeRuntime {
+        const scratches = try allocator.alloc(ScratchArena, workers);
+        for (scratches) |*scratch| scratch.* = ScratchArena.init(allocator);
+        return .{ .allocator = allocator, .base = base, .scratches = scratches };
+    }
+
+    fn deinit(self: *ServeRuntime) void {
+        for (self.scratches) |*scratch| scratch.deinit();
+        self.allocator.free(self.scratches);
+        self.* = undefined;
+    }
+
+    fn handle(opaque_ctx: *anyopaque, stream: std.Io.net.Stream, worker_index: usize) void {
+        const self: *ServeRuntime = @ptrCast(@alignCast(opaque_ctx));
+        var ctx = self.base.*;
+        ctx.scratch = &self.scratches[worker_index];
+        handleConnection(&ctx, stream) catch |err| {
             if (ctx.opts.log) std.log.warn("ztok grpc-serve: connection error: {t}", .{err});
         };
         stream.close(ctx.io);
-        n_handled += 1;
-        if (max_connections != 0 and n_handled >= max_connections) return error.AcceptLoopEnded;
     }
-}
+};
 
 const ServeCtx = struct {
     allocator: std.mem.Allocator,
@@ -116,6 +180,8 @@ const ServeCtx = struct {
     pipeline: *const Pipeline,
     pool: *BatchPool,
     opts: Options,
+    scratch: ?*ScratchArena = null,
+    pool_mutex: ?*std.Io.Mutex = null,
 };
 
 fn handleConnection(ctx: *ServeCtx, stream: std.Io.net.Stream) !void {
@@ -189,6 +255,18 @@ fn readBody(ctx: *ServeCtx, req: *std.http.Server.Request) !?[]u8 {
         error.WriteFailed => return error.WriteFailed,
         error.HttpExpectationFailed => return error.HttpExpectationFailed,
     };
+
+    if (req.head.content_length) |cl| {
+        const body = try ctx.allocator.alloc(u8, cl);
+        errdefer ctx.allocator.free(body);
+        var filled: usize = 0;
+        while (filled < body.len) {
+            const n = try body_reader.readSliceShort(body[filled..]);
+            if (n == 0) return error.UnexpectedEndOfStream;
+            filled += n;
+        }
+        return body;
+    }
 
     var list: std.ArrayList(u8) = .empty;
     errdefer list.deinit(ctx.allocator);
@@ -279,8 +357,12 @@ fn handleEncode(ctx: *ServeCtx, req: *std.http.Server.Request) !void {
 
     const min_for_chunked: usize = 64 * 1024;
     const n_workers = ctx.pool.workerCount();
-    const ids = if (input.len >= min_for_chunked and n_workers > 1)
-        try ctx.pipeline.encodeChunked(ctx.allocator, ctx.pool, input, n_workers)
+    const ids = if (input.len >= min_for_chunked and n_workers > 1) blk: {
+        if (ctx.pool_mutex) |mutex| mutex.lockUncancelable(ctx.io);
+        defer if (ctx.pool_mutex) |mutex| mutex.unlock(ctx.io);
+        break :blk try ctx.pipeline.encodeChunked(ctx.allocator, ctx.pool, input, n_workers);
+    } else if (ctx.scratch) |scratch|
+        try ctx.pipeline.encodeWithScratch(ctx.allocator, input, scratch)
     else
         try ctx.pipeline.encode(ctx.allocator, input);
     defer ctx.allocator.free(ids);

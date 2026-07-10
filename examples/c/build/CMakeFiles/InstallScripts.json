@@ -1,7 +1,0 @@
-{
-	"InstallScripts" : 
-	[
-		"/thearray/git/ztok/examples/c/build/cmake_install.cmake"
-	],
-	"Parallel" : false
-}

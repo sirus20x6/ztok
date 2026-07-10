@@ -685,14 +685,14 @@ test "train keeps all 256 bytes and hits the target size" {
 
 test "train serial and parallel produce a byte-identical vocab" {
     const words = [_][]const u8{
-        "banana",   "bandana", "ananas",     "band",   "candy",
-        "sandbar",  "random",  "abracadabra", "dandelion", "standard",
-        "panorama", "savanna", "caravan",    "vanilla", "lavanda",
-        "mandible", "andante", "android",    "grandstand", "bandana",
+        "banana",   "bandana", "ananas",      "band",       "candy",
+        "sandbar",  "random",  "abracadabra", "dandelion",  "standard",
+        "panorama", "savanna", "caravan",     "vanilla",    "lavanda",
+        "mandible", "andante", "android",     "grandstand", "bandana",
     };
     const counts = [_]u32{
-        37, 11, 23, 5, 17, 8, 41, 13, 3, 19,
-        7,  29, 2, 31, 6, 4,  9,  15, 1, 12,
+        37, 11, 23, 5,  17, 8, 41, 13, 3, 19,
+        7,  29, 2,  31, 6,  4, 9,  15, 1, 12,
     };
 
     const opts_base = TrainOptions{

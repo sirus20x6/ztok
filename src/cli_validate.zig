@@ -353,7 +353,7 @@ fn writeText(
 
     try out.print("\nSummary: {d} warning{s}, {d} error{s}\n", .{
         total_warnings, plural(total_warnings),
-        total_errors, plural(total_errors),
+        total_errors,   plural(total_errors),
     });
 }
 

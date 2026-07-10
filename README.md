@@ -2,7 +2,7 @@
 
 A fast, multithreaded, data-oriented tokenizer toolkit in Zig 0.16.
 
-`v1.27.0` · **AGPL-3.0-only** · 1099 tests · 8 language bindings · bit-identical with tiktoken / HuggingFace / SentencePiece
+`v1.28.0` · **AGPL-3.0-only** · 1150+ tests · 8 language bindings · bit-identical with tiktoken / HuggingFace / SentencePiece
 
 ztok loads the tokenizers you already use and produces **byte-identical**
 output: 13/13 SentencePiece + HuggingFace reference pairs match at
@@ -15,9 +15,9 @@ tie-break on `t5 × code`). Then it goes past parity — see
 
 - **Four model families** — byte-level BPE (greedy / longest-match /
   optimal), Unigram (Viterbi), WordPiece, and TokenMonster ungreedy.
-- **Fast, parallel by default** — cl100k at **~20–23 MB/s** single-thread
-  scaling to **~291–425 MB/s** batched ×48 +pin (multilingual mix →
-  ASCII-heavy corpus), **1.9–5.5× faster than tiktoken** on identical
+- **Fast, parallel by default** — cl100k at **~19–22 MB/s** single-thread
+  scaling to **~297–396 MB/s** batched ×48 +pin (multilingual mix →
+  ASCII-heavy corpus), **1.8–4.8× faster than tiktoken** on identical
   bytes (chart below); portable AVX2/NEON SIMD byte scanners; per-thread
   arenas, no hot-path allocs.
 - **8 language bindings** over one stable C ABI — Python, Node.js, Ruby,
@@ -54,7 +54,7 @@ version: headline, perf numbers, equivalence deltas).
 | **Loaders** | `.tiktoken`, HF `tokenizer.json` (BPE / WordPiece / Unigram), SentencePiece `.model` (BPE / Unigram + byte_fallback), ztok `.ztm` (Monster), Mistral Tekken `.json`, HF `tokenizer_config.json` — with format auto-detect |
 | **Writers** | HF `tokenizer.json` (+ post-processors), SentencePiece `.model`, ztok `.ztm` |
 | **Training** | BPE, Unigram (EM + subword regularization), WordPiece, TokenMonster distillation, PathPiece (CTC-minimizing) |
-| **Performance** | cl100k vs **tiktoken** on identical corpus bytes (EPYC 24c/48t, ReleaseFast), shown as a range across a multilingual mix and an ASCII-heavy corpus: **~20–23 vs 10 MB/s** single-thread (1.9–2.2×), **~105–132 vs 49–52** batch ×8 (2.0–2.7×), **~291–425 vs 76–78** batch ×48 +pin (3.8–5.5×). Gap widens with core count — chart below. |
+| **Performance** | cl100k vs **tiktoken** on identical corpus bytes (EPYC 24c/48t, ReleaseFast; median of 3 runs), shown as a range across a multilingual mix and an ASCII-heavy corpus: **~19–22 vs 10–11 MB/s** single-thread (1.8–2.2×), **~95–124 vs 54** batch ×8 (1.8–2.3×), **~297–396 vs 83–90** batch ×48 +pin (3.3–4.8×). Gap widens with core count — chart below. |
 | **Targets** | x86_64 / aarch64 native; wasm32-wasi (static lib); wasm32-freestanding (browser, SIMD128) |
 | **C ABI** | `libztok.{a,so}` + `include/ztok.h` — persistent batch pools, streaming encode, overlay channels, format auto-detect; CMake + pkg-config install via `zig build -p <prefix>` |
 | **Language bindings** | **8** — Python, Node.js, Ruby, Go, Rust, .NET, Java, Swift — over one C ABI, each with round-trip fuzz harnesses |
@@ -62,19 +62,19 @@ version: headline, perf numbers, equivalence deltas).
 | **Vocab ops** | `vocab_extend` (domain tokens + embedding-init plan), `vocab_prune`, `merge-vocab`, `adapt-vocab` |
 | **Chunking / RAG** | token-cap windows with overlap over `encodeWithOffsets`; boundary modes (token / codepoint / word / word_dict / sentence / paragraph), byte-accurate ranges; multi-language sentence + Thai/Lao/zh/ja word segmenters (approximation-grade) |
 | **CLI** | 19 subcommands incl. `encode` / `encode-multimodal` / `decode` / `explain` / `train` / `chunk` / `eval` / `transcode` / `serve` / `bench` / `visualize`. `serve` is an HTTP + gRPC server with token/OIDC auth, rate limiting, TLS, and a persistent prefix cache. |
-| **Tests** | **1099/1100** (1 CI-only skip), cold-cache integrated rebuild verified |
+| **Tests** | **1150+** native tests plus per-binding suites, cold-cache integrated rebuild verified |
 | **Ops / quality** | GitHub Actions CI (Linux + macOS), nightly fuzz cron, weekly equivalence sweep, multi-stage Dockerfile (~42 MiB distroless image), Helm chart |
 
 ![ztok vs tiktoken cl100k throughput on an identical corpus: single-thread, batch ×8, batch ×48](docs/throughput.png)
 
-<sub>Bar = multilingual mix (conservative); whisker = ASCII-heavy peak. Same vocab & corpus bytes per pair, same machine; both tokenizers emit equal id counts. Regenerate with `python3 docs/throughput_chart.py`.</sub>
+<sub>Bar = multilingual-mix median; whisker = ASCII-heavy median. Three independent 8-iteration runs per value, same vocab, corpus bytes, and machine; both tokenizers emit equal id counts. Raw data: `docs/benchmark_data.json`. Regenerate with `python3 docs/throughput_chart.py`.</sub>
 
 ztok is faster than each reference library on *its own vocab*, too —
-single-thread, same 9 MB corpus, id-matched per pair:
+single-thread, same 9 MB corpus and respective vocab per pair:
 
 ![ztok single-thread throughput vs tiktoken, HF tokenizers, and SentencePiece, each on its own vocab](docs/competitors.png)
 
-<sub>**1.9×** vs tiktoken (cl100k), **3.2×** vs HF tokenizers (gpt2), **2.0×** vs SentencePiece BPE (llama2), **1.6×** vs SentencePiece Unigram (t5). The multithreaded gap is wider: **3.3–5.6×** vs SentencePiece at batch ×48. Regenerate with `python3 docs/competitors_chart.py`.</sub>
+<sub>Median of three runs: **1.9×** vs tiktoken (cl100k), **7.3×** vs HF tokenizers (gpt2), **2.1×** vs SentencePiece BPE (llama2), **1.6×** vs SentencePiece Unigram (t5). Counts are exact for cl100k/Llama-2 BPE and differ by less than 0.1% for GPT-2/T5. Raw data: `docs/benchmark_data.json`. Regenerate with `python3 docs/competitors_chart.py`.</sub>
 
 ## Beyond bit-identical (post-1.25)
 
@@ -110,7 +110,7 @@ none of the four reference libraries offers them. See
 
 ```sh
 zig build                # static lib, shared lib, CLI, header into zig-out/
-zig build test           # ~1099 unit tests
+zig build test           # 1150+ unit and integration tests
 zig build run -- encode --model bench/vocabs/cl100k_base.tiktoken --cl100k "hello world"
 ```
 
@@ -319,6 +319,8 @@ ztok bench     [--quick] [--iters N] [--format text|json] \
                [--include cl100k,sp-bpe,sp-unigram,tm,hf-bpe] [--vocab-root DIR]
 ztok serve     --model M.tiktoken [--cl100k] \
                [--host 127.0.0.1] [--port 7890] [--workers N] \
+               [--connection-workers N] [--connection-queue N] \
+               [--bpe-hot-table on|off] \
                [--auth-token TOKEN | --auth-token-file PATH] \
                [--rate-limit REQ_PER_SEC]
 ```
@@ -333,10 +335,19 @@ clients can tokenize without a native binding. Routes:
 encoding out — same `{"ids":[...]}\n...\n{"done":true}` shape; lets
 non-Zig clients stream multi-GB inputs without buffering), `POST /decode`
 (JSON), `POST /eval` (mirrors the `ztok eval` JSON schema), `GET /version`,
-`GET /health`. The persistent `BatchPool` is shared across requests;
+`GET /health`. Independent connections run through a bounded persistent
+worker pool (auto-sized to at most 32 workers); `--connection-workers` and
+`--connection-queue` override its concurrency and backpressure limits. Each
+connection worker reuses tokenizer scratch memory. The non-reentrant
+tokenizer `BatchPool` is shared safely for large parallel encodes;
 `/encode_stream` and `/encode_chunked` both run the `StreamEncoder` which
 emits ids as bytes arrive and defers the trailing partial codepoint /
 pre-tokenizer span to the next feed.
+
+Raw `.tiktoken` models keep the single-thread-friendly BPE hot table off by
+default. Multi-core deployments can benchmark and opt in with
+`--bpe-hot-table on`; `off` is also available to override HF BPE's existing
+serving-oriented default.
 
 ```sh
 ztok serve --model cl100k_base.tiktoken --cl100k &
@@ -673,7 +684,7 @@ src/
   doctor.zig        — vocab/pipeline linter (unreachable merges, roundtrip, ...)
   eval.zig          — corpus metrics (bytes/token, fertility, KV cache cost)
   diff.zig          — side-by-side tokenization comparison
-  prefix_cache.zig  — Wyhash + LRU cache for repeated prefixes
+  prefix_cache.zig  — Wyhash + LRU cache for repeated exact inputs
   chunk.zig         — RAG-aware chunking: token-cap windows + overlap + boundary snap
   vocab_extend.zig  — add tokens + embedding init plan
   vocab_prune.zig   — drop unused tokens, compact ids, emit remap table

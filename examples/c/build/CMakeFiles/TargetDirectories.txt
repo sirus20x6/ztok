@@ -1,3 +1,0 @@
-/thearray/git/ztok/examples/c/build/CMakeFiles/hello.dir
-/thearray/git/ztok/examples/c/build/CMakeFiles/edit_cache.dir
-/thearray/git/ztok/examples/c/build/CMakeFiles/rebuild_cache.dir

@@ -323,11 +323,11 @@ ingress:
 ## @section Persistent cache
 ##
 
-# `ztok serve` does NOT currently expose a persistent prefix-cache
-# directory flag. This block reserves the wiring so when the binary
-# grows that knob, enabling `persistentCache.enabled=true` here will
-# Just Work: the PVC is created, mounted at `persistentCache.mountPath`,
-# and the cache directory survives pod restarts.
+# `ztok serve --prefix-cache-dir` stores exact-input tokenization results
+# in this directory. This block controls the PVC and command-line wiring.
+# Enabling `persistentCache.enabled=true` creates the PVC, mounts it at
+# `persistentCache.mountPath`, and passes that path to the server so the
+# cache directory survives pod restarts.
 persistentCache:
   enabled: false
   size: 10Gi

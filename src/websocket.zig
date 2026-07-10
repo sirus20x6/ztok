@@ -72,7 +72,22 @@ pub const FrameError = error{
     OutOfMemory,
     EndOfStream,
     ReadFailed,
+    ReservedBits,
+    FragmentedMessage,
+    InvalidControlFrame,
+    NonCanonicalLength,
+    LengthOverflow,
 };
+
+/// A WebSocket client nonce is exactly 16 decoded bytes encoded with the
+/// standard base64 alphabet (RFC 6455 section 4.2.1).
+pub fn isValidClientKey(key: []const u8) bool {
+    const decoded_len = std.base64.standard.Decoder.calcSizeForSlice(key) catch return false;
+    if (decoded_len != 16) return false;
+    var decoded: [16]u8 = undefined;
+    std.base64.standard.Decoder.decode(&decoded, key) catch return false;
+    return true;
+}
 
 /// Read one client → server frame from `r` and return it. `payload`
 /// is freshly allocated from `allocator`; caller frees.
@@ -88,6 +103,8 @@ pub fn readClientFrame(
     const b0 = header[0];
     const b1 = header[1];
 
+    if ((b0 & 0x70) != 0) return error.ReservedBits;
+
     const fin: bool = (b0 & 0x80) != 0;
     const opcode_raw: u4 = @intCast(b0 & 0x0F);
     const opcode: Opcode = switch (opcode_raw) {
@@ -102,6 +119,13 @@ pub fn readClientFrame(
     const masked: bool = (b1 & 0x80) != 0;
     const len7: u7 = @intCast(b1 & 0x7F);
 
+    // Fragment reassembly is intentionally unsupported. Reject both an
+    // initial non-final data frame and continuation frames rather than
+    // treating each fragment as an independent tokenizer request.
+    if (!fin or opcode == .continuation) return error.FragmentedMessage;
+    const is_control = @intFromEnum(opcode) >= 0x8;
+    if (is_control and len7 > 125) return error.InvalidControlFrame;
+
     // RFC 6455 §5.3 — frames from client MUST be masked.
     if (!masked) return error.Unmasked;
 
@@ -110,16 +134,22 @@ pub fn readClientFrame(
         126 => blk: {
             var ext: [2]u8 = undefined;
             r.readSliceAll(&ext) catch return error.ShortFrame;
-            break :blk std.mem.readInt(u16, &ext, .big);
+            const n = std.mem.readInt(u16, &ext, .big);
+            if (n < 126) return error.NonCanonicalLength;
+            break :blk n;
         },
         127 => blk: {
             var ext: [8]u8 = undefined;
             r.readSliceAll(&ext) catch return error.ShortFrame;
-            break :blk std.mem.readInt(u64, &ext, .big);
+            const n = std.mem.readInt(u64, &ext, .big);
+            if ((n & (@as(u64, 1) << 63)) != 0) return error.LengthOverflow;
+            if (n < 65536) return error.NonCanonicalLength;
+            break :blk n;
         },
     };
 
     if (payload_len > max_payload) return error.TooLarge;
+    if (payload_len > std.math.maxInt(usize)) return error.LengthOverflow;
 
     var mask: [4]u8 = undefined;
     r.readSliceAll(&mask) catch return error.ShortFrame;
@@ -127,12 +157,15 @@ pub fn readClientFrame(
     const payload_usize: usize = @intCast(payload_len);
     const buf = try allocator.alloc(u8, payload_usize);
     errdefer allocator.free(buf);
-    r.readSliceAll(buf) catch {
-        allocator.free(buf);
-        return error.ShortFrame;
-    };
+    r.readSliceAll(buf) catch return error.ShortFrame;
     var i: usize = 0;
     while (i < buf.len) : (i += 1) buf[i] ^= mask[i & 3];
+
+    // A close frame payload is either empty or starts with a two-byte status
+    // code; a one-byte payload is structurally invalid.
+    if (opcode == .close and buf.len == 1) {
+        return error.InvalidControlFrame;
+    }
 
     return .{ .fin = fin, .opcode = opcode, .payload = buf };
 }
@@ -174,6 +207,12 @@ test "ws: computeAcceptKey matches the RFC 6455 example" {
     var out: [accept_key_b64_len]u8 = undefined;
     const got = computeAcceptKey("dGhlIHNhbXBsZSBub25jZQ==", &out);
     try testing.expectEqualStrings("s3pPLMBiTxaQ9kYGzzhZRbK+xOo=", got);
+}
+
+test "ws: client key must decode to exactly 16 bytes" {
+    try testing.expect(isValidClientKey("dGhlIHNhbXBsZSBub25jZQ=="));
+    try testing.expect(!isValidClientKey("not-base64"));
+    try testing.expect(!isValidClientKey("c2hvcnQ="));
 }
 
 test "ws: writeServerFrame uses 7-bit length for small payload" {
@@ -227,6 +266,39 @@ test "ws: readClientFrame rejects unmasked client frame" {
     var wire: [2]u8 = .{ 0x82, 0x00 };
     var r: std.Io.Reader = .fixed(&wire);
     try testing.expectError(error.Unmasked, readClientFrame(&r, a, 1024));
+}
+
+test "ws: truncated payload is released exactly once" {
+    const a = testing.allocator;
+    var wire = [_]u8{ 0x82, 0x83, 1, 2, 3, 4, 0xAA };
+    var r: std.Io.Reader = .fixed(&wire);
+    try testing.expectError(error.ShortFrame, readClientFrame(&r, a, 1024));
+}
+
+test "ws: readClientFrame rejects reserved bits and fragmentation" {
+    const a = testing.allocator;
+    var reserved = [_]u8{ 0xC1, 0x80 };
+    var rr: std.Io.Reader = .fixed(&reserved);
+    try testing.expectError(error.ReservedBits, readClientFrame(&rr, a, 1024));
+
+    var fragmented = [_]u8{ 0x01, 0x80 };
+    var fr: std.Io.Reader = .fixed(&fragmented);
+    try testing.expectError(error.FragmentedMessage, readClientFrame(&fr, a, 1024));
+
+    var continuation = [_]u8{ 0x80, 0x80 };
+    var cr: std.Io.Reader = .fixed(&continuation);
+    try testing.expectError(error.FragmentedMessage, readClientFrame(&cr, a, 1024));
+}
+
+test "ws: readClientFrame enforces control and canonical lengths" {
+    const a = testing.allocator;
+    var oversized_ping = [_]u8{ 0x89, 0xFE };
+    var pr: std.Io.Reader = .fixed(&oversized_ping);
+    try testing.expectError(error.InvalidControlFrame, readClientFrame(&pr, a, 1024));
+
+    var noncanonical = [_]u8{ 0x82, 0xFE, 0x00, 0x7D };
+    var nr: std.Io.Reader = .fixed(&noncanonical);
+    try testing.expectError(error.NonCanonicalLength, readClientFrame(&nr, a, 1024));
 }
 
 test "ws: server → client round-trip via Reader.fixed + Allocating" {

@@ -119,6 +119,8 @@ pub const ValidateError = error{
     UnsupportedRsaModulus,
     /// JWK is missing required RSA fields (n or e).
     InvalidRsaKey,
+    /// JWK key type does not match the JWT algorithm.
+    InvalidKeyType,
 };
 
 /// Pluggable HTTP GET. Returns the response body as a freshly-allocated
@@ -230,6 +232,7 @@ pub const Validator = struct {
         const sig_bytes = b64UrlDecodeInto(sig_b64, &sig_buf) catch return error.InvalidEncoding;
 
         if (is_hs256) {
+            if (!std.mem.eql(u8, jwk.kty, "oct")) return error.InvalidKeyType;
             const key_material = jwk.k orelse return error.UnknownKid;
 
             // Verify signature over `header_b64.payload_b64` with HMAC-SHA256.
@@ -245,6 +248,7 @@ pub const Validator = struct {
             if (!std.crypto.timing_safe.eql([HmacSha256.mac_length]u8, mac, sig_arr)) return error.BadSignature;
         } else {
             // RS256.
+            if (!std.mem.eql(u8, jwk.kty, "RSA")) return error.InvalidKeyType;
             const n_bytes = jwk.n orelse return error.InvalidRsaKey;
             const e_bytes = jwk.e orelse return error.InvalidRsaKey;
             try verifyRs256(header_b64, payload_b64, sig_bytes, n_bytes, e_bytes);
@@ -295,11 +299,30 @@ pub const Validator = struct {
         // exp
         if (obj.get("exp")) |v| switch (v) {
             .integer => |i| if (i <= now_unix_seconds) return error.Expired,
-            .float => |f| if (@as(i64, @intFromFloat(f)) <= now_unix_seconds) return error.Expired,
+            .float => |f| {
+                if (!std.math.isFinite(f)) return error.Expired;
+                if (f <= @as(f64, @floatFromInt(now_unix_seconds))) return error.Expired;
+            },
             else => return error.Expired,
         } else {
             return error.Expired;
         }
+    }
+
+    /// Validate with lazy JWKS rotation. Stale keys are refreshed on a
+    /// best-effort basis so already-known keys remain usable during a
+    /// transient IdP outage. An unknown `kid` forces one refresh and retry.
+    pub fn validateBearerRefreshing(
+        self: *Validator,
+        token: []const u8,
+        now_unix_seconds: i64,
+    ) anyerror!void {
+        if (self.jwksIsStale()) self.refreshJwks() catch {};
+        self.validateBearer(token, now_unix_seconds) catch |err| {
+            if (err != error.UnknownKid) return err;
+            try self.refreshJwks();
+            try self.validateBearer(token, now_unix_seconds);
+        };
     }
 };
 
@@ -342,6 +365,14 @@ pub fn initFromDiscovery(
         .{ .ignore_unknown_fields = true, .allocate = .alloc_always },
     );
     if (disc_val != .object) return error.BadDiscoveryDoc;
+    const issuer_v = disc_val.object.get("issuer") orelse return error.BadDiscoveryDoc;
+    if (issuer_v != .string) return error.BadDiscoveryDoc;
+    // OIDC Discovery requires the returned issuer to exactly match the
+    // issuer used to construct the discovery URL. Accepting a different
+    // value can bind trusted keys to the wrong security domain.
+    if (!std.mem.eql(u8, std.mem.trimEnd(u8, issuer_v.string, "/"), trimmed_issuer)) {
+        return error.IssuerMismatch;
+    }
     const jwks_uri_v = disc_val.object.get("jwks_uri") orelse return error.BadDiscoveryDoc;
     if (jwks_uri_v != .string) return error.BadDiscoveryDoc;
     const jwks_uri_owned = try allocator.dupe(u8, jwks_uri_v.string);
@@ -603,6 +634,55 @@ fn buildHs256Jwt(
     const s_b64 = enc.encode(s_buf, &mac);
 
     return std.fmt.allocPrint(a, "{s}.{s}.{s}", .{ h_b64, p_b64, s_b64 });
+}
+
+const JwksRefreshStub = struct {
+    body: []const u8,
+    calls: u32 = 0,
+};
+
+fn jwksRefreshStub(ctx: ?*anyopaque, allocator: std.mem.Allocator, url: []const u8) anyerror![]u8 {
+    _ = url;
+    const stub: *JwksRefreshStub = @ptrCast(@alignCast(ctx.?));
+    stub.calls += 1;
+    return allocator.dupe(u8, stub.body);
+}
+
+test "oidc: unknown kid refreshes JWKS and retries validation" {
+    const a = testing.allocator;
+    const key = "rotated-secret-key-material";
+    const enc = std.base64.url_safe_no_pad.Encoder;
+    var k_buf: [128]u8 = undefined;
+    const k_b64 = enc.encode(k_buf[0..enc.calcSize(key.len)], key);
+    const fresh_json = try std.fmt.allocPrint(
+        a,
+        "{{\"keys\":[{{\"kid\":\"new\",\"alg\":\"HS256\",\"kty\":\"oct\",\"k\":\"{s}\"}}]}}",
+        .{k_b64},
+    );
+    defer a.free(fresh_json);
+
+    var stub: JwksRefreshStub = .{ .body = fresh_json };
+    var v: Validator = .{
+        .allocator = a,
+        .issuer = "https://example.com",
+        .audience = "ztok",
+        .jwks = try parseJwks(a, "{\"keys\":[]}", wallNanos()),
+        .jwks_uri = try a.dupe(u8, "https://example.com/jwks"),
+        .http_fetch = jwksRefreshStub,
+        .http_ctx = @ptrCast(&stub),
+    };
+    defer v.deinit();
+
+    const jwt = try buildHs256Jwt(
+        a,
+        "{\"alg\":\"HS256\",\"kid\":\"new\"}",
+        "{\"iss\":\"https://example.com\",\"aud\":\"ztok\",\"exp\":9999999999}",
+        key,
+    );
+    defer a.free(jwt);
+
+    try v.validateBearerRefreshing(jwt, 1_000_000_000);
+    try testing.expectEqual(@as(u32, 1), stub.calls);
 }
 
 test "oidc: HS256 token with correct iss/aud/exp validates" {
@@ -891,6 +971,27 @@ test "oidc: initFromDiscovery pulls discovery doc + JWKS via injected fetch" {
     // The validator should now verify a real RS256 JWT signed by the
     // injected key.
     try v.validateBearer(rs256_jwt_good, 1_000_000_000);
+}
+
+test "oidc: discovery issuer must match configured issuer" {
+    const a = testing.allocator;
+    var ctx: DiscoveryStubCtx = .{
+        .allocator = a,
+        .issuer = "https://attacker.invalid",
+        .jwks_uri = "https://example.com/oauth2/jwks",
+        .jwks_body = "{\"keys\":[]}",
+    };
+    try testing.expectError(
+        error.IssuerMismatch,
+        initFromDiscovery(
+            a,
+            discoveryStubFetch,
+            @ptrCast(&ctx),
+            "https://example.com",
+            "ztok",
+        ),
+    );
+    try testing.expectEqual(@as(u32, 0), ctx.jwks_calls);
 }
 
 test "oidc: refreshJwks re-pulls the JWKS via the stored fetch fn" {

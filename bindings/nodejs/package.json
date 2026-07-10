@@ -1,6 +1,6 @@
 {
   "name": "ztok",
-  "version": "1.20.0",
+  "version": "1.28.0",
   "description": "Node.js bindings for ztok — a fast, multithreaded, data-oriented tokenizer library (Zig).",
   "main": "index.js",
   "types": "index.d.ts",

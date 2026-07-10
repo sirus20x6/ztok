@@ -424,10 +424,8 @@ fn runPerWorkerHistogram(
     try out.print("\nworker | jobs |   bytes  | active_ms | encode_ms | min_ms | max_ms\n", .{});
     for (stats, 0..) |*p, wi| {
         try out.print("{d:>6} | {d:>4} | {d:>8} | {d:>9.2} | {d:>9.2} | {d:>6.3} | {d:>6.3}\n", .{
-            wi, p.s.jobs, p.s.bytes,
-            @as(f64, @floatFromInt(p.s.active_ns)) / 1e6,
-            @as(f64, @floatFromInt(p.s.gpa_ns)) / 1e6,
-            @as(f64, @floatFromInt(p.s.min_ns)) / 1e6,
+            wi,                                           p.s.jobs,                                  p.s.bytes,
+            @as(f64, @floatFromInt(p.s.active_ns)) / 1e6, @as(f64, @floatFromInt(p.s.gpa_ns)) / 1e6, @as(f64, @floatFromInt(p.s.min_ns)) / 1e6,
             @as(f64, @floatFromInt(p.s.max_ns)) / 1e6,
         });
     }

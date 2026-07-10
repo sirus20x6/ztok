@@ -180,42 +180,44 @@ pub const Boundary = enum {
 /// dot needs an abbreviation entry.
 pub const default_abbreviations: []const []const u8 = &.{
     // 1.13 set.
-    "Mr",   "Mrs",   "Ms",   "Dr",   "Prof", "St",
-    "Sr",   "Jr",    "Mt",   "Ave",  "Blvd", "Capt",
-    "Col",  "Gen",   "Hon",  "Inc",  "Ltd",  "Maj",
-    "Rev",  "Sgt",   "vs",   "etc",  "i.e",  "e.g",
-    "cf",   "approx", "no",
+    "Mr",  "Mrs",    "Ms",  "Dr",  "Prof", "St",
+    "Sr",  "Jr",     "Mt",  "Ave", "Blvd", "Capt",
+    "Col", "Gen",    "Hon", "Inc", "Ltd",  "Maj",
+    "Rev", "Sgt",    "vs",  "etc", "i.e",  "e.g",
+    "cf",  "approx", "no",
     // 1.15 additions: military ranks, additional titles, academic
     // degrees (both with and without internal dots — written prose
     // alternates between `Ph.D.` and `PhD`).
-    "Lt",   "Cpl",   "Cmdr", "Adm",  "Atty",
-    "PhD",  "MD",    "BA",   "RN",   "MA",  "MS",
-    "MSc",  "BSc",   "DDS",  "DVM",  "CPA",
-    "Ph.D", "M.D",   "B.A",  "R.N",
+     "Lt",  "Cpl",  "Cmdr",
+    "Adm", "Atty",   "PhD", "MD",  "BA",   "RN",
+    "MA",  "MS",     "MSc", "BSc", "DDS",  "DVM",
+    "CPA", "Ph.D",   "M.D", "B.A", "R.N",
 };
 
 /// French abbreviations common in journalistic prose. Match is
 /// case-sensitive on the immediately-preceding alphanumeric run.
 pub const french_abbreviations: []const []const u8 = &.{
-    "M",   "Mme", "Mlle", "Dr",  "Pr",  "St",  "Ste",
-    "app", "av",  "ch",   "fig", "p",   "pp",  "réf",
+    "M",   "Mme", "Mlle", "Dr",  "Pr", "St", "Ste",
+    "app", "av",  "ch",   "fig", "p",  "pp",
+    "réf",
     "vol", "cf",  "etc",
 };
 
 /// German abbreviations.
 pub const german_abbreviations: []const []const u8 = &.{
-    "Hr",   "Fr",   "Dr",  "Prof", "Sg",  "Kfm",
-    "Mag",  "Dipl", "Ing", "usw",  "bzw", "bzgl",
-    "ca",   "etc",  "gem", "geg",  "ggf", "z",
-    "B",    "u",    "a",   "d",    "h",   "Nr",
+    "Hr",  "Fr",   "Dr",  "Prof", "Sg",  "Kfm",
+    "Mag", "Dipl", "Ing", "usw",  "bzw", "bzgl",
+    "ca",  "etc",  "gem", "geg",  "ggf", "z",
+    "B",   "u",    "a",   "d",    "h",   "Nr",
     "Str",
 };
 
 /// Spanish abbreviations.
 pub const spanish_abbreviations: []const []const u8 = &.{
-    "Sr",   "Sra",  "Srta", "Lic",  "Dr",   "Dra",
-    "Ing",  "Prof", "p",    "ej",   "Av",   "Cía",
-    "Dpto", "Ud",   "Uds",  "etc",  "cf",
+    "Sr",   "Sra",  "Srta", "Lic", "Dr", "Dra",
+    "Ing",  "Prof", "p",    "ej",  "Av",
+    "Cía",
+    "Dpto", "Ud",   "Uds",  "etc", "cf",
 };
 
 /// Italian abbreviations. Notes: "Sig.ra" is a two-token abbrev (a
@@ -235,18 +237,26 @@ pub const italian_abbreviations: []const []const u8 = &.{
 /// back over BOTH ASCII and Unicode letter codepoints to match.
 pub const hindi_abbreviations: []const []const u8 = &.{
     // Devanagari.
-    "डॉ",        // Doctor (डॉ.)
-    "श्री",       // Shri / Mr.
-    "श्रीमती",     // Shrimati / Mrs.
-    "कुमार",      // Kumar (unmarried male)
-    "कुमारी",     // Kumari (unmarried female)
-    "आदि",       // adi / etc.
-    "अर्थात",     // arthat / i.e.
-    "पृ",         // pri / page
-    "सं",         // san / number/edition
+    "डॉ", // Doctor (डॉ.)
+    "श्री", // Shri / Mr.
+    "श्रीमती", // Shrimati / Mrs.
+    "कुमार", // Kumar (unmarried male)
+    "कुमारी", // Kumari (unmarried female)
+    "आदि", // adi / etc.
+    "अर्थात", // arthat / i.e.
+    "पृ", // pri / page
+    "सं", // san / number/edition
     // Romanized.
-    "Sh",   "Sri",  "Smt",  "Km",    "Kr",
-    "adi",  "arthat", "Pt", "Dr",   "Shri",
+    "Sh",
+    "Sri",
+    "Smt",
+    "Km",
+    "Kr",
+    "adi",
+    "arthat",
+    "Pt",
+    "Dr",
+    "Shri",
 };
 
 /// Vietnamese abbreviations. Honorifics (Ô, Bà, Cô, Anh, Chị, Ông),
@@ -258,13 +268,33 @@ pub const hindi_abbreviations: []const []const u8 = &.{
 /// marks are decoded as UTF-8 multi-byte sequences and matched bytewise.
 pub const vietnamese_abbreviations: []const []const u8 = &.{
     // Honorifics.
-    "Ô",    "Ông",  "Bà",   "Cô",   "Anh",  "Chị",
+    "Ô",
+    "Ông",
+    "Bà",
+    "Cô",
+    "Anh",
+    "Chị",
     // Academic / professional.
-    "TS",   "GS",   "PGS",  "BS",   "KTS",  "KS",
-    "HS",   "SV",   "ThS",  "CN",
+    "TS",
+    "GS",
+    "PGS",
+    "BS",
+    "KTS",
+    "KS",
+    "HS",
+    "SV",
+    "ThS",
+    "CN",
     // Administrative subdivisions.
-    "TP",   "TX",   "TT",   "P",    "Q",    "H",
-    "X",    "TỉNH", "Q.",
+    "TP",
+    "TX",
+    "TT",
+    "P",
+    "Q",
+    "H",
+    "X",
+    "TỉNH",
+    "Q.",
 };
 
 /// Polish abbreviations. Academic / professional titles (dr, prof,
@@ -275,17 +305,28 @@ pub const vietnamese_abbreviations: []const []const u8 = &.{
 pub const polish_abbreviations: []const []const u8 = &.{
     // Academic — both lowercase (Polish convention) and capitalized
     // (sentence-initial / proper-name usage).
-    "dr",   "prof", "mgr",   "inż",  "arch", "hab",
-    "doc",  "dypl",
-    "Dr",   "Prof", "Mgr",   "Inż",
+    "dr",   "prof", "mgr",
+    "inż",
+    "arch", "hab",  "doc",
+    "dypl", "Dr",   "Prof",
+    "Mgr",
+    "Inż",
     // Military.
-    "płk",  "ppłk", "gen",   "mjr",  "kpt",  "por",
-    "ppor", "sierż", "kpr",
+    "płk",
+    "ppłk",
+    "gen",  "mjr",  "kpt",
+    "por",  "ppor",
+    "sierż",
+    "kpr",
     // Religious.
-    "ks",   "św",   "bp",    "abp",  "o",
+     "ks",
+    "św",
+    "bp",   "abp",  "o",
     // Common written-prose.
-    "np",   "tj",   "tzn",   "ds",   "nr",   "ul",
-    "al",   "tzw",  "itd",   "itp",  "tys",
+    "np",   "tj",   "tzn",
+    "ds",   "nr",   "ul",
+    "al",   "tzw",  "itd",
+    "itp",  "tys",
 };
 
 /// Union of all multi-language lists above plus the English defaults.
@@ -1038,11 +1079,11 @@ const SegmenterCtx = struct {
 /// elsewhere fails), and adding entries scales the false-positive
 /// rate proportionally.
 const lowercase_sentence_openers: []const []const u8 = &.{
-    "the",     "a",       "an",      "and",     "but",
-    "or",      "nor",     "so",      "yet",     "for",
-    "then",    "however", "because", "i",       "it",
-    "he",      "she",     "they",    "we",      "you",
-    "this",    "that",    "these",   "those",
+    "the",  "a",       "an",      "and",   "but",
+    "or",   "nor",     "so",      "yet",   "for",
+    "then", "however", "because", "i",     "it",
+    "he",   "she",     "they",    "we",    "you",
+    "this", "that",    "these",   "those",
 };
 
 /// Snap to a sentence boundary. Walks candidate ends right-to-left,

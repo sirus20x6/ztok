@@ -142,7 +142,7 @@ test "Trace.merge feeds BPE merge stream end-to-end" {
     const Pipeline = root.Pipeline;
     const sample =
         "aA== 0\n" ++ // 'h' - actually any single-byte ids work; not used
-        "aGU= 1\n";   // 'he'
+        "aGU= 1\n"; // 'he'
     _ = sample;
 
     // Build a vocab via the BPE Builder pattern: each line in tiktoken

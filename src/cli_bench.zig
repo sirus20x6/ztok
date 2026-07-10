@@ -713,13 +713,13 @@ fn writeText(out: *std.Io.Writer, r: *const BenchResult) !void {
                 for (s.results) |sr| {
                     if (first) {
                         try out.print("  {s:<13} {s:<6}  {d:<10}  {s:<14}  {d:>7.1}  {d:>8.2}  {d:>7}\n", .{
-                            name, status, s.vocab_size, shapeLabel(sr.shape),
+                            name,          status,         s.vocab_size, shapeLabel(sr.shape),
                             sr.mb_per_sec, sr.ms_per_iter, sr.ids,
                         });
                         first = false;
                     } else {
                         try out.print("  {s:<13} {s:<6}  {s:<10}  {s:<14}  {d:>7.1}  {d:>8.2}  {d:>7}\n", .{
-                            "", "", "", shapeLabel(sr.shape),
+                            "",            "",             "",     shapeLabel(sr.shape),
                             sr.mb_per_sec, sr.ms_per_iter, sr.ids,
                         });
                     }

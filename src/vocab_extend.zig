@@ -866,7 +866,7 @@ pub fn extendBpe(
 
     if (old_bytes_len > 0) @memcpy(new_bytes[0..old_bytes_len], old_bpe.bytes);
     if (old_bpe.offsets.len > 0) {
-        @memcpy(new_offsets[0 .. old_bpe.offsets.len], old_bpe.offsets);
+        @memcpy(new_offsets[0..old_bpe.offsets.len], old_bpe.offsets);
     } else {
         new_offsets[0] = 0;
     }

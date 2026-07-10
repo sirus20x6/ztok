@@ -1097,4 +1097,3 @@ test "v2: alias trie lookup succeeds for alias bytes" {
     try testing.expectEqual(@as(usize, 1), ids2.len);
     try testing.expectEqual(id_prim, ids2[0]);
 }
-

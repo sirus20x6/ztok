@@ -48,13 +48,28 @@ pub fn main(init: std.process.Init) !void {
     var i: usize = 1;
     while (i < owned.items.len) : (i += 1) {
         const a = owned.items[i];
-        if (std.mem.eql(u8, a, "--model")) { model_path = owned.items[i + 1]; i += 1; }
-        else if (std.mem.eql(u8, a, "--corpus")) { corpus_path = owned.items[i + 1]; i += 1; }
-        else if (std.mem.eql(u8, a, "--scenario")) { scenario = owned.items[i + 1]; i += 1; }
-        else if (std.mem.eql(u8, a, "--small-iters")) { small_iters = try std.fmt.parseInt(u32, owned.items[i + 1], 10); i += 1; }
-        else if (std.mem.eql(u8, a, "--large-bytes")) { large_bytes = try std.fmt.parseInt(usize, owned.items[i + 1], 10); i += 1; }
-        else if (std.mem.eql(u8, a, "--batch-n")) { batch_n = try std.fmt.parseInt(usize, owned.items[i + 1], 10); i += 1; }
-        else if (std.mem.eql(u8, a, "--batch-per")) { batch_per = try std.fmt.parseInt(usize, owned.items[i + 1], 10); i += 1; }
+        if (std.mem.eql(u8, a, "--model")) {
+            model_path = owned.items[i + 1];
+            i += 1;
+        } else if (std.mem.eql(u8, a, "--corpus")) {
+            corpus_path = owned.items[i + 1];
+            i += 1;
+        } else if (std.mem.eql(u8, a, "--scenario")) {
+            scenario = owned.items[i + 1];
+            i += 1;
+        } else if (std.mem.eql(u8, a, "--small-iters")) {
+            small_iters = try std.fmt.parseInt(u32, owned.items[i + 1], 10);
+            i += 1;
+        } else if (std.mem.eql(u8, a, "--large-bytes")) {
+            large_bytes = try std.fmt.parseInt(usize, owned.items[i + 1], 10);
+            i += 1;
+        } else if (std.mem.eql(u8, a, "--batch-n")) {
+            batch_n = try std.fmt.parseInt(usize, owned.items[i + 1], 10);
+            i += 1;
+        } else if (std.mem.eql(u8, a, "--batch-per")) {
+            batch_per = try std.fmt.parseInt(usize, owned.items[i + 1], 10);
+            i += 1;
+        }
     }
 
     const mp = model_path orelse {
@@ -159,9 +174,8 @@ pub fn main(init: std.process.Init) !void {
         const total_bytes: u64 = @as(u64, batch_n) * @as(u64, batch_per);
         const mb_per_sec = (@as(f64, @floatFromInt(total_bytes)) / @as(f64, @floatFromInt(dt))) * 1e3;
         try out.print("batch_pooled  n={d}  per={d}  time={d:.2} ms  MB/s={d:.1}  ids={d}\n", .{
-            batch_n, batch_per,
-            @as(f64, @floatFromInt(dt)) / 1e6,
-            mb_per_sec,
+            batch_n,                           batch_per,
+            @as(f64, @floatFromInt(dt)) / 1e6, mb_per_sec,
             total_ids,
         });
     }

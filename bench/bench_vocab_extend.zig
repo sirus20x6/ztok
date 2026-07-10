@@ -39,22 +39,24 @@ fn buildSyntheticBpe(a: std.mem.Allocator, vocab_size: u32, seed: u64) !Bpe {
     // TWO stems plus a numeric tail to expand the cardinality beyond
     // the 100K vocab size while keeping 4-gram overlap realistic.
     const prefixes = [_][]const u8{
-        "un", "re", "in", "dis", "pre", "non", "anti", "auto",
-        "co", "de", "en", "ex", "il", "im", "ir", "mis",
+        "un",   "re",   "in",   "dis", "pre",   "non",   "anti",  "auto",
+        "co",   "de",   "en",   "ex",  "il",    "im",    "ir",    "mis",
         "over", "post", "semi", "sub", "super", "trans", "ultra", "under",
-        "for", "fore", "out", "up", "with", "be", "em", "ab",
+        "for",  "fore", "out",  "up",  "with",  "be",    "em",    "ab",
     };
     const stems = [_][]const u8{
-        "act", "ate", "able", "ance", "ant", "ary",
-        "ence", "ent", "ess", "fic", "ful", "ial",
-        "ify", "ion", "ish", "ism", "ist", "ity", "ive", "ize",
-        "less", "ment", "ness", "ous", "ship", "tion", "ward",
-        "form", "graph", "logy", "meter", "phon", "scope", "tech", "type",
-        "play", "work", "load", "code", "data", "node", "path", "name",
+        "act",   "ate",  "able",  "ance", "ant",   "ary",
+        "ence",  "ent",  "ess",   "fic",  "ful",   "ial",
+        "ify",   "ion",  "ish",   "ism",  "ist",   "ity",
+        "ive",   "ize",  "less",  "ment", "ness",  "ous",
+        "ship",  "tion", "ward",  "form", "graph", "logy",
+        "meter", "phon", "scope", "tech", "type",  "play",
+        "work",  "load", "code",  "data", "node",  "path",
+        "name",
     };
     const suffixes = [_][]const u8{
-        "", "s", "ed", "ing", "er", "est", "ly", "able", "ish", "ful",
-        "_x", "_y", "_z", "_a", "_b", "_c",
+        "",   "s",  "ed", "ing", "er", "est", "ly", "able", "ish", "ful",
+        "_x", "_y", "_z", "_a",  "_b", "_c",
     };
 
     // Step 1: generate the piece-bytes list in a way that doesn't alias
@@ -171,13 +173,13 @@ fn buildNewTokens(a: std.mem.Allocator, old: *const Bpe, n: usize, seed: u64) ![
     var prng = std.Random.DefaultPrng.init(seed);
     const r = prng.random();
     const prefixes = [_][]const u8{
-        "domain_", "medical_", "scientific_", "legal_", "financial_",
-        "novel_", "synthetic_", "test_", "rare_", "private_",
+        "domain_", "medical_",   "scientific_", "legal_", "financial_",
+        "novel_",  "synthetic_", "test_",       "rare_",  "private_",
     };
     const stems = [_][]const u8{
-        "encoder", "transformer", "embedding", "tokenizer", "decoder",
-        "context", "attention", "weights", "features", "patterns",
-        "actuator", "classifier", "function", "instance", "method",
+        "encoder",  "transformer", "embedding", "tokenizer", "decoder",
+        "context",  "attention",   "weights",   "features",  "patterns",
+        "actuator", "classifier",  "function",  "instance",  "method",
     };
     const suffixes = [_][]const u8{ "", "_v2", "_v3", "_alt", "_x", "_y", "_pro" };
 

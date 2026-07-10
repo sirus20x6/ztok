@@ -2485,9 +2485,9 @@ test "hot table: encode bit-identical with and without hot table" {
     defer bpe.deinit();
 
     const inputs = [_][]const u8{
-        "ab",         "cd",        "abcd",          "abcdef",
-        "abcdefab",   "efcdab",    "abcdefabcdef",  "xyzab",
-        "abcdefg",    "a",         "f",             "abcabcabc",
+        "ab",       "cd",     "abcd",         "abcdef",
+        "abcdefab", "efcdab", "abcdefabcdef", "xyzab",
+        "abcdefg",  "a",      "f",            "abcabcabc",
     };
 
     var with_hot: [128]TokenId = undefined;
@@ -2603,10 +2603,10 @@ test "1.16: encode bit-identical with hot_table on vs off" {
     // existing `hot table: encode bit-identical with and without hot
     // table` test via the null-the-pointer pattern.
     const short_inputs = [_][]const u8{
-        "ab",                   "cd",        "abcd",
-        "abcdef",               "abcdefab",  "efcdab",
-        "abcdefabcdef",         "xyzab",     "abcdefgh",
-        "a",                    "f",         "abcabcabc",
+        "ab",                   "cd",       "abcd",
+        "abcdef",               "abcdefab", "efcdab",
+        "abcdefabcdef",         "xyzab",    "abcdefgh",
+        "a",                    "f",        "abcabcabc",
         "abcdefabcdefabcdefab",
     };
     var out_off: [256]TokenId = undefined;

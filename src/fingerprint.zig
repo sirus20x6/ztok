@@ -168,11 +168,11 @@ test "different BPE vocabs produce different fingerprints" {
     const sample_a =
         "YQ== 0\n" ++ // 'a' -> 0
         "Yg== 1\n" ++ // 'b' -> 1
-        "YWI= 2\n";   // 'ab' -> 2
+        "YWI= 2\n"; // 'ab' -> 2
     const sample_b =
         "Yg== 0\n" ++ // 'b' -> 0
         "YQ== 1\n" ++ // 'a' -> 1
-        "YmE= 2\n";   // 'ba' -> 2
+        "YmE= 2\n"; // 'ba' -> 2
 
     var bpe_a = try Bpe.loadTiktokenBytes(testing.allocator, sample_a);
     defer bpe_a.deinit();

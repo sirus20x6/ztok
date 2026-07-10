@@ -2,20 +2,20 @@
 """Render the ztok-vs-tiktoken throughput chart (docs/throughput.png).
 
 Apples-to-apples: same cl100k_base vocab, the *same* corpus bytes per
-pair, same machine, warm encode loop (8 iters), ReleaseFast. Both
-tokenizers emit the same id count on each corpus, so it's like-for-like.
+pair, same machine, warm encode loop (8 iters), ReleaseFast. Each value
+is the median of three independent runs. Both tokenizers emit the same
+id count on each corpus, so it's like-for-like.
 
 Throughput is corpus-dependent, so each bar shows a RANGE across two
 real corpora measured on the reference box (AMD EPYC 7473X, 24c/48t),
-2026-05-22:
+2026-07-10:
   * low  end = English + code + chat + multilingual mix (~9 MB) — the
     heavy non-ASCII content slows BPE for both tokenizers.
   * high end = English + code + chat (~10.6 MB) — ASCII-heavy, the
     common code/English LLM-training case.
-The solid bar is the conservative (low) number; the whisker reaches the
-ASCII-heavy peak. Multithreaded peaks vary run-to-run (ztok batch ×48
-~367–461 MB/s on ASCII; ~291 steady on the mix), so the high end is
-representative, not a record.
+The solid bar is the conservative mix median; the whisker reaches the
+ASCII-heavy median. Raw runs and token counts live in
+`docs/benchmark_data.json`.
 
 Reproduce:
   # mix:   english+code+chat+multilingual, x3 ;  ascii: english+code+chat, x5
@@ -25,17 +25,24 @@ Reproduce:
 Regenerate with:  python3 docs/throughput_chart.py
 """
 
+import json
+from pathlib import Path
+
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 
+HERE = Path(__file__).resolve().parent
+DATA = json.loads((HERE / "benchmark_data.json").read_text())
+scaling = DATA["cl100k_scaling"]
+
 configs = ["single-thread", "batch ×8", "batch ×48\n(+pin-physical)"]
-# low = multilingual mix (conservative), high = ASCII-heavy (peak)
-ztok_lo = [19.6, 104.7, 291.0]
-ztok_hi = [22.6, 132.5, 425.0]
-tik_lo = [10.4, 48.8, 76.0]
-tik_hi = [10.4, 52.4, 78.3]
+# low = multilingual mix (conservative), high = ASCII-heavy
+ztok_lo = scaling["ztok"]["mix"]["median_mb_s"]
+ztok_hi = scaling["ztok"]["ascii"]["median_mb_s"]
+tik_lo = scaling["tiktoken"]["mix"]["median_mb_s"]
+tik_hi = scaling["tiktoken"]["ascii"]["median_mb_s"]
 
 x = np.arange(len(configs))
 w = 0.38
@@ -58,8 +65,10 @@ for i, b in enumerate(b1):
             f"{ztok_lo[i]:.0f}–{ztok_hi[i]:.0f}", ha="center", va="bottom",
             fontsize=10, fontweight="bold", color="#1a365d")
 for i, b in enumerate(b2):
+    label = (f"{tik_lo[i]:.0f}–{tik_hi[i]:.0f}"
+             if round(tik_lo[i]) != round(tik_hi[i]) else f"{tik_lo[i]:.0f}")
     ax.text(b.get_x() + b.get_width() / 2, tik_hi[i] + 8,
-            f"{tik_lo[i]:.0f}", ha="center", va="bottom", fontsize=10, color="#4a5568")
+            label, ha="center", va="bottom", fontsize=10, color="#4a5568")
 
 # speedup range above each group
 for i in range(3):
@@ -78,11 +87,12 @@ ax.spines[["top", "right"]].set_visible(False)
 ax.tick_params(labelsize=11)
 ax.legend(loc="upper left", fontsize=11, frameon=False)
 ax.text(0.5, -0.24,
-        "ReleaseFast, AMD EPYC 7473X (24c/48t), warm loop (8 iters), same corpus bytes & vocab per pair.\n"
-        "Bar = English+code+chat+multilingual mix; whisker = ASCII-heavy (English+code+chat) peak. Both emit equal id counts.",
+        "ReleaseFast, AMD EPYC 7473X (24c/48t), 8 iters/run, median of 3 runs, same bytes & vocab per pair.\n"
+        "Bar = English+code+chat+multilingual mix; whisker = ASCII-heavy median. Both emit equal id counts.",
         transform=ax.transAxes, ha="center", va="top", fontsize=8.0,
         color="#718096", family="monospace")
 
 plt.tight_layout()
-fig.savefig("docs/throughput.png", dpi=150, bbox_inches="tight", facecolor="white")
-print("wrote docs/throughput.png")
+output = HERE / "throughput.png"
+fig.savefig(output, dpi=150, bbox_inches="tight", facecolor="white")
+print(f"wrote {output}")

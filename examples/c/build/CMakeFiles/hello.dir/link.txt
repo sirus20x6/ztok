@@ -1,1 +1,0 @@
-/usr/lib/ccache/bin/cc -march=znver3 -Wl,--dependency-file=CMakeFiles/hello.dir/link.d CMakeFiles/hello.dir/hello.c.o -o hello  -Wl,-rpath,/tmp/ztok_install_test/lib /tmp/ztok_install_test/lib/libztok.so

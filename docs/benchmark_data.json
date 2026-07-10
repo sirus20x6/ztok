@@ -1,0 +1,118 @@
+{
+  "schema": 1,
+  "measured_on": "2026-07-10",
+  "host": {
+    "cpu": "AMD EPYC 7473X 24-Core Processor",
+    "cores": 24,
+    "threads": 48,
+    "os": "Linux 7.0.10-zen1-1.1-zen x86_64"
+  },
+  "toolchain": {
+    "ztok": "1.28.0",
+    "zig": "0.16.0",
+    "tiktoken": "0.12.0",
+    "tokenizers": "0.21.4",
+    "sentencepiece": "0.2.1"
+  },
+  "method": {
+    "optimization": "ReleaseFast",
+    "iterations_per_run": 8,
+    "independent_runs": 3,
+    "summary": "median of three independent warm-loop runs"
+  },
+  "corpora": {
+    "mix": {
+      "bytes": 9064746,
+      "recipe": "3x (english.txt + code.txt + chat.txt + multilingual.txt)"
+    },
+    "ascii": {
+      "bytes": 10632310,
+      "recipe": "5x (english.txt + code.txt + chat.txt)"
+    }
+  },
+  "cl100k_scaling": {
+    "shapes": [
+      "single-thread",
+      "batch x8",
+      "batch x48 +pin-physical"
+    ],
+    "ztok": {
+      "mix": {
+        "runs_mb_s": [
+          [19.1691, 98.0237, 309.8018],
+          [19.7547, 94.9146, 294.4654],
+          [19.3512, 93.5734, 297.4899]
+        ],
+        "median_mb_s": [19.3512, 94.9146, 297.4899],
+        "ids": 2688006
+      },
+      "ascii": {
+        "runs_mb_s": [
+          [22.1980, 127.3757, 397.5431],
+          [21.3185, 120.7345, 395.9355],
+          [22.0130, 124.1872, 389.5335]
+        ],
+        "median_mb_s": [22.0130, 124.1872, 395.9355],
+        "ids": 2867510
+      }
+    },
+    "tiktoken": {
+      "mix": {
+        "runs_mb_s": [
+          [10.4, 53.4, 81.1],
+          [10.2, 54.4, 83.0],
+          [10.2, 53.7, 85.5]
+        ],
+        "median_mb_s": [10.2, 53.7, 83.0],
+        "ids": 2688006
+      },
+      "ascii": {
+        "runs_mb_s": [
+          [10.7, 52.9, 89.6],
+          [10.5, 55.4, 88.6],
+          [10.3, 54.1, 90.9]
+        ],
+        "median_mb_s": [10.5, 54.1, 89.6],
+        "ids": 2867510
+      }
+    }
+  },
+  "single_thread_competitors": [
+    {
+      "label": "tiktoken\n(cl100k)",
+      "ztok_runs_mb_s": [19.1691, 19.7547, 19.3512],
+      "ztok_median_mb_s": 19.3512,
+      "reference_runs_mb_s": [10.4, 10.2, 10.2],
+      "reference_median_mb_s": 10.2,
+      "ztok_ids": 2688006,
+      "reference_ids": 2688006
+    },
+    {
+      "label": "HF tokenizers\n(gpt2)",
+      "ztok_runs_mb_s": [11.8705, 11.6744, 11.5030],
+      "ztok_median_mb_s": 11.6744,
+      "reference_runs_mb_s": [1.5, 1.6, 1.6],
+      "reference_median_mb_s": 1.6,
+      "ztok_ids": 3473808,
+      "reference_ids": 3473772
+    },
+    {
+      "label": "SentencePiece\nBPE (llama2)",
+      "ztok_runs_mb_s": [3.1, 3.1, 3.1],
+      "ztok_median_mb_s": 3.1,
+      "reference_runs_mb_s": [1.6, 1.5, 1.5],
+      "reference_median_mb_s": 1.5,
+      "ztok_ids": 3121668,
+      "reference_ids": 3121668
+    },
+    {
+      "label": "SentencePiece\nUnigram (t5)",
+      "ztok_runs_mb_s": [16.5, 16.7, 16.3],
+      "ztok_median_mb_s": 16.5,
+      "reference_runs_mb_s": [9.9, 10.1, 10.3],
+      "reference_median_mb_s": 10.1,
+      "ztok_ids": 2887647,
+      "reference_ids": 2889763
+    }
+  ]
+}

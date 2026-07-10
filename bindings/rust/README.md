@@ -5,7 +5,7 @@ tokenizer library written in Zig. Mirrors the C ABI declared in
 [`include/ztok.h`](../../include/ztok.h) and the surface of the existing
 Python / Node / Ruby / Go bindings.
 
-Status: **1.22.0** — every C ABI surface declared in `include/ztok.h`
+Status: **1.28.0** — every C ABI surface declared in `include/ztok.h`
 for this release is wrapped (see [Wrapped surface](#wrapped-surface)).
 
 ## Installing libztok

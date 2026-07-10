@@ -5,7 +5,7 @@ Java 21+ binding for [libztok](../../README.md). Uses the
 JAR. The whole binding is plain Java that talks to `libztok` via
 `java.lang.foreign.Linker` downcall handles.
 
-Status: **1.23.0**. Wraps the full stable C ABI surface from
+Status: **1.28.0**. Wraps the full stable C ABI surface from
 `include/ztok.h`:
 
 - `ztok_pipeline_new`, `ztok_pipeline_free`
@@ -27,7 +27,7 @@ Status: **1.23.0**. Wraps the full stable C ABI surface from
 <dependency>
   <groupId>com.anthropic</groupId>
   <artifactId>ztok</artifactId>
-  <version>1.23.0</version>
+  <version>1.28.0</version>
 </dependency>
 ```
 

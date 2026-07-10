@@ -683,6 +683,18 @@ pub const Pipeline = struct {
         input: []const u8,
         n_chunks: usize,
     ) ![]TokenId {
+        // Splitting is correct only when normalization is byte-identical and
+        // the pre-tokenizer exposes truly independent model spans. Identity
+        // pre-tokenization presents the entire input as one model span, so
+        // only byte_id can be divided without changing model decisions.
+        if (!self.normalizer.isIdentity()) return self.encode(result_allocator, input);
+        switch (self.pre_tokenizer) {
+            .identity => if (self.model != .byte_id) return self.encode(result_allocator, input),
+            // Sequence chains currently use an approximate newline heuristic
+            // rather than a proof for every supported operation.
+            .chain => return self.encode(result_allocator, input),
+            else => {},
+        }
         if (self.added_tokens) |scanner| {
             return self.encodeChunkedWithAddedTokens(result_allocator, pool, scanner, input, n_chunks);
         }
@@ -712,16 +724,8 @@ pub const Pipeline = struct {
         var i: usize = 1;
         while (i < chunks) : (i += 1) {
             const desired = i * nominal;
-            const snapped = self.pre_tokenizer.findSafeCut(input, desired, window) orelse blk: {
-                // Last-resort fallback: back off to the nearest UTF-8
-                // codepoint boundary so we never cut mid-character. Token
-                // ids may still differ from single-shot here (whitespace
-                // run or BPE merge spanning the cut), but at least the
-                // BPE doesn't get a malformed UTF-8 leading byte.
-                var p = desired;
-                while (p > 0 and (input[p] & 0xC0) == 0x80) p -= 1;
-                break :blk p;
-            };
+            const snapped = self.pre_tokenizer.findSafeCut(input, desired, window) orelse
+                return self.encode(result_allocator, input);
             // Enforce monotonicity (snapping backwards into a previous
             // segment would create a zero-length slice; clamp instead).
             boundaries[i] = @max(snapped, boundaries[i - 1]);
@@ -746,43 +750,56 @@ pub const Pipeline = struct {
             return self.encode(result_allocator, input);
         }
 
-        // Build slice inputs.
-        const inputs = try result_allocator.alloc([]const u8, out_count);
-        defer result_allocator.free(inputs);
-        var k: usize = 0;
-        while (k < out_count) : (k += 1) {
-            inputs[k] = input[boundaries[k]..boundaries[k + 1]];
-        }
-
-        // Encode in parallel. On success, every entry of `partials` is a
-        // freshly allocated `[]TokenId` owned by `result_allocator`.
-        const partials = try result_allocator.alloc([]TokenId, out_count);
+        // Put worst-case partial outputs in the prewarmed worker-local
+        // arenas. They remain valid until the next batch-wide reset, so a
+        // worker may process multiple jobs without touching the shared GPA.
+        // Only the final right-sized result is globally allocated.
+        const expansion = self.pre_tokenizer.maxByteExpansion();
+        const partials = try result_allocator.alloc([]const TokenId, out_count);
         defer result_allocator.free(partials);
+        @memset(partials, &.{});
+        pool.resetAllArenas();
+        const Ctx = struct {
+            pipe: *const Pipeline,
+            pool: *BatchPool,
+            input: []const u8,
+            boundaries: []const usize,
+            partials: [][]const TokenId,
+            expansion: usize,
+            errored: std.atomic.Value(u32) = .init(0),
 
-        self.encodeBatch(result_allocator, pool, inputs, partials) catch |err| {
-            // encodeBatch returns BatchEncodeFailed if any worker errored.
-            // We can't tell which slots are valid, so leak nothing extra
-            // (the per-worker arenas hold scratch; the only allocations on
-            // result_allocator are partial slices that succeeded — but we
-            // don't know which). Best effort: free nothing; rely on the
-            // caller's GPA to surface leaks if any. In practice
-            // BatchEncodeFailed should only fire on OOM, which is fatal.
-            return err;
+            pub fn run(c: *@This(), idx: usize, worker_idx: usize) void {
+                const scratch = c.pool.arenaAllocator(worker_idx);
+                const text = c.input[c.boundaries[idx]..c.boundaries[idx + 1]];
+                const cap = c.pipe.model.maxTokensFor(text.len * c.expansion);
+                const region = scratch.alloc(TokenId, cap) catch {
+                    _ = c.errored.fetchAdd(1, .acq_rel);
+                    return;
+                };
+                c.partials[idx] = c.pipe.encodeText(scratch, text, region) catch {
+                    _ = c.errored.fetchAdd(1, .acq_rel);
+                    return;
+                };
+            }
         };
+        var ctx: Ctx = .{
+            .pipe = self,
+            .pool = pool,
+            .input = input,
+            .boundaries = boundaries[0 .. out_count + 1],
+            .partials = partials,
+            .expansion = expansion,
+        };
+        try pool.runBatch(Ctx, &ctx, out_count);
+        if (ctx.errored.load(.acquire) != 0) return error.BatchEncodeFailed;
 
-        defer {
-            for (partials) |p| result_allocator.free(p);
-        }
-
-        // Concatenate.
         var total: usize = 0;
-        for (partials) |p| total += p.len;
-
+        for (partials) |partial| total += partial.len;
         const out = try result_allocator.alloc(TokenId, total);
-        var n: usize = 0;
-        for (partials) |p| {
-            @memcpy(out[n .. n + p.len], p);
-            n += p.len;
+        var written: usize = 0;
+        for (partials) |partial| {
+            @memcpy(out[written .. written + partial.len], partial);
+            written += partial.len;
         }
         return out;
     }
@@ -877,11 +894,9 @@ pub const Pipeline = struct {
                 var i: usize = 1;
                 while (i < share) : (i += 1) {
                     const desired = i * sub_nominal;
-                    const snapped = pretok.findSafeCut(sub_slice, desired, window) orelse blk: {
-                        var p = desired;
-                        while (p > 0 and (sub_slice[p] & 0xC0) == 0x80) p -= 1;
-                        break :blk p;
-                    };
+                    // Omit an unsafe desired cut. The surrounding safe cuts
+                    // (or the segment endpoints) still form a correct job.
+                    const snapped = pretok.findSafeCut(sub_slice, desired, window) orelse continue;
                     const prev = cut_starts.items[cut_starts.items.len - 1];
                     const monotone: u32 = @intCast(@max(snapped, @as(usize, prev)));
                     try cut_starts.append(scratch, monotone);
@@ -943,19 +958,18 @@ pub const Pipeline = struct {
             return self.encode(result_allocator, input);
         }
 
-        // Per-job partial id buffers. Owned by `result_allocator`; freed
-        // after concatenation. Special jobs allocate a 1-element slice so
-        // the concat loop stays uniform.
-        const partials = try result_allocator.alloc([]TokenId, jobs.len);
+        const expansion = self.normalizer.maxByteExpansion() * self.pre_tokenizer.maxByteExpansion();
+        const partials = try result_allocator.alloc([]const TokenId, jobs.len);
         defer result_allocator.free(partials);
-        for (partials) |*p| p.* = &.{};
+        @memset(partials, &.{});
+        pool.resetAllArenas();
 
         const Ctx = struct {
             pipe: *const Pipeline,
             input: []const u8,
             jobs: []const ChunkJob,
-            partials: [][]TokenId,
-            ra: std.mem.Allocator,
+            partials: [][]const TokenId,
+            expansion: usize,
             pool: *BatchPool,
             errored: std.atomic.Value(u32),
 
@@ -963,30 +977,27 @@ pub const Pipeline = struct {
 
             pub fn run(c: *Self, idx: usize, worker_idx: usize) void {
                 const job = c.jobs[idx];
+                const scratch = c.pool.arenaAllocator(worker_idx);
                 switch (job) {
                     .special => |id| {
-                        const out = c.ra.alloc(TokenId, 1) catch {
+                        const region = scratch.alloc(TokenId, 1) catch {
                             _ = c.errored.fetchAdd(1, .acq_rel);
                             return;
                         };
-                        out[0] = id;
-                        c.partials[idx] = out;
+                        region[0] = id;
+                        c.partials[idx] = region;
                     },
                     .text => |t| {
-                        const scratch = c.pool.resetArena(worker_idx);
-                        const exp = c.pipe.normalizer.maxByteExpansion() * c.pipe.pre_tokenizer.maxByteExpansion();
-                        const cap = c.pipe.model.maxTokensFor((t.end - t.start) * exp);
-                        const out = c.ra.alloc(TokenId, cap) catch {
+                        const text = c.input[t.start..t.end];
+                        const cap = c.pipe.model.maxTokensFor(text.len * c.expansion);
+                        const region = scratch.alloc(TokenId, cap) catch {
                             _ = c.errored.fetchAdd(1, .acq_rel);
                             return;
                         };
-                        const written = c.pipe.encodeText(scratch, c.input[t.start..t.end], out) catch {
-                            c.ra.free(out);
+                        c.partials[idx] = c.pipe.encodeText(scratch, text, region) catch {
                             _ = c.errored.fetchAdd(1, .acq_rel);
                             return;
                         };
-                        const shrunk = c.ra.realloc(out, written.len) catch out[0..written.len];
-                        c.partials[idx] = shrunk;
                     },
                 }
             }
@@ -997,30 +1008,20 @@ pub const Pipeline = struct {
             .input = input,
             .jobs = jobs,
             .partials = partials,
-            .ra = result_allocator,
+            .expansion = expansion,
             .pool = pool,
             .errored = .init(0),
         };
 
-        pool.runBatch(Ctx, &ctx, jobs.len) catch |err| {
-            for (partials) |p| if (p.len > 0) result_allocator.free(p);
-            return err;
-        };
-
-        if (ctx.errored.load(.acquire) != 0) {
-            for (partials) |p| if (p.len > 0) result_allocator.free(p);
-            return error.BatchEncodeFailed;
-        }
-
-        defer for (partials) |p| if (p.len > 0) result_allocator.free(p);
-
+        try pool.runBatch(Ctx, &ctx, jobs.len);
+        if (ctx.errored.load(.acquire) != 0) return error.BatchEncodeFailed;
         var total: usize = 0;
-        for (partials) |p| total += p.len;
+        for (partials) |partial| total += partial.len;
         const out = try result_allocator.alloc(TokenId, total);
-        var n: usize = 0;
-        for (partials) |p| {
-            @memcpy(out[n .. n + p.len], p);
-            n += p.len;
+        var written: usize = 0;
+        for (partials) |partial| {
+            @memcpy(out[written .. written + partial.len], partial);
+            written += partial.len;
         }
         return out;
     }
@@ -1037,6 +1038,7 @@ pub const Pipeline = struct {
         results: [][]TokenId,
     ) !void {
         std.debug.assert(results.len == inputs.len);
+        for (results) |*r| r.* = &.{};
 
         const Ctx = struct {
             pipe: *const Pipeline,
@@ -1064,7 +1066,7 @@ pub const Pipeline = struct {
             ) ![]TokenId {
                 const exp = pipe.normalizer.maxByteExpansion() * pipe.pre_tokenizer.maxByteExpansion();
                 if (pipe.added_tokens) |scanner| {
-                    const segs = try added_tokens_mod.scan(scanner,scratch, input);
+                    const segs = try added_tokens_mod.scan(scanner, scratch, input);
                     var cap: usize = 0;
                     for (segs) |seg| switch (seg) {
                         .text => |t| cap += pipe.model.maxTokensFor((t.end - t.start) * exp),
@@ -1101,8 +1103,20 @@ pub const Pipeline = struct {
             .errored = .init(0),
         };
 
-        try pool.runBatch(Ctx, &ctx, inputs.len);
-        if (ctx.errored.load(.acquire) != 0) return error.BatchEncodeFailed;
+        pool.runBatch(Ctx, &ctx, inputs.len) catch |err| {
+            for (results) |*r| {
+                if (r.len > 0) result_allocator.free(r.*);
+                r.* = &.{};
+            }
+            return err;
+        };
+        if (ctx.errored.load(.acquire) != 0) {
+            for (results) |*r| {
+                if (r.len > 0) result_allocator.free(r.*);
+                r.* = &.{};
+            }
+            return error.BatchEncodeFailed;
+        }
     }
 };
 
@@ -1145,8 +1159,9 @@ test "end-to-end: cl100k + bpe round-trip" {
         rank += 1;
     }
     const extra = [_][]const u8{
-        "he", "hel", "hell", "hello",
-        " w", " wo", " wor", " worl", " world",
+        "he",     "hel", "hell", "hello",
+        " w",     " wo", " wor", " worl",
+        " world",
     };
     for (extra) |bytes| {
         const encoded = b64.encode(&enc_buf, bytes);
@@ -1466,8 +1481,9 @@ test "Pipeline.encodeWithOffsets with cl100k+bpe covers input" {
         rank += 1;
     }
     const extra = [_][]const u8{
-        "he", "hel", "hell", "hello",
-        " w", " wo", " wor", " worl", " world",
+        "he",     "hel", "hell", "hello",
+        " w",     " wo", " wor", " worl",
+        " world",
     };
     for (extra) |bytes| {
         const encoded = b64.encode(&enc_buf, bytes);
@@ -1716,11 +1732,12 @@ fn buildTinyBpe(a: std.mem.Allocator) !@import("bpe.zig").Bpe {
     }
     // A handful of merges so the BPE has interesting fan-in.
     const extra = [_][]const u8{
-        "he", "hel", "hell", "hello",
-        " w", " wo", " wor", " worl", " world",
-        "th", "the", " the", " and", " of",
-        "in", "ing", " a", " to", " is",
-        "\n\n", " \n", " *", "##",
+        "he",     "hel", "hell", "hello",
+        " w",     " wo", " wor", " worl",
+        " world", "th",  "the",  " the",
+        " and",   " of", "in",   "ing",
+        " a",     " to", " is",  "\n\n",
+        " \n",    " *",  "##",
     };
     for (extra) |bytes| {
         const encoded = b64.encode(&enc_buf, bytes);
@@ -1763,6 +1780,31 @@ test "encodeChunked identity byte_id matches single-shot" {
     try expectChunkedMatchesSingleShot(&pipe, &bp, "x", 4);
     // Multi-byte UTF-8: ensure cuts don't land mid-codepoint.
     try expectChunkedMatchesSingleShot(&pipe, &bp, "αβγδεζηθικλμνξοπρστυφχψω", 4);
+}
+
+test "encodeChunked identity BPE falls back instead of splitting a model span" {
+    var bpe = try buildTinyBpe(std.testing.allocator);
+    defer bpe.deinit();
+    var v = Vocab.empty(std.testing.allocator);
+    defer v.deinit();
+    const pipe: Pipeline = .{
+        .normalizer = .identity,
+        .pre_tokenizer = .identity,
+        .model = .{ .bpe = &bpe },
+        .decoder = .concat,
+        .vocab = &v,
+    };
+    var bp = try BatchPool.init(std.testing.allocator, 4);
+    defer bp.deinit();
+
+    // Every chunk cut would otherwise be inside the single identity span,
+    // allowing BPE merges such as "hello" to cross the boundary.
+    try expectChunkedMatchesSingleShot(
+        &pipe,
+        &bp,
+        "hellohellohellohello worldhellohellohellohello",
+        7,
+    );
 }
 
 test "encodeChunked cl100k+bpe matches single-shot — basic sentences" {

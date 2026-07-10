@@ -191,7 +191,7 @@ test "bpe variant dispatch" {
     const sample =
         "YQ== 0\n" ++ // 'a'
         "Yg== 1\n" ++ // 'b'
-        "YWI= 2\n";   // 'ab'
+        "YWI= 2\n"; // 'ab'
     var b = try Bpe.loadTiktokenBytes(std.testing.allocator, sample);
     defer b.deinit();
 
@@ -249,9 +249,9 @@ test "monster variant dispatch" {
     var bld = Monster.Builder.init(std.testing.allocator);
     defer bld.deinit();
     _ = try bld.addToken("<unk>"); // id 0
-    _ = try bld.addToken("a");      // id 1
-    _ = try bld.addToken("ab");     // id 2
-    _ = try bld.addToken("abc");    // id 3
+    _ = try bld.addToken("a"); // id 1
+    _ = try bld.addToken("ab"); // id 2
+    _ = try bld.addToken("abc"); // id 3
     var mon = try bld.finalize(0);
     defer mon.deinit();
 

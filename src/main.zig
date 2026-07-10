@@ -145,13 +145,18 @@ fn printUsage(out: *std.Io.Writer) !void {
         \\                 [--input ids.txt|--stdin] [--format text|jsonl]
         \\  ztok serve     --model PATH [--cl100k]
         \\                 [--host HOST] [--port N] [--workers N]
+        \\                 [--connection-workers N] [--connection-queue N]
+        \\                 [--bpe-hot-table on|off]
         \\                 [--auth-token TOKEN | --auth-token-file PATH]
         \\                 [--auth-oidc-issuer URL --auth-oidc-audience NAME]
         \\                 [--rate-limit REQ_PER_SEC]
+        \\                 [--idle-timeout-ms N] [--max-keepalive-requests N]
         \\                 [--log-format text|json] [--metrics]
         \\                 [--tls-cert PATH --tls-key PATH]
         \\  ztok grpc-serve --model PATH [--cl100k]
         \\                 [--host HOST] [--port N] [--workers N]
+        \\                 [--connection-workers N] [--connection-queue N]
+        \\                 [--bpe-hot-table on|off]
         \\                 (gRPC-Web over HTTP/1.1, default port 7891)
         \\  ztok bench     [--quick] [--iters N] [--include cl100k,sp-bpe,sp-unigram,tm,hf-bpe]
         \\                 [--vocab-root DIR] [--format text|json]
@@ -250,9 +255,14 @@ const Args = struct {
     host: ?[]const u8 = null,
     port: ?u16 = null,
     workers: ?u32 = null,
+    connection_workers: ?u16 = null,
+    connection_queue: ?u16 = null,
+    bpe_hot_table: ?bool = null,
     auth_token: ?[]const u8 = null,
     auth_token_file: ?[]const u8 = null,
     rate_limit: ?u32 = null,
+    idle_timeout_ms: ?u32 = null,
+    max_keepalive_requests: ?u32 = null,
     // serve hardening (post-1.22 agent D)
     log_format: ?[]const u8 = null,
     metrics: bool = false,
@@ -466,6 +476,25 @@ const Args = struct {
                 if (i + 1 >= raw.len) return error.MissingValue;
                 a.workers = try std.fmt.parseInt(u32, raw[i + 1], 10);
                 i += 1;
+            } else if (std.mem.eql(u8, tok, "--connection-workers")) {
+                if (i + 1 >= raw.len) return error.MissingValue;
+                a.connection_workers = try std.fmt.parseInt(u16, raw[i + 1], 10);
+                i += 1;
+            } else if (std.mem.eql(u8, tok, "--connection-queue")) {
+                if (i + 1 >= raw.len) return error.MissingValue;
+                a.connection_queue = try std.fmt.parseInt(u16, raw[i + 1], 10);
+                i += 1;
+            } else if (std.mem.eql(u8, tok, "--bpe-hot-table")) {
+                if (i + 1 >= raw.len) return error.MissingValue;
+                const value = raw[i + 1];
+                if (std.mem.eql(u8, value, "on")) {
+                    a.bpe_hot_table = true;
+                } else if (std.mem.eql(u8, value, "off")) {
+                    a.bpe_hot_table = false;
+                } else {
+                    return error.InvalidValue;
+                }
+                i += 1;
             } else if (std.mem.eql(u8, tok, "--auth-token")) {
                 if (i + 1 >= raw.len) return error.MissingValue;
                 a.auth_token = raw[i + 1];
@@ -477,6 +506,14 @@ const Args = struct {
             } else if (std.mem.eql(u8, tok, "--rate-limit")) {
                 if (i + 1 >= raw.len) return error.MissingValue;
                 a.rate_limit = try std.fmt.parseInt(u32, raw[i + 1], 10);
+                i += 1;
+            } else if (std.mem.eql(u8, tok, "--idle-timeout-ms")) {
+                if (i + 1 >= raw.len) return error.MissingValue;
+                a.idle_timeout_ms = try std.fmt.parseInt(u32, raw[i + 1], 10);
+                i += 1;
+            } else if (std.mem.eql(u8, tok, "--max-keepalive-requests")) {
+                if (i + 1 >= raw.len) return error.MissingValue;
+                a.max_keepalive_requests = try std.fmt.parseInt(u32, raw[i + 1], 10);
                 i += 1;
             } else if (std.mem.eql(u8, tok, "--log-format")) {
                 if (i + 1 >= raw.len) return error.MissingValue;
@@ -1750,7 +1787,7 @@ fn cmdServe(gpa: std.mem.Allocator, io: std.Io, raw: []const []const u8, out: *s
         std.process.exit(2);
     };
 
-    var loaded = loadPipelineAutoDetect(gpa, io, model_path) catch |err| {
+    var loaded = loadPipelineAutoDetectWithBpeHotTable(gpa, io, model_path, args.bpe_hot_table) catch |err| {
         try out.print("serve: failed to load {s}: {s}\n", .{ model_path, @errorName(err) });
         std.process.exit(2);
     };
@@ -1838,9 +1875,9 @@ fn cmdServe(gpa: std.mem.Allocator, io: std.Io, raw: []const []const u8, out: *s
         try out.writeAll("serve: TLS termination requested. The default build (-Dtls=none) will refuse to start; rebuild with `zig build -Dtls=mbedtls` to enable.\n");
     }
 
-    // OIDC startup. Best-effort: if the discovery / JWKS pull fails,
-    // log a warning and proceed without OIDC (so a transient network
-    // hiccup doesn't take the serve down). With both
+    // OIDC startup. Authentication configuration is fail-closed: a partial
+    // issuer/audience pair or a failed discovery/JWKS pull aborts startup.
+    // With both
     // --auth-oidc-issuer and --auth-oidc-audience set, we GET the
     // discovery doc + JWKS via `std.http.Client` (HTTPS-capable in
     // 0.16 stdlib) and build the validator. RS256 keys verify
@@ -1853,7 +1890,11 @@ fn cmdServe(gpa: std.mem.Allocator, io: std.Io, raw: []const []const u8, out: *s
         v.deinit();
         gpa.destroy(v);
     };
-    if (args.auth_oidc_issuer != null and args.auth_oidc_audience != null) {
+    if ((args.auth_oidc_issuer == null) != (args.auth_oidc_audience == null)) {
+        try out.writeAll("serve: --auth-oidc-issuer and --auth-oidc-audience must be provided together\n");
+        std.process.exit(2);
+    }
+    if (args.auth_oidc_issuer != null) {
         http_client = .{ .allocator = gpa, .io = io };
         oidc_validator = ztok.auth_oidc.initFromDiscovery(
             gpa,
@@ -1861,9 +1902,9 @@ fn cmdServe(gpa: std.mem.Allocator, io: std.Io, raw: []const []const u8, out: *s
             @ptrCast(&http_client.?),
             args.auth_oidc_issuer.?,
             args.auth_oidc_audience.?,
-        ) catch |err| blk: {
-            try out.print("serve: warning — OIDC discovery/JWKS fetch failed: {s}; proceeding without OIDC. Use --auth-token to keep clients usable.\n", .{@errorName(err)});
-            break :blk null;
+        ) catch |err| {
+            try out.print("serve: OIDC discovery/JWKS fetch failed: {s}; refusing to start without the requested authentication\n", .{@errorName(err)});
+            std.process.exit(2);
         };
     }
 
@@ -1887,7 +1928,12 @@ fn cmdServe(gpa: std.mem.Allocator, io: std.Io, raw: []const []const u8, out: *s
                 std.process.exit(2);
             },
         };
-        const cache_path = try std.fmt.allocPrint(gpa, "{s}/prefix_cache.dat", .{dir});
+        // Namespace persistent results by tokenizer behavior. Reusing a PVC
+        // after a model rollout must never return ids produced by the prior
+        // vocabulary.
+        const fp = try ztok.fingerprint.computeFingerprint(&pipeline, gpa);
+        const fp_hex = std.fmt.bytesToHex(fp, .lower);
+        const cache_path = try std.fmt.allocPrint(gpa, "{s}/prefix_cache-{s}.dat", .{ dir, &fp_hex });
         prefix_cache_path_owned = cache_path;
         prefix_cache = ztok.prefix_cache.PrefixCache.openPersistent(gpa, .{
             .path = cache_path,
@@ -1922,6 +1968,10 @@ fn cmdServe(gpa: std.mem.Allocator, io: std.Io, raw: []const []const u8, out: *s
         .model_kind = model_kind,
         .auth_token = auth_token,
         .rate_limit_rps = args.rate_limit,
+        .idle_timeout_ms = args.idle_timeout_ms orelse ztok.cli_serve.default_idle_timeout_ms,
+        .max_keepalive_requests = args.max_keepalive_requests orelse ztok.cli_serve.default_max_keepalive_requests,
+        .connection_workers = args.connection_workers orelse 0,
+        .connection_queue = args.connection_queue orelse 0,
         .log_format = log_format,
         .metrics = if (args.metrics) &metrics else null,
         .oidc = oidc_validator,
@@ -1943,7 +1993,7 @@ fn cmdGrpcServe(gpa: std.mem.Allocator, io: std.Io, raw: []const []const u8, out
         std.process.exit(2);
     };
 
-    var loaded = loadPipelineAutoDetect(gpa, io, model_path) catch |err| {
+    var loaded = loadPipelineAutoDetectWithBpeHotTable(gpa, io, model_path, args.bpe_hot_table) catch |err| {
         try out.print("grpc-serve: failed to load {s}: {s}\n", .{ model_path, @errorName(err) });
         std.process.exit(2);
     };
@@ -1987,6 +2037,8 @@ fn cmdGrpcServe(gpa: std.mem.Allocator, io: std.Io, raw: []const []const u8, out
         .port = port,
         .version = VERSION,
         .model_kind = model_kind,
+        .connection_workers = args.connection_workers orelse 0,
+        .connection_queue = args.connection_queue orelse 0,
     });
 }
 
@@ -2108,8 +2160,7 @@ fn cmdVisualize(gpa: std.mem.Allocator, io: std.Io, raw: []const []const u8, out
     // alias to match how every other subcommand looks.
     const vocab_path: []const u8 = if (args.positional.items.len > 0)
         args.positional.items[0]
-    else if (args.model_path) |m| m
-    else {
+    else if (args.model_path) |m| m else {
         try out.writeAll("visualize: vocab path required (usage: ztok visualize VOCAB [--corpus PATH] [--out FILE] [--top-k N])\n");
         std.process.exit(2);
     };
@@ -2519,8 +2570,8 @@ fn cmdMergeVocab(gpa: std.mem.Allocator, io: std.Io, raw: []const []const u8, ou
     try out.print(
         "merge-vocab: a={s} ({s}, {d} tokens, {s}), b={s} ({d} tokens), on-conflict={s}, prefix-b='{s}'\n",
         .{
-            a_path,            @tagName(a_fmt),       loaded_a.vocabSize(),
-            @tagName(a_kind),  b_path,                loaded_b.vocabSize(),
+            a_path,                @tagName(a_fmt), loaded_a.vocabSize(),
+            @tagName(a_kind),      b_path,          loaded_b.vocabSize(),
             @tagName(on_conflict), prefix_b,
         },
     );
@@ -2878,6 +2929,18 @@ fn cmdTranscode(gpa: std.mem.Allocator, io: std.Io, raw: []const []const u8, out
 /// Returns an `OwnedModel` discriminated union; caller must call
 /// `deinit()`.
 fn loadPipelineAutoDetect(gpa: std.mem.Allocator, io: std.Io, path: []const u8) !OwnedModel {
+    return loadPipelineAutoDetectWithBpeHotTable(gpa, io, path, null);
+}
+
+/// `bpe_hot_table` overrides the format-specific default when non-null.
+/// Raw tiktoken defaults off (best cold/single-thread latency); HF BPE
+/// defaults on for compatibility with its existing serving-oriented load.
+fn loadPipelineAutoDetectWithBpeHotTable(
+    gpa: std.mem.Allocator,
+    io: std.Io,
+    path: []const u8,
+    bpe_hot_table: ?bool,
+) !OwnedModel {
     _ = io; // auto_detect.detectFile + each loader uses its own io internally
     const fmt = ztok.auto_detect.detectFile(path) catch ztok.auto_detect.Format.unknown;
     const effective: ztok.auto_detect.Format = if (fmt != .unknown) fmt else blk: {
@@ -2893,12 +2956,16 @@ fn loadPipelineAutoDetect(gpa: std.mem.Allocator, io: std.Io, path: []const u8) 
     };
 
     switch (effective) {
-        .tiktoken => return .{ .bpe = try ztok.Bpe.loadTiktokenFile(gpa, path) },
+        .tiktoken => return .{ .bpe = try ztok.Bpe.loadTiktokenFileWithOptions(gpa, path, .{
+            .hot_table = bpe_hot_table orelse false,
+        }) },
         .hf_json => {
             var hf = try ztok.hf_json.loadFromFile(gpa, path);
             defer hf.deinit();
             return switch (hf.model_kind) {
-                .bpe => .{ .bpe = try ztok.hf_bridge.bpeFromHF(gpa, &hf) },
+                .bpe => .{ .bpe = try ztok.hf_bridge.bpeFromHFWithOptions(gpa, &hf, .{
+                    .hot_table = bpe_hot_table orelse true,
+                }) },
                 .unigram => .{ .unigram = try ztok.hf_bridge.unigramFromHF(gpa, &hf) },
                 .wordpiece => blk: {
                     // Resolve unk_id by looking up the token name from

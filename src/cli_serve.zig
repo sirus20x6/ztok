@@ -9,12 +9,10 @@
 //!   GET  /health                                  -> {"ok": true}
 //!
 //! Threading:
-//!   The HTTP accept loop is serial on the calling thread. Each request
-//!   is handled fully before the next is accepted. CPU parallelism comes
-//!   from the persistent `BatchPool`, which `/encode` uses via
-//!   `Pipeline.encodeChunked` when the input is large enough to benefit.
-//!   This is intentional — concurrent connections aren't a goal of this
-//!   primitive. See `Security` below.
+//!   A bounded persistent connection pool handles independent clients in
+//!   parallel. CPU fan-out inside one large encode still comes from the
+//!   separate `BatchPool`; access to that non-reentrant pool is serialized.
+//!   Each connection worker owns a reusable `Pipeline.ScratchArena`.
 //!
 //! Security model (post-1.18):
 //!   * Binds 127.0.0.1 by default so the listener is unreachable from
@@ -42,6 +40,7 @@
 
 const std = @import("std");
 const Pipeline = @import("pipeline.zig").Pipeline;
+const ScratchArena = @import("pipeline.zig").ScratchArena;
 const TokenId = @import("token.zig").TokenId;
 const StreamEncoder = @import("stream.zig").StreamEncoder;
 const BatchPool = @import("thread_pool.zig").BatchPool;
@@ -51,6 +50,7 @@ const websocket = @import("websocket.zig");
 const auth_oidc = @import("auth_oidc.zig");
 const mbedtls = @import("mbedtls.zig");
 const prefix_cache_mod = @import("prefix_cache.zig");
+const connection_pool_mod = @import("connection_pool.zig");
 const build_options = @import("build_options");
 
 pub const Metrics = metrics_mod.Metrics;
@@ -75,6 +75,9 @@ pub const RequestOutcome = struct {
 pub const default_host: []const u8 = "127.0.0.1";
 pub const default_port: u16 = 7890;
 pub const default_max_body_bytes: usize = 16 * 1024 * 1024;
+pub const default_idle_timeout_ms: u32 = 30_000;
+pub const default_max_keepalive_requests: u32 = 100;
+pub const default_max_connection_workers: usize = 32;
 
 /// Buffer sizes for std.http.Server per connection.
 const recv_buf_size: usize = 8192;
@@ -92,6 +95,20 @@ pub const Options = struct {
     port: u16 = default_port,
     /// Hard cap on a POST body. Larger requests get a 413.
     max_body_bytes: usize = default_max_body_bytes,
+    /// Receive/send inactivity timeout per accepted connection. Zero
+    /// disables the socket deadline. Prevents a slow client from occupying
+    /// a connection worker indefinitely.
+    idle_timeout_ms: u32 = default_idle_timeout_ms,
+    /// Bound requests served on one cleartext keep-alive connection.
+    /// Zero means unlimited.
+    max_keepalive_requests: u32 = default_max_keepalive_requests,
+    /// Number of persistent connection workers. Zero selects
+    /// min(tokenizer workers, 32). Independent requests run concurrently;
+    /// the bounded queue applies backpressure when every worker is busy.
+    connection_workers: u16 = 0,
+    /// Maximum accepted connections waiting for a worker. Zero selects
+    /// two queued connections per worker.
+    connection_queue: u16 = 0,
     /// String reported by `GET /version` for `model_kind`.
     model_kind: ModelKind = .bpe,
     /// String reported by `GET /version` for `version`.
@@ -121,7 +138,7 @@ pub const Options = struct {
     /// both are set, the token wins (bearer auth → constant-time
     /// match), else the JWT is checked. `/health` and `/metrics`
     /// bypass.
-    oidc: ?*const auth_oidc.Validator = null,
+    oidc: ?*auth_oidc.Validator = null,
     /// Set to true to terminate TLS at the server. When true and the
     /// build was configured with `-Dtls=mbedtls`, `tls_cert_path` /
     /// `tls_key_path` are loaded into an mbedtls server context and
@@ -137,19 +154,13 @@ pub const Options = struct {
     /// PEM path to the server private key, used only when
     /// `tls_enabled` is true and TLS was built in.
     tls_key_path: ?[]const u8 = null,
-    /// Optional persistent prefix cache. When non-null, `/encode`
-    /// requests consult the cache keyed by `prefix_cache_key_bytes` of
-    /// the input (full input when shorter); on hit, only the suffix is
-    /// re-encoded and the two id arrays are concatenated. Caller owns
-    /// the PrefixCache and is responsible for its lifetime.
+    /// Optional persistent exact-result cache. When non-null, `/encode`
+    /// requests cache the complete input and its complete id stream.
+    /// Arbitrary prefix/suffix token streams cannot be concatenated safely
+    /// for BPE and normalization pipelines, so partial-prefix splicing is
+    /// deliberately not attempted. Caller owns the PrefixCache.
     prefix_cache: ?*prefix_cache_mod.PrefixCache = null,
 };
-
-/// First N bytes of an `/encode` request body that, when present, become
-/// the prefix cache key. Inputs shorter than this are cached in full.
-/// 256 matches the canonical "system prompt prefix" working-set size
-/// and lines up with the persistent cache's small-record assumptions.
-pub const prefix_cache_key_bytes: usize = 256;
 
 /// Run the server until the listener errors or process exit. Blocks
 /// the calling thread; this is the main loop of `ztok serve`.
@@ -209,6 +220,10 @@ pub fn run(
         null;
     defer if (rate_limiter) |*rl| rl.deinit();
 
+    var pool_mutex: std.Io.Mutex = .init;
+    var cache_mutex: std.Io.Mutex = .init;
+    var oidc_mutex: std.Io.Mutex = .init;
+    var log_mutex: std.Io.Mutex = .init;
     var ctx: ServeCtx = .{
         .allocator = allocator,
         .io = io,
@@ -218,9 +233,27 @@ pub fn run(
         .rate_limiter = if (rate_limiter) |*rl| rl else null,
         .tls_server = if (tls_server) |*s| s else null,
         .prefix_cache = opts.prefix_cache,
+        .pool_mutex = &pool_mutex,
+        .cache_mutex = &cache_mutex,
+        .oidc_mutex = &oidc_mutex,
+        .log_mutex = &log_mutex,
     };
 
-    serveLoop(&ctx, &server, 0) catch |err| {
+    const connection_workers = resolveConnectionWorkers(opts.connection_workers, pool.workerCount());
+    const queue_capacity = resolveConnectionQueue(opts.connection_queue, connection_workers);
+    var runtime = try ServeRuntime.init(allocator, &ctx, connection_workers);
+    defer runtime.deinit();
+    const connections = try ConnectionPool.init(
+        allocator,
+        io,
+        connection_workers,
+        queue_capacity,
+        &runtime,
+        ServeRuntime.handle,
+    );
+    defer connections.deinit();
+
+    serveLoop(&ctx, &server, 0, connections) catch |err| {
         if (err != error.AcceptLoopEnded) return err;
     };
 }
@@ -232,6 +265,7 @@ fn serveLoop(
     ctx: *ServeCtx,
     server: *std.Io.net.Server,
     max_connections: usize,
+    connections: *ConnectionPool,
 ) !void {
     var n_handled: usize = 0;
     while (true) {
@@ -242,12 +276,16 @@ fn serveLoop(
                 continue;
             },
         };
-        handleConnection(ctx, stream) catch |err| {
-            if (ctx.opts.log) std.log.warn("ztok serve: connection error: {t}", .{err});
+        configureSocketTimeout(stream.socket.handle, ctx.opts.idle_timeout_ms) catch |err| {
+            if (ctx.opts.log) std.log.warn("ztok serve: could not set connection timeout: {t}", .{err});
         };
-        stream.close(ctx.io);
+        connections.submit(stream) catch |err| {
+            stream.close(ctx.io);
+            return err;
+        };
         n_handled += 1;
         if (max_connections != 0 and n_handled >= max_connections) {
+            connections.waitIdle();
             return error.AcceptLoopEnded;
         }
     }
@@ -278,6 +316,10 @@ pub fn runForTest(
         null;
     defer if (rate_limiter) |*rl| rl.deinit();
 
+    var pool_mutex: std.Io.Mutex = .init;
+    var cache_mutex: std.Io.Mutex = .init;
+    var oidc_mutex: std.Io.Mutex = .init;
+    var log_mutex: std.Io.Mutex = .init;
     var ctx: ServeCtx = .{
         .allocator = allocator,
         .io = io,
@@ -286,11 +328,72 @@ pub fn runForTest(
         .opts = opts,
         .rate_limiter = if (rate_limiter) |*rl| rl else null,
         .prefix_cache = opts.prefix_cache,
+        .pool_mutex = &pool_mutex,
+        .cache_mutex = &cache_mutex,
+        .oidc_mutex = &oidc_mutex,
+        .log_mutex = &log_mutex,
     };
-    serveLoop(&ctx, &server, max_connections) catch |err| {
+    const connection_workers = resolveConnectionWorkers(opts.connection_workers, pool.workerCount());
+    const queue_capacity = resolveConnectionQueue(opts.connection_queue, connection_workers);
+    var runtime = try ServeRuntime.init(allocator, &ctx, connection_workers);
+    defer runtime.deinit();
+    const connections = try ConnectionPool.init(
+        allocator,
+        io,
+        connection_workers,
+        queue_capacity,
+        &runtime,
+        ServeRuntime.handle,
+    );
+    defer connections.deinit();
+    serveLoop(&ctx, &server, max_connections, connections) catch |err| {
         if (err != error.AcceptLoopEnded) return err;
     };
 }
+
+const ConnectionPool = connection_pool_mod.BoundedPool(std.Io.net.Stream);
+
+fn resolveConnectionWorkers(configured: u16, tokenizer_workers: usize) usize {
+    if (configured != 0) return configured;
+    return @max(@as(usize, 1), @min(tokenizer_workers, default_max_connection_workers));
+}
+
+fn resolveConnectionQueue(configured: u16, workers: usize) usize {
+    if (configured != 0) return configured;
+    return workers * 2;
+}
+
+const ServeRuntime = struct {
+    allocator: std.mem.Allocator,
+    base: *ServeCtx,
+    scratches: []ScratchArena,
+
+    fn init(allocator: std.mem.Allocator, base: *ServeCtx, workers: usize) !ServeRuntime {
+        const scratches = try allocator.alloc(ScratchArena, workers);
+        for (scratches) |*scratch| scratch.* = ScratchArena.init(allocator);
+        return .{ .allocator = allocator, .base = base, .scratches = scratches };
+    }
+
+    fn deinit(self: *ServeRuntime) void {
+        for (self.scratches) |*scratch| scratch.deinit();
+        self.allocator.free(self.scratches);
+        self.* = undefined;
+    }
+
+    fn handle(opaque_ctx: *anyopaque, stream: std.Io.net.Stream, worker_index: usize) void {
+        const self: *ServeRuntime = @ptrCast(@alignCast(opaque_ctx));
+        var ctx = self.base.*;
+        ctx.scratch = &self.scratches[worker_index];
+        ctx.last_status = 200;
+        ctx.last_bytes_out = 0;
+        ctx.last_bytes_in = 0;
+        ctx.last_encode_tokens = 0;
+        handleConnection(&ctx, stream) catch |err| {
+            if (ctx.opts.log) std.log.warn("ztok serve: connection error: {t}", .{err});
+        };
+        stream.close(ctx.io);
+    }
+};
 
 pub const ServeCtx = struct {
     allocator: std.mem.Allocator,
@@ -307,6 +410,15 @@ pub const ServeCtx = struct {
     /// Optional persistent prefix cache. Mirrors `Options.prefix_cache`
     /// so handlers can reach it through `ctx`.
     prefix_cache: ?*prefix_cache_mod.PrefixCache = null,
+    /// Connection-local transient arena. Set by `ServeRuntime`; null for
+    /// protocol-pure in-memory tests and external callers constructing a
+    /// context directly.
+    scratch: ?*ScratchArena = null,
+    /// Shared mutable subsystems protected for concurrent connections.
+    pool_mutex: ?*std.Io.Mutex = null,
+    cache_mutex: ?*std.Io.Mutex = null,
+    oidc_mutex: ?*std.Io.Mutex = null,
+    log_mutex: ?*std.Io.Mutex = null,
     /// Most-recent response status set by the active handler. Used by
     /// the per-request metrics + logging wrapper to record outcome.
     /// Defaults to 200 (handlers that hit the success path don't
@@ -316,6 +428,9 @@ pub const ServeCtx = struct {
     /// estimated where possible (exact for `req.respond`, sum of
     /// payload bytes for streaming responses tracked by helpers).
     last_bytes_out: u64 = 0,
+    /// Request-body bytes observed. Initialized from Content-Length and
+    /// incremented while dechunking when the length is not known up front.
+    last_bytes_in: u64 = 0,
     /// Encoded-token count for the current request, when known.
     last_encode_tokens: u64 = 0,
 };
@@ -386,6 +501,7 @@ fn handleConnection(ctx: *ServeCtx, stream: std.Io.net.Stream) !void {
     const peer_ip = peerIpFromHandle(stream.socket.handle) catch ClientIp.unknown;
 
     // Serve one or more pipelined HTTP/1.1 requests on the same connection.
+    var requests_on_connection: u32 = 0;
     while (true) {
         var req = http.receiveHead() catch |err| switch (err) {
             error.HttpConnectionClosing => return,
@@ -403,11 +519,24 @@ fn handleConnection(ctx: *ServeCtx, stream: std.Io.net.Stream) !void {
             }) catch {};
             return;
         };
+        requests_on_connection += 1;
         // If the client asked for connection: close (or sent HTTP/1.0
         // without keep-alive), stop reading and let the caller close
         // the socket. Otherwise loop back and serve the next request.
         if (!client_wants_keepalive) return;
+        if (ctx.opts.max_keepalive_requests != 0 and requests_on_connection >= ctx.opts.max_keepalive_requests) return;
     }
+}
+
+fn configureSocketTimeout(fd: std.posix.socket_t, timeout_ms: u32) !void {
+    if (timeout_ms == 0) return;
+    const tv: std.posix.timeval = .{
+        .sec = @intCast(timeout_ms / 1000),
+        .usec = @intCast((timeout_ms % 1000) * 1000),
+    };
+    const bytes = std.mem.asBytes(&tv);
+    try std.posix.setsockopt(fd, std.posix.SOL.SOCKET, std.posix.SO.RCVTIMEO, bytes);
+    try std.posix.setsockopt(fd, std.posix.SOL.SOCKET, std.posix.SO.SNDTIMEO, bytes);
 }
 
 fn handleRequest(ctx: *ServeCtx, req: *std.http.Server.Request, client_ip: ClientIp) !void {
@@ -416,6 +545,7 @@ fn handleRequest(ctx: *ServeCtx, req: *std.http.Server.Request, client_ip: Clien
     // Reset per-request mutable state. (ServeCtx is reused across
     // requests on the same connection.)
     ctx.last_status = 200;
+    ctx.last_bytes_in = req.head.content_length orelse 0;
     ctx.last_bytes_out = 0;
     ctx.last_encode_tokens = 0;
 
@@ -423,11 +553,11 @@ fn handleRequest(ctx: *ServeCtx, req: *std.http.Server.Request, client_ip: Clien
     const path = if (std.mem.indexOfScalar(u8, target, '?')) |q| target[0..q] else target;
     const path_label = metrics_mod.PathLabel.fromPath(path);
     const method_label = metrics_mod.MethodLabel.fromMethod(method);
-    const bytes_in: u64 = req.head.content_length orelse 0;
+    var client_ip_buf: [64]u8 = undefined;
+    const client_ip_str = formatClientIp(client_ip, &client_ip_buf);
 
     if (ctx.opts.metrics) |m| {
         m.enterRequest();
-        m.addBytesIn(path_label, bytes_in);
     }
     const t_start_ns = std.Io.Clock.now(.awake, ctx.io).toNanoseconds();
     defer {
@@ -437,6 +567,7 @@ fn handleRequest(ctx: *ServeCtx, req: *std.http.Server.Request, client_ip: Clien
         if (ctx.opts.metrics) |m| {
             const status_bucket = metrics_mod.StatusBucket.fromStatus(ctx.last_status);
             m.incRequest(method_label, path_label, status_bucket);
+            m.addBytesIn(path_label, ctx.last_bytes_in);
             m.addBytesOut(path_label, ctx.last_bytes_out);
             m.addEncodeTokens(ctx.last_encode_tokens);
             const dur_s: f64 = @as(f64, @floatFromInt(dur_ns)) / 1_000_000_000.0;
@@ -448,12 +579,15 @@ fn handleRequest(ctx: *ServeCtx, req: *std.http.Server.Request, client_ip: Clien
             .path_label = path_label,
             .path_str = path,
             .status = ctx.last_status,
-            .bytes_in = bytes_in,
+            .bytes_in = ctx.last_bytes_in,
             .bytes_out = ctx.last_bytes_out,
             .duration_ns = dur_ns,
-            .client_ip_str = "client",
+            .client_ip_str = client_ip_str,
             .encoded_tokens = ctx.last_encode_tokens,
         });
+    }
+    errdefer {
+        if (ctx.last_status < 400) ctx.last_status = 500;
     }
 
     // /health bypasses auth + rate limit. Ops needs an unconditional
@@ -584,13 +718,6 @@ fn respondJsonLiteral(req: *std.http.Server.Request, body: []const u8) !void {
 }
 
 /// Updates the metrics ctx (status + bytes_out) and writes a 400.
-fn respondBadRequest(req: *std.http.Server.Request, msg: []const u8) !void {
-    try req.respond(msg, .{
-        .status = .bad_request,
-        .extra_headers = &.{.{ .name = "content-type", .value = "text/plain" }},
-    });
-}
-
 fn respondBadRequestTracked(ctx: *ServeCtx, req: *std.http.Server.Request, msg: []const u8) !void {
     setStatus(ctx, 400);
     addBytesOut(ctx, msg.len);
@@ -627,6 +754,18 @@ fn readBody(ctx: *ServeCtx, req: *std.http.Server.Request) !?[]u8 {
         error.HttpExpectationFailed => return error.HttpExpectationFailed,
     };
 
+    if (req.head.content_length) |cl| {
+        const body = try ctx.allocator.alloc(u8, cl);
+        errdefer ctx.allocator.free(body);
+        var filled: usize = 0;
+        while (filled < body.len) {
+            const n = try body_reader.readSliceShort(body[filled..]);
+            if (n == 0) return error.UnexpectedEndOfStream;
+            filled += n;
+        }
+        return body;
+    }
+
     var list: std.ArrayList(u8) = .empty;
     errdefer list.deinit(ctx.allocator);
 
@@ -634,6 +773,7 @@ fn readBody(ctx: *ServeCtx, req: *std.http.Server.Request) !?[]u8 {
     while (true) {
         const n = try body_reader.readSliceShort(&tmp);
         if (n == 0) break;
+        ctx.last_bytes_in += n;
         if (list.items.len + n > ctx.opts.max_body_bytes) return error.BodyTooLarge;
         try list.appendSlice(ctx.allocator, tmp[0..n]);
         if (n < tmp.len) {
@@ -645,44 +785,80 @@ fn readBody(ctx: *ServeCtx, req: *std.http.Server.Request) !?[]u8 {
     return try list.toOwnedSlice(ctx.allocator);
 }
 
-/// Minimal JSON-string extractor for a top-level `"text": "..."` field.
-/// Returns the unescaped value, freshly allocated. Returns null if the
-/// field is missing or the body isn't a JSON object.
-fn extractTextField(allocator: std.mem.Allocator, body: []const u8) !?[]u8 {
-    // We could lean on std.json.parseFromSlice with an anonymous struct,
-    // but it requires the field to be present and surfaces parse errors
-    // through generic types. A focused scanner is simpler and avoids the
-    // struct-type contortions.
+const ParsedTextField = struct {
+    arena: std.heap.ArenaAllocator,
+    value: []const u8,
+
+    fn deinit(self: *ParsedTextField) void {
+        self.arena.deinit();
+        self.* = undefined;
+    }
+};
+
+/// Parse a top-level `text` field. Unescaped strings borrow directly from
+/// `body`; escaped strings are decoded into the returned arena. This avoids
+/// the old parse-allocation followed by a second duplicate allocation.
+fn parseTextField(allocator: std.mem.Allocator, body: []const u8) !?ParsedTextField {
     var arena = std.heap.ArenaAllocator.init(allocator);
-    defer arena.deinit();
-    const Parsed = struct { text: ?[]u8 = null };
+    errdefer arena.deinit();
+    const Parsed = struct { text: ?[]const u8 = null };
     const parsed = std.json.parseFromSliceLeaky(
         Parsed,
         arena.allocator(),
         body,
-        .{ .ignore_unknown_fields = true, .allocate = .alloc_always },
-    ) catch return null;
+        .{ .ignore_unknown_fields = true, .allocate = .alloc_if_needed },
+    ) catch {
+        arena.deinit();
+        return null;
+    };
     if (parsed.text) |t| {
-        return try allocator.dupe(u8, t);
+        return .{ .arena = arena, .value = t };
     }
+    arena.deinit();
     return null;
 }
 
-/// Extract an `"ids": [u32, u32, ...]` field. Caller frees the slice.
-fn extractIdsField(allocator: std.mem.Allocator, body: []const u8) !?[]TokenId {
+/// Compatibility helper used by protocol-pure tests.
+fn extractTextField(allocator: std.mem.Allocator, body: []const u8) !?[]u8 {
+    var parsed = (try parseTextField(allocator, body)) orelse return null;
+    defer parsed.deinit();
+    return try allocator.dupe(u8, parsed.value);
+}
+
+const ParsedIdsField = struct {
+    arena: std.heap.ArenaAllocator,
+    value: []const TokenId,
+
+    fn deinit(self: *ParsedIdsField) void {
+        self.arena.deinit();
+        self.* = undefined;
+    }
+};
+
+fn parseIdsField(allocator: std.mem.Allocator, body: []const u8) !?ParsedIdsField {
     var arena = std.heap.ArenaAllocator.init(allocator);
-    defer arena.deinit();
+    errdefer arena.deinit();
     const Parsed = struct { ids: ?[]TokenId = null };
     const parsed = std.json.parseFromSliceLeaky(
         Parsed,
         arena.allocator(),
         body,
         .{ .ignore_unknown_fields = true, .allocate = .alloc_always },
-    ) catch return null;
+    ) catch {
+        arena.deinit();
+        return null;
+    };
     if (parsed.ids) |ids| {
-        return try allocator.dupe(TokenId, ids);
+        return .{ .arena = arena, .value = ids };
     }
+    arena.deinit();
     return null;
+}
+
+fn extractIdsField(allocator: std.mem.Allocator, body: []const u8) !?[]TokenId {
+    var parsed = (try parseIdsField(allocator, body)) orelse return null;
+    defer parsed.deinit();
+    return try allocator.dupe(TokenId, parsed.value);
 }
 
 // === /encode ===========================================================
@@ -690,40 +866,22 @@ fn extractIdsField(allocator: std.mem.Allocator, body: []const u8) !?[]TokenId {
 /// Encode `text` against `ctx.pipeline`, consulting `ctx.prefix_cache`
 /// when present.
 ///
-/// Cache key: the first `prefix_cache_key_bytes` of `text` (the whole
-/// input when shorter). Cache value: the id stream produced by encoding
-/// exactly those bytes.
-///
-/// On a hit with `text.len > prefix_cache_key_bytes` we encode only the
-/// suffix and concatenate. This matches the documented LLM-prompt
-/// prefix-caching contract; callers that need bit-identical guarantees
-/// across a boundary should pre-tokenize the prefix at a normalization-
-/// safe boundary before posting to `/encode`.
+/// Cache key: the complete input. Cache value: the complete id stream.
+/// This exact-result contract preserves bit identity for every pipeline;
+/// token streams encoded on either side of an arbitrary byte boundary do
+/// not generally concatenate to the single-shot result.
 ///
 /// Returns a freshly allocated slice the caller must free with
 /// `ctx.allocator`. Falls back to a plain `encode`/`encodeChunked`
 /// when no cache is configured.
 fn encodeWithPrefixCache(ctx: *ServeCtx, text: []const u8) ![]TokenId {
     if (ctx.prefix_cache) |pc| {
-        const key_len = @min(text.len, prefix_cache_key_bytes);
-        const key = text[0..key_len];
-        const prefix_ids = try pc.lookupOrInsert(ctx.pipeline, key);
-        // `prefix_ids` lifetime is "until the next mutating op on `pc`".
-        // We must copy out before encoding the suffix (which is a pure
-        // pipeline op and won't mutate the cache, but a future change
-        // could), and before returning to the caller.
-        if (text.len == key_len) {
-            return ctx.allocator.dupe(TokenId, prefix_ids);
-        }
-        const prefix_owned = try ctx.allocator.dupe(TokenId, prefix_ids);
-        errdefer ctx.allocator.free(prefix_owned);
-        const suffix_ids = try ctx.pipeline.encode(ctx.allocator, text[key_len..]);
-        defer ctx.allocator.free(suffix_ids);
-        const out = try ctx.allocator.alloc(TokenId, prefix_owned.len + suffix_ids.len);
-        @memcpy(out[0..prefix_owned.len], prefix_owned);
-        @memcpy(out[prefix_owned.len..], suffix_ids);
-        ctx.allocator.free(prefix_owned);
-        return out;
+        if (ctx.cache_mutex) |mutex| mutex.lockUncancelable(ctx.io);
+        defer if (ctx.cache_mutex) |mutex| mutex.unlock(ctx.io);
+        const ids = try pc.lookupOrInsert(ctx.pipeline, text);
+        // Cache slices are invalidated by the next mutation; return an
+        // independent result owned by the request allocator.
+        return ctx.allocator.dupe(TokenId, ids);
     }
 
     // Encode through the pool when there's enough input to make
@@ -731,31 +889,37 @@ fn encodeWithPrefixCache(ctx: *ServeCtx, text: []const u8) ![]TokenId {
     const min_for_chunked: usize = 64 * 1024;
     const n_workers = ctx.pool.workerCount();
     if (text.len >= min_for_chunked and n_workers > 1) {
+        if (ctx.pool_mutex) |mutex| mutex.lockUncancelable(ctx.io);
+        defer if (ctx.pool_mutex) |mutex| mutex.unlock(ctx.io);
         return ctx.pipeline.encodeChunked(ctx.allocator, ctx.pool, text, n_workers);
     }
+    return encodeSingle(ctx, text);
+}
+
+fn encodeSingle(ctx: *ServeCtx, text: []const u8) ![]TokenId {
+    if (ctx.scratch) |scratch| return ctx.pipeline.encodeWithScratch(ctx.allocator, text, scratch);
     return ctx.pipeline.encode(ctx.allocator, text);
 }
 
 fn handleEncode(ctx: *ServeCtx, req: *std.http.Server.Request) !void {
     const body_opt = readBody(ctx, req) catch |err| switch (err) {
-        error.BodyTooLarge => return req.respond("body too large\n", .{
-            .status = .payload_too_large,
-            .extra_headers = &.{.{ .name = "content-type", .value = "text/plain" }},
-        }),
+        error.BodyTooLarge => return respondPayloadTooLargeTracked(ctx, req),
         else => return err,
     };
-    const body = body_opt orelse return respondBadRequest(req, "missing body\n");
+    const body = body_opt orelse return respondBadRequestTracked(ctx, req, "missing body\n");
     defer ctx.allocator.free(body);
 
-    const text = (try extractTextField(ctx.allocator, body)) orelse {
-        return respondBadRequest(req, "expected JSON {\"text\":\"...\"}\n");
+    var parsed_text = (try parseTextField(ctx.allocator, body)) orelse {
+        return respondBadRequestTracked(ctx, req, "expected JSON {\"text\":\"...\"}\n");
     };
-    defer ctx.allocator.free(text);
+    defer parsed_text.deinit();
+    const text = parsed_text.value;
 
     // Encode (optionally through the prefix cache) — see encodeWithPrefixCache
     // for the splice semantics.
     const ids = try encodeWithPrefixCache(ctx, text);
     defer ctx.allocator.free(ids);
+    ctx.last_encode_tokens += ids.len;
 
     // Compute a response upper bound: 8 bytes per id is generous
     // ("4294967295," is 11). Use a streaming response so we don't
@@ -768,12 +932,18 @@ fn handleEncode(ctx: *ServeCtx, req: *std.http.Server.Request) !void {
     });
     const w = &body_writer.writer;
     try w.writeAll("{\"ids\":[");
+    var body_len: usize = "{\"ids\":[".len + "]}\n".len;
     for (ids, 0..) |id, i| {
-        if (i > 0) try w.writeByte(',');
+        if (i > 0) {
+            try w.writeByte(',');
+            body_len += 1;
+        }
         try w.print("{d}", .{id});
+        body_len += decimalLenU32(id);
     }
     try w.writeAll("]}\n");
     try body_writer.end();
+    addBytesOut(ctx, body_len);
 }
 
 // === /encode_stream ====================================================
@@ -785,19 +955,17 @@ const stream_feed_size: usize = 4096;
 
 fn handleEncodeStream(ctx: *ServeCtx, req: *std.http.Server.Request) !void {
     const body_opt = readBody(ctx, req) catch |err| switch (err) {
-        error.BodyTooLarge => return req.respond("body too large\n", .{
-            .status = .payload_too_large,
-            .extra_headers = &.{.{ .name = "content-type", .value = "text/plain" }},
-        }),
+        error.BodyTooLarge => return respondPayloadTooLargeTracked(ctx, req),
         else => return err,
     };
-    const body = body_opt orelse return respondBadRequest(req, "missing body\n");
+    const body = body_opt orelse return respondBadRequestTracked(ctx, req, "missing body\n");
     defer ctx.allocator.free(body);
 
-    const text = (try extractTextField(ctx.allocator, body)) orelse {
-        return respondBadRequest(req, "expected JSON {\"text\":\"...\"}\n");
+    var parsed_text = (try parseTextField(ctx.allocator, body)) orelse {
+        return respondBadRequestTracked(ctx, req, "expected JSON {\"text\":\"...\"}\n");
     };
-    defer ctx.allocator.free(text);
+    defer parsed_text.deinit();
+    const text = parsed_text.value;
 
     var resp_buf: [4096]u8 = undefined;
     var body_writer = try req.respondStreaming(&resp_buf, .{
@@ -820,7 +988,8 @@ fn handleEncodeStream(ctx: *ServeCtx, req: *std.http.Server.Request) !void {
         const chunk_end = @min(i + stream_feed_size, text.len);
         try enc.feed(text[i..chunk_end], &batch);
         if (batch.items.len > 0) {
-            try writeIdsBatchLine(w, batch.items);
+            ctx.last_encode_tokens += batch.items.len;
+            addBytesOut(ctx, try writeIdsBatchLine(w, batch.items));
             batch.clearRetainingCapacity();
             try body_writer.flush();
         }
@@ -828,20 +997,50 @@ fn handleEncodeStream(ctx: *ServeCtx, req: *std.http.Server.Request) !void {
     }
     try enc.finish(&batch);
     if (batch.items.len > 0) {
-        try writeIdsBatchLine(w, batch.items);
+        ctx.last_encode_tokens += batch.items.len;
+        addBytesOut(ctx, try writeIdsBatchLine(w, batch.items));
         batch.clearRetainingCapacity();
     }
     try w.writeAll("{\"done\":true}\n");
+    addBytesOut(ctx, "{\"done\":true}\n".len);
     try body_writer.end();
 }
 
-fn writeIdsBatchLine(w: *std.Io.Writer, ids: []const TokenId) !void {
+fn writeIdsBatchLine(w: *std.Io.Writer, ids: []const TokenId) !usize {
+    var len: usize = "{\"ids\":[".len + "]}\n".len;
     try w.writeAll("{\"ids\":[");
     for (ids, 0..) |id, i| {
-        if (i > 0) try w.writeByte(',');
+        if (i > 0) {
+            try w.writeByte(',');
+            len += 1;
+        }
         try w.print("{d}", .{id});
+        len += decimalLenU32(id);
     }
     try w.writeAll("]}\n");
+    return len;
+}
+
+fn decimalLenU32(v: u32) usize {
+    if (v < 10) return 1;
+    if (v < 100) return 2;
+    if (v < 1_000) return 3;
+    if (v < 10_000) return 4;
+    if (v < 100_000) return 5;
+    if (v < 1_000_000) return 6;
+    if (v < 10_000_000) return 7;
+    if (v < 100_000_000) return 8;
+    if (v < 1_000_000_000) return 9;
+    return 10;
+}
+
+fn idsJsonLineLen(ids: []const TokenId) usize {
+    var n: usize = "{\"ids\":[".len + "]}\n".len;
+    for (ids, 0..) |id, i| {
+        if (i > 0) n += 1;
+        n += decimalLenU32(id);
+    }
+    return n;
 }
 
 // === /encode_chunked ===================================================
@@ -885,19 +1084,16 @@ fn handleEncodeChunked(ctx: *ServeCtx, req: *std.http.Server.Request) !void {
     // Reject requests with no body — both content-length 0 and a
     // GET-style no-body invocation. We need bytes to encode.
     if (req.head.method.requestHasBody() == false) {
-        return respondBadRequest(req, "missing body\n");
+        return respondBadRequestTracked(ctx, req, "missing body\n");
     }
     if (req.head.transfer_encoding == .none and req.head.content_length == null) {
-        return respondBadRequest(req, "missing body (no content-length and no transfer-encoding)\n");
+        return respondBadRequestTracked(ctx, req, "missing body (no content-length and no transfer-encoding)\n");
     }
     // Early reject: a known content-length over the cap shouldn't even
     // start streaming.
     if (req.head.content_length) |cl| {
         if (cl > ctx.opts.max_body_bytes) {
-            return req.respond("body too large\n", .{
-                .status = .payload_too_large,
-                .extra_headers = &.{.{ .name = "content-type", .value = "text/plain" }},
-            });
+            return respondPayloadTooLargeTracked(ctx, req);
         }
     }
 
@@ -943,18 +1139,21 @@ fn handleEncodeChunked(ctx: *ServeCtx, req: *std.http.Server.Request) !void {
         };
         if (n == 0) break;
         bytes_read += n;
+        if (req.head.content_length == null) ctx.last_bytes_in += n;
         if (bytes_read > ctx.opts.max_body_bytes) {
             // Surface a final {"error":"body_too_large"} line on the
             // wire — the response is already in chunked mode so we can
             // append it, then end with the chunked terminator. Status
             // can't be changed at this point (headers are out).
             try w.writeAll("{\"error\":\"body_too_large\"}\n");
+            addBytesOut(ctx, "{\"error\":\"body_too_large\"}\n".len);
             try body_writer.end();
             return;
         }
         try enc.feed(tmp[0..n], &batch);
         if (batch.items.len > 0) {
-            try writeIdsBatchLine(w, batch.items);
+            ctx.last_encode_tokens += batch.items.len;
+            addBytesOut(ctx, try writeIdsBatchLine(w, batch.items));
             batch.clearRetainingCapacity();
             try body_writer.flush();
         }
@@ -965,10 +1164,12 @@ fn handleEncodeChunked(ctx: *ServeCtx, req: *std.http.Server.Request) !void {
     }
     try enc.finish(&batch);
     if (batch.items.len > 0) {
-        try writeIdsBatchLine(w, batch.items);
+        ctx.last_encode_tokens += batch.items.len;
+        addBytesOut(ctx, try writeIdsBatchLine(w, batch.items));
         batch.clearRetainingCapacity();
     }
     try w.writeAll("{\"done\":true}\n");
+    addBytesOut(ctx, "{\"done\":true}\n".len);
     try body_writer.end();
 }
 
@@ -976,22 +1177,21 @@ fn handleEncodeChunked(ctx: *ServeCtx, req: *std.http.Server.Request) !void {
 
 fn handleDecode(ctx: *ServeCtx, req: *std.http.Server.Request) !void {
     const body_opt = readBody(ctx, req) catch |err| switch (err) {
-        error.BodyTooLarge => return req.respond("body too large\n", .{
-            .status = .payload_too_large,
-            .extra_headers = &.{.{ .name = "content-type", .value = "text/plain" }},
-        }),
+        error.BodyTooLarge => return respondPayloadTooLargeTracked(ctx, req),
         else => return err,
     };
-    const body = body_opt orelse return respondBadRequest(req, "missing body\n");
+    const body = body_opt orelse return respondBadRequestTracked(ctx, req, "missing body\n");
     defer ctx.allocator.free(body);
 
-    const ids = (try extractIdsField(ctx.allocator, body)) orelse {
-        return respondBadRequest(req, "expected JSON {\"ids\":[...]}\n");
+    var parsed_ids = (try parseIdsField(ctx.allocator, body)) orelse {
+        return respondBadRequestTracked(ctx, req, "expected JSON {\"ids\":[...]}\n");
     };
-    defer ctx.allocator.free(ids);
+    defer parsed_ids.deinit();
+    const ids = parsed_ids.value;
 
     const text = try ctx.pipeline.decode(ctx.allocator, ids);
     defer ctx.allocator.free(text);
+    addBytesOut(ctx, "{\"text\":".len + jsonStringLen(text) + "}\n".len);
 
     var resp_buf: [4096]u8 = undefined;
     var body_writer = try req.respondStreaming(&resp_buf, .{
@@ -1010,31 +1210,29 @@ fn handleDecode(ctx: *ServeCtx, req: *std.http.Server.Request) !void {
 
 fn handleEval(ctx: *ServeCtx, req: *std.http.Server.Request) !void {
     const body_opt = readBody(ctx, req) catch |err| switch (err) {
-        error.BodyTooLarge => return req.respond("body too large\n", .{
-            .status = .payload_too_large,
-            .extra_headers = &.{.{ .name = "content-type", .value = "text/plain" }},
-        }),
+        error.BodyTooLarge => return respondPayloadTooLargeTracked(ctx, req),
         else => return err,
     };
-    const body = body_opt orelse return respondBadRequest(req, "missing body\n");
+    const body = body_opt orelse return respondBadRequestTracked(ctx, req, "missing body\n");
     defer ctx.allocator.free(body);
 
-    const text = (try extractTextField(ctx.allocator, body)) orelse {
-        return respondBadRequest(req, "expected JSON {\"text\":\"...\"}\n");
+    var parsed_text = (try parseTextField(ctx.allocator, body)) orelse {
+        return respondBadRequestTracked(ctx, req, "expected JSON {\"text\":\"...\"}\n");
     };
-    defer ctx.allocator.free(text);
+    defer parsed_text.deinit();
+    const text = parsed_text.value;
 
-    var resp_buf: [4096]u8 = undefined;
-    var body_writer = try req.respondStreaming(&resp_buf, .{
-        .respond_options = .{
-            .extra_headers = &.{.{ .name = "content-type", .value = "application/json" }},
-        },
-    });
-    const w = &body_writer.writer;
+    var rendered: std.Io.Writer.Allocating = .init(ctx.allocator);
+    defer rendered.deinit();
     try cli_eval.runEval(ctx.allocator, ctx.pipeline, text, .{
         .format = .json,
-    }, w);
-    try body_writer.end();
+    }, &rendered.writer);
+    const response = rendered.written();
+    addBytesOut(ctx, response.len);
+    try req.respond(response, .{
+        .status = .ok,
+        .extra_headers = &.{.{ .name = "content-type", .value = "application/json" }},
+    });
 }
 
 // === Inline string JSON escape =========================================
@@ -1053,6 +1251,16 @@ fn writeJsonString(w: *std.Io.Writer, s: []const u8) !void {
         else => try w.writeByte(c),
     };
     try w.writeByte('"');
+}
+
+fn jsonStringLen(s: []const u8) usize {
+    var n: usize = 2; // surrounding quotes
+    for (s) |c| n += switch (c) {
+        '"', '\\', '\n', '\r', '\t', 0x08, 0x0C => 2,
+        0x00...0x07, 0x0B, 0x0E...0x1F => 6,
+        else => 1,
+    };
+    return n;
 }
 
 // === Auth helpers ======================================================
@@ -1111,6 +1319,26 @@ pub const ClientIp = struct {
         return .{ .bytes = b };
     }
 };
+
+fn formatClientIp(ip: ClientIp, buf: []u8) []const u8 {
+    if (std.mem.eql(u8, &ip.bytes, &ClientIp.unknown.bytes)) return "unknown";
+    const mapped_prefix = [_]u8{ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xff, 0xff };
+    if (std.mem.eql(u8, ip.bytes[0..12], &mapped_prefix)) {
+        return std.fmt.bufPrint(buf, "{d}.{d}.{d}.{d}", .{
+            ip.bytes[12], ip.bytes[13], ip.bytes[14], ip.bytes[15],
+        }) catch "unknown";
+    }
+    return std.fmt.bufPrint(buf, "{x}:{x}:{x}:{x}:{x}:{x}:{x}:{x}", .{
+        std.mem.readInt(u16, ip.bytes[0..2], .big),
+        std.mem.readInt(u16, ip.bytes[2..4], .big),
+        std.mem.readInt(u16, ip.bytes[4..6], .big),
+        std.mem.readInt(u16, ip.bytes[6..8], .big),
+        std.mem.readInt(u16, ip.bytes[8..10], .big),
+        std.mem.readInt(u16, ip.bytes[10..12], .big),
+        std.mem.readInt(u16, ip.bytes[12..14], .big),
+        std.mem.readInt(u16, ip.bytes[14..16], .big),
+    }) catch "unknown";
+}
 
 const ClientIpContext = struct {
     pub fn hash(_: ClientIpContext, k: ClientIp) u64 {
@@ -1286,6 +1514,8 @@ pub const RateLimiter = struct {
 /// `jq`-style pipelines both work.
 fn emitRequestLog(ctx: *ServeCtx, outcome: RequestOutcome) void {
     if (!ctx.opts.log) return;
+    if (ctx.log_mutex) |mutex| mutex.lockUncancelable(ctx.io);
+    defer if (ctx.log_mutex) |mutex| mutex.unlock(ctx.io);
     switch (ctx.opts.log_format) {
         .text => {
             std.log.info(
@@ -1405,13 +1635,15 @@ fn handleEncodeWs(ctx: *ServeCtx, req: *std.http.Server.Request) !void {
     var key: ?[]const u8 = null;
     var has_upgrade_ws = false;
     var has_connection_upgrade = false;
+    var has_version_13 = false;
     var it = req.iterateHeaders();
     while (it.next()) |h| {
         if (std.ascii.eqlIgnoreCase(h.name, "sec-websocket-key")) key = h.value;
-        if (std.ascii.eqlIgnoreCase(h.name, "upgrade") and std.ascii.indexOfIgnoreCase(h.value, "websocket") != null) has_upgrade_ws = true;
-        if (std.ascii.eqlIgnoreCase(h.name, "connection") and std.ascii.indexOfIgnoreCase(h.value, "upgrade") != null) has_connection_upgrade = true;
+        if (std.ascii.eqlIgnoreCase(h.name, "upgrade") and headerHasToken(h.value, "websocket")) has_upgrade_ws = true;
+        if (std.ascii.eqlIgnoreCase(h.name, "connection") and headerHasToken(h.value, "upgrade")) has_connection_upgrade = true;
+        if (std.ascii.eqlIgnoreCase(h.name, "sec-websocket-version") and std.mem.eql(u8, std.mem.trim(u8, h.value, " \t"), "13")) has_version_13 = true;
     }
-    if (key == null or !has_upgrade_ws or !has_connection_upgrade) {
+    if (key == null or !websocket.isValidClientKey(key.?) or !has_upgrade_ws or !has_connection_upgrade or !has_version_13) {
         setStatus(ctx, 400);
         const body = "expected WebSocket upgrade request\n";
         addBytesOut(ctx, body.len);
@@ -1455,7 +1687,7 @@ fn handleEncodeWs(ctx: *ServeCtx, req: *std.http.Server.Request) !void {
             },
             .text, .binary => {
                 // Treat payload as the bytes to encode.
-                const ids = try ctx.pipeline.encode(ctx.allocator, frame.payload);
+                const ids = try encodeSingle(ctx, frame.payload);
                 defer ctx.allocator.free(ids);
                 ctx.last_encode_tokens += ids.len;
                 // Emit ids in ws_emit_chunk_ids batches as binary frames
@@ -1485,12 +1717,20 @@ fn handleEncodeWs(ctx: *ServeCtx, req: *std.http.Server.Request) !void {
     }
 }
 
+fn headerHasToken(value: []const u8, wanted: []const u8) bool {
+    var it = std.mem.splitScalar(u8, value, ',');
+    while (it.next()) |raw| {
+        if (std.ascii.eqlIgnoreCase(std.mem.trim(u8, raw, " \t"), wanted)) return true;
+    }
+    return false;
+}
+
 // === OIDC bearer-JWT check =============================================
 
 fn checkOidcAuth(
     ctx: *ServeCtx,
     req: *const std.http.Server.Request,
-    v: *const auth_oidc.Validator,
+    v: *auth_oidc.Validator,
 ) !bool {
     var it = req.iterateHeaders();
     while (it.next()) |h| {
@@ -1502,10 +1742,20 @@ fn checkOidcAuth(
         // the configured wall clock for this server (test path uses
         // std.testing.io which advances monotonically too).
         const now_s = std.Io.Clock.now(.real, ctx.io).toSeconds();
-        v.validateBearer(token, now_s) catch return false;
-        return true;
+        if (ctx.oidc_mutex) |mutex| mutex.lockUncancelable(ctx.io);
+        defer if (ctx.oidc_mutex) |mutex| mutex.unlock(ctx.io);
+        return validateOidcToken(v, token, now_s);
     }
     return false;
+}
+
+/// Validate with lazy key rotation. A stale cache is refreshed on a
+/// best-effort basis before validation (old keys remain usable during a
+/// transient IdP outage). An unknown `kid` forces one refresh and retry so
+/// newly-rotated signing keys work without restarting the server.
+fn validateOidcToken(v: *auth_oidc.Validator, token: []const u8, now_s: i64) bool {
+    v.validateBearerRefreshing(token, now_s) catch return false;
+    return true;
 }
 
 // === TLS request path ==================================================
@@ -1665,14 +1915,25 @@ fn writeTlsResponse(
     extra_headers: []const u8,
     body: []const u8,
 ) !void {
+    try writeTlsResponseHead(conn, status, reason, content_type, extra_headers, body.len);
+    if (body.len > 0) try writeTlsAll(conn, body);
+}
+
+fn writeTlsResponseHead(
+    conn: *mbedtls.Conn,
+    status: u16,
+    reason: []const u8,
+    content_type: []const u8,
+    extra_headers: []const u8,
+    content_length: usize,
+) !void {
     var head_buf: [512]u8 = undefined;
     const head = try std.fmt.bufPrint(
         &head_buf,
         "HTTP/1.1 {d} {s}\r\nContent-Type: {s}\r\nContent-Length: {d}\r\nConnection: close\r\n{s}\r\n",
-        .{ status, reason, content_type, body.len, extra_headers },
+        .{ status, reason, content_type, content_length, extra_headers },
     );
     try writeTlsAll(conn, head);
-    if (body.len > 0) try writeTlsAll(conn, body);
 }
 
 fn writeTlsAll(conn: *mbedtls.Conn, bytes: []const u8) !void {
@@ -1802,7 +2063,9 @@ fn tlsCheckAuth(ctx: *ServeCtx, conn: *mbedtls.Conn, req: *const TlsRequest) !bo
         if (authz.len < 7 or !std.ascii.eqlIgnoreCase(authz[0..7], "bearer ")) return tlsRespondUnauthorized(ctx, conn);
         const token = authz[7..];
         const now_s = std.Io.Clock.now(.real, ctx.io).toSeconds();
-        v.validateBearer(token, now_s) catch return tlsRespondUnauthorized(ctx, conn);
+        if (ctx.oidc_mutex) |mutex| mutex.lockUncancelable(ctx.io);
+        defer if (ctx.oidc_mutex) |mutex| mutex.unlock(ctx.io);
+        if (!validateOidcToken(v, token, now_s)) return tlsRespondUnauthorized(ctx, conn);
         return true;
     }
     return true;
@@ -1818,12 +2081,46 @@ fn tlsRespondUnauthorized(ctx: *ServeCtx, conn: *mbedtls.Conn) !bool {
 
 fn dispatchTlsRequest(ctx: *ServeCtx, conn: *mbedtls.Conn, req: *TlsRequest, client_ip: ClientIp, leftover: []const u8) !void {
     ctx.last_status = 200;
+    ctx.last_bytes_in = req.body.len;
     ctx.last_bytes_out = 0;
     ctx.last_encode_tokens = 0;
 
     const method = req.method;
     const target = req.target;
     const path = if (std.mem.indexOfScalar(u8, target, '?')) |q| target[0..q] else target;
+    const path_label = metrics_mod.PathLabel.fromPath(path);
+    const method_label = metrics_mod.MethodLabel.fromMethod(method);
+    var client_ip_buf: [64]u8 = undefined;
+    const client_ip_str = formatClientIp(client_ip, &client_ip_buf);
+    if (ctx.opts.metrics) |m| m.enterRequest();
+    const t_start_ns = std.Io.Clock.now(.awake, ctx.io).toNanoseconds();
+    defer {
+        const t_end_ns = std.Io.Clock.now(.awake, ctx.io).toNanoseconds();
+        const elapsed = t_end_ns - t_start_ns;
+        const duration_ns: u64 = if (elapsed > 0) @intCast(@as(i64, @intCast(elapsed))) else 0;
+        if (ctx.opts.metrics) |m| {
+            m.incRequest(method_label, path_label, metrics_mod.StatusBucket.fromStatus(ctx.last_status));
+            m.addBytesIn(path_label, ctx.last_bytes_in);
+            m.addBytesOut(path_label, ctx.last_bytes_out);
+            m.addEncodeTokens(ctx.last_encode_tokens);
+            m.observeDuration(path_label, @as(f64, @floatFromInt(duration_ns)) / 1_000_000_000.0);
+            m.exitRequest();
+        }
+        emitRequestLog(ctx, .{
+            .method = method,
+            .path_label = path_label,
+            .path_str = path,
+            .status = ctx.last_status,
+            .bytes_in = ctx.last_bytes_in,
+            .bytes_out = ctx.last_bytes_out,
+            .duration_ns = duration_ns,
+            .client_ip_str = client_ip_str,
+            .encoded_tokens = ctx.last_encode_tokens,
+        });
+    }
+    errdefer {
+        if (ctx.last_status < 400) ctx.last_status = 500;
+    }
 
     // /health bypasses auth + rate limit.
     if (method == .GET and std.mem.eql(u8, path, "/health")) {
@@ -1913,29 +2210,26 @@ fn tlsHandleEncode(ctx: *ServeCtx, conn: *mbedtls.Conn, req: *TlsRequest) !void 
         addBytesOut(ctx, body.len);
         return writeTlsResponse(conn, 400, "Bad Request", "text/plain", "", body);
     }
-    const text = (try extractTextField(ctx.allocator, req.body)) orelse {
+    var parsed_text = (try parseTextField(ctx.allocator, req.body)) orelse {
         setStatus(ctx, 400);
         const body = "expected JSON {\"text\":\"...\"}\n";
         addBytesOut(ctx, body.len);
         return writeTlsResponse(conn, 400, "Bad Request", "text/plain", "", body);
     };
-    defer ctx.allocator.free(text);
+    defer parsed_text.deinit();
+    const text = parsed_text.value;
 
     const ids = try encodeWithPrefixCache(ctx, text);
     defer ctx.allocator.free(ids);
     ctx.last_encode_tokens += ids.len;
 
-    var out: std.Io.Writer.Allocating = .init(ctx.allocator);
-    defer out.deinit();
-    try out.writer.writeAll("{\"ids\":[");
-    for (ids, 0..) |id, i| {
-        if (i > 0) try out.writer.writeByte(',');
-        try out.writer.print("{d}", .{id});
-    }
-    try out.writer.writeAll("]}\n");
-    const body = out.written();
-    addBytesOut(ctx, body.len);
-    try writeTlsResponse(conn, 200, "OK", "application/json", "", body);
+    const body_len = idsJsonLineLen(ids);
+    addBytesOut(ctx, body_len);
+    try writeTlsResponseHead(conn, 200, "OK", "application/json", "", body_len);
+    var buf: [4096]u8 = undefined;
+    var writer = mbedtls.connWriter(conn, &buf);
+    _ = try writeIdsBatchLine(&writer.interface, ids);
+    try writer.interface.flush();
 }
 
 fn tlsHandleDecode(ctx: *ServeCtx, conn: *mbedtls.Conn, req: *TlsRequest) !void {
@@ -1945,25 +2239,27 @@ fn tlsHandleDecode(ctx: *ServeCtx, conn: *mbedtls.Conn, req: *TlsRequest) !void 
         addBytesOut(ctx, body.len);
         return writeTlsResponse(conn, 400, "Bad Request", "text/plain", "", body);
     }
-    const ids = (try extractIdsField(ctx.allocator, req.body)) orelse {
+    var parsed_ids = (try parseIdsField(ctx.allocator, req.body)) orelse {
         setStatus(ctx, 400);
         const body = "expected JSON {\"ids\":[...]}\n";
         addBytesOut(ctx, body.len);
         return writeTlsResponse(conn, 400, "Bad Request", "text/plain", "", body);
     };
-    defer ctx.allocator.free(ids);
+    defer parsed_ids.deinit();
+    const ids = parsed_ids.value;
 
     const text = try ctx.pipeline.decode(ctx.allocator, ids);
     defer ctx.allocator.free(text);
 
-    var out: std.Io.Writer.Allocating = .init(ctx.allocator);
-    defer out.deinit();
-    try out.writer.writeAll("{\"text\":");
-    try writeJsonString(&out.writer, text);
-    try out.writer.writeAll("}\n");
-    const body = out.written();
-    addBytesOut(ctx, body.len);
-    try writeTlsResponse(conn, 200, "OK", "application/json", "", body);
+    const body_len = "{\"text\":".len + jsonStringLen(text) + "}\n".len;
+    addBytesOut(ctx, body_len);
+    try writeTlsResponseHead(conn, 200, "OK", "application/json", "", body_len);
+    var buf: [4096]u8 = undefined;
+    var writer = mbedtls.connWriter(conn, &buf);
+    try writer.interface.writeAll("{\"text\":");
+    try writeJsonString(&writer.interface, text);
+    try writer.interface.writeAll("}\n");
+    try writer.interface.flush();
 }
 
 fn tlsHandleEval(ctx: *ServeCtx, conn: *mbedtls.Conn, req: *TlsRequest) !void {
@@ -1973,13 +2269,14 @@ fn tlsHandleEval(ctx: *ServeCtx, conn: *mbedtls.Conn, req: *TlsRequest) !void {
         addBytesOut(ctx, body.len);
         return writeTlsResponse(conn, 400, "Bad Request", "text/plain", "", body);
     }
-    const text = (try extractTextField(ctx.allocator, req.body)) orelse {
+    var parsed_text = (try parseTextField(ctx.allocator, req.body)) orelse {
         setStatus(ctx, 400);
         const body = "expected JSON {\"text\":\"...\"}\n";
         addBytesOut(ctx, body.len);
         return writeTlsResponse(conn, 400, "Bad Request", "text/plain", "", body);
     };
-    defer ctx.allocator.free(text);
+    defer parsed_text.deinit();
+    const text = parsed_text.value;
 
     var out: std.Io.Writer.Allocating = .init(ctx.allocator);
     defer out.deinit();
@@ -2038,13 +2335,14 @@ fn tlsHandleEncodeStream(ctx: *ServeCtx, conn: *mbedtls.Conn, req: *TlsRequest) 
         addBytesOut(ctx, body.len);
         return writeTlsResponse(conn, 400, "Bad Request", "text/plain", "", body);
     }
-    const text = (try extractTextField(ctx.allocator, req.body)) orelse {
+    var parsed_text = (try parseTextField(ctx.allocator, req.body)) orelse {
         setStatus(ctx, 400);
         const body = "expected JSON {\"text\":\"...\"}\n";
         addBytesOut(ctx, body.len);
         return writeTlsResponse(conn, 400, "Bad Request", "text/plain", "", body);
     };
-    defer ctx.allocator.free(text);
+    defer parsed_text.deinit();
+    const text = parsed_text.value;
 
     var buf: [tls_stream_buf_size]u8 = undefined;
     var cw = mbedtls.connWriter(conn, &buf);
@@ -2067,8 +2365,9 @@ fn tlsHandleEncodeStream(ctx: *ServeCtx, conn: *mbedtls.Conn, req: *TlsRequest) 
         const chunk_end = @min(i + stream_feed_size, text.len);
         try enc.feed(text[i..chunk_end], &batch);
         if (batch.items.len > 0) {
+            ctx.last_encode_tokens += batch.items.len;
             line.clearRetainingCapacity();
-            try writeIdsBatchLine(&line.writer, batch.items);
+            _ = try writeIdsBatchLine(&line.writer, batch.items);
             try writeChunk(&cw.interface, line.written());
             addBytesOut(ctx, line.written().len);
             batch.clearRetainingCapacity();
@@ -2077,8 +2376,9 @@ fn tlsHandleEncodeStream(ctx: *ServeCtx, conn: *mbedtls.Conn, req: *TlsRequest) 
     }
     try enc.finish(&batch);
     if (batch.items.len > 0) {
+        ctx.last_encode_tokens += batch.items.len;
         line.clearRetainingCapacity();
-        try writeIdsBatchLine(&line.writer, batch.items);
+        _ = try writeIdsBatchLine(&line.writer, batch.items);
         try writeChunk(&cw.interface, line.written());
         addBytesOut(ctx, line.written().len);
         batch.clearRetainingCapacity();
@@ -2123,8 +2423,9 @@ fn tlsHandleEncodeChunked(ctx: *ServeCtx, conn: *mbedtls.Conn, req: *TlsRequest)
         const end = @min(off + chunked_read_size, req.body.len);
         try enc.feed(req.body[off..end], &batch);
         if (batch.items.len > 0) {
+            ctx.last_encode_tokens += batch.items.len;
             line.clearRetainingCapacity();
-            try writeIdsBatchLine(&line.writer, batch.items);
+            _ = try writeIdsBatchLine(&line.writer, batch.items);
             try writeChunk(&cw.interface, line.written());
             addBytesOut(ctx, line.written().len);
             batch.clearRetainingCapacity();
@@ -2133,8 +2434,9 @@ fn tlsHandleEncodeChunked(ctx: *ServeCtx, conn: *mbedtls.Conn, req: *TlsRequest)
     }
     try enc.finish(&batch);
     if (batch.items.len > 0) {
+        ctx.last_encode_tokens += batch.items.len;
         line.clearRetainingCapacity();
-        try writeIdsBatchLine(&line.writer, batch.items);
+        _ = try writeIdsBatchLine(&line.writer, batch.items);
         try writeChunk(&cw.interface, line.written());
         addBytesOut(ctx, line.written().len);
         batch.clearRetainingCapacity();
@@ -2151,12 +2453,14 @@ fn tlsHandleEncodeWs(ctx: *ServeCtx, conn: *mbedtls.Conn, req: *TlsRequest, left
     var key: ?[]const u8 = null;
     var has_upgrade_ws = false;
     var has_connection_upgrade = false;
+    var has_version_13 = false;
     for (req.headers) |h| {
         if (std.ascii.eqlIgnoreCase(h.name, "sec-websocket-key")) key = h.value;
-        if (std.ascii.eqlIgnoreCase(h.name, "upgrade") and std.ascii.indexOfIgnoreCase(h.value, "websocket") != null) has_upgrade_ws = true;
-        if (std.ascii.eqlIgnoreCase(h.name, "connection") and std.ascii.indexOfIgnoreCase(h.value, "upgrade") != null) has_connection_upgrade = true;
+        if (std.ascii.eqlIgnoreCase(h.name, "upgrade") and headerHasToken(h.value, "websocket")) has_upgrade_ws = true;
+        if (std.ascii.eqlIgnoreCase(h.name, "connection") and headerHasToken(h.value, "upgrade")) has_connection_upgrade = true;
+        if (std.ascii.eqlIgnoreCase(h.name, "sec-websocket-version") and std.mem.eql(u8, std.mem.trim(u8, h.value, " \t"), "13")) has_version_13 = true;
     }
-    if (key == null or !has_upgrade_ws or !has_connection_upgrade) {
+    if (key == null or !websocket.isValidClientKey(key.?) or !has_upgrade_ws or !has_connection_upgrade or !has_version_13) {
         setStatus(ctx, 400);
         const body = "expected WebSocket upgrade request\n";
         addBytesOut(ctx, body.len);
@@ -2207,7 +2511,7 @@ fn tlsHandleEncodeWs(ctx: *ServeCtx, conn: *mbedtls.Conn, req: *TlsRequest, left
                 try out.flush();
             },
             .text, .binary => {
-                const ids = try ctx.pipeline.encode(ctx.allocator, frame.payload);
+                const ids = try encodeSingle(ctx, frame.payload);
                 defer ctx.allocator.free(ids);
                 ctx.last_encode_tokens += ids.len;
                 var i: usize = 0;
@@ -2284,6 +2588,19 @@ test "extractTextField returns null when field is absent" {
     try testing.expect((try extractTextField(a, "{\"other\":1}")) == null);
 }
 
+test "parseTextField borrows plain strings and allocates only for escapes" {
+    const a = testing.allocator;
+    const plain = "{\"text\":\"hello\"}";
+    var borrowed = (try parseTextField(a, plain)) orelse return error.TestFailed;
+    defer borrowed.deinit();
+    try testing.expectEqualStrings("hello", borrowed.value);
+    try testing.expectEqual(@intFromPtr(plain.ptr) + "{\"text\":\"".len, @intFromPtr(borrowed.value.ptr));
+
+    var decoded = (try parseTextField(a, "{\"text\":\"hello\\nworld\"}")) orelse return error.TestFailed;
+    defer decoded.deinit();
+    try testing.expectEqualStrings("hello\nworld", decoded.value);
+}
+
 test "extractIdsField parses an id array" {
     const a = testing.allocator;
     const got = (try extractIdsField(a, "{\"ids\":[1,2,3]}")) orelse return error.TestFailed;
@@ -2294,7 +2611,7 @@ test "extractIdsField parses an id array" {
 test "writeIdsBatchLine produces compact NDJSON" {
     var buf: [256]u8 = undefined;
     var w: std.Io.Writer = .fixed(&buf);
-    try writeIdsBatchLine(&w, &.{ 7, 11, 13 });
+    _ = try writeIdsBatchLine(&w, &.{ 7, 11, 13 });
     try testing.expectEqualStrings("{\"ids\":[7,11,13]}\n", w.buffered());
 }
 
@@ -3029,6 +3346,14 @@ test "log: text-format path doesn't emit JSON envelope (sanity)" {
     try testing.expectEqual(LogFormat.text, ctx.opts.log_format);
 }
 
+test "log: client IP formatter emits real IPv4 and IPv6 values" {
+    var buf: [64]u8 = undefined;
+    try testing.expectEqualStrings("10.2.3.4", formatClientIp(ClientIp.fromIp4(.{ 10, 2, 3, 4 }), &buf));
+    try testing.expectEqualStrings("unknown", formatClientIp(ClientIp.unknown, &buf));
+    const ip6 = ClientIp.fromIp6(.{ 0x20, 0x01, 0x0d, 0xb8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1 });
+    try testing.expectEqualStrings("2001:db8:0:0:0:0:0:1", formatClientIp(ip6, &buf));
+}
+
 // === /metrics tests (post-1.22 agent D) ================================
 
 test "metrics: /metrics endpoint returns Prometheus text exposition" {
@@ -3048,6 +3373,8 @@ test "metrics: /metrics endpoint returns Prometheus text exposition" {
     const resp1 = try handleRequestInMemory(&ctx, req1, ClientIp.unknown);
     defer a.free(resp1);
     try testing.expectEqual(@as(?u16, 200), responseStatus(resp1));
+    try testing.expect(m.encode_tokens_total.load(.monotonic) > 0);
+    try testing.expect(m.bytes_out_total[@intFromEnum(metrics_mod.PathLabel.encode)].load(.monotonic) > 0);
 
     // Now hit /metrics.
     const req2 = try buildReq(a, "GET", "/metrics", "", "");
@@ -3059,6 +3386,26 @@ test "metrics: /metrics endpoint returns Prometheus text exposition" {
     try testing.expect(std.mem.indexOf(u8, body, "# TYPE ztok_requests_total counter") != null);
     try testing.expect(std.mem.indexOf(u8, body, "ztok_requests_total{method=\"POST\",path=\"/encode\",status=\"2xx\"} 1") != null);
     try testing.expect(std.mem.indexOf(u8, body, "ztok_request_duration_seconds_count{path=\"/encode\"}") != null);
+}
+
+test "metrics: malformed encode is counted as 4xx with response bytes" {
+    const a = testing.allocator;
+    const fx = try PipeFixture.init(a);
+    defer fx.deinit(a);
+    var pool = try BatchPool.init(a, 2);
+    defer pool.deinit();
+    var m: Metrics = .{};
+    var ctx = ctxFor(a, fx, &pool, .{ .log = false, .metrics = &m });
+
+    const req = try buildReq(a, "POST", "/encode", "", "{\"wrong\":true}");
+    defer a.free(req);
+    const resp = try handleRequestInMemory(&ctx, req, ClientIp.unknown);
+    defer a.free(resp);
+    try testing.expectEqual(@as(?u16, 400), responseStatus(resp));
+
+    const count = m.requests_total[@intFromEnum(metrics_mod.MethodLabel.POST)][@intFromEnum(metrics_mod.PathLabel.encode)][@intFromEnum(metrics_mod.StatusBucket.s4xx)].load(.monotonic);
+    try testing.expectEqual(@as(u64, 1), count);
+    try testing.expect(m.bytes_out_total[@intFromEnum(metrics_mod.PathLabel.encode)].load(.monotonic) > 0);
 }
 
 test "metrics: /metrics requires opts.metrics to be set (returns 404 when disabled)" {
@@ -3314,6 +3661,41 @@ test "prefix cache: /encode round-trip is bit-identical with the cache enabled (
     try testing.expectEqualSlices(TokenId, want, got_ids);
 }
 
+test "prefix cache: inputs longer than the former splice boundary stay bit-identical" {
+    const a = testing.allocator;
+    const fx = try PipeFixture.init(a);
+    defer fx.deinit(a);
+    var pool = try BatchPool.init(a, 2);
+    defer pool.deinit();
+
+    var tmp = std.testing.tmpDir(.{});
+    defer tmp.cleanup();
+    const path = try prefixCacheTmpPath(a, &tmp);
+    defer a.free(path);
+    var pc = try PrefixCache.openPersistent(a, .{ .path = path });
+    defer pc.closePersistent();
+
+    const suffix = "hello world";
+    const text = try a.alloc(u8, 253 + suffix.len);
+    defer a.free(text);
+    @memset(text[0..253], 'x');
+    @memcpy(text[253..], suffix);
+
+    const want = try fx.pipe.encode(a, text);
+    defer a.free(want);
+    var ctx = ctxFor(a, fx, &pool, .{ .log = false });
+    ctx.prefix_cache = pc;
+    const got = try encodeWithPrefixCache(&ctx, text);
+    defer a.free(got);
+    try testing.expectEqualSlices(TokenId, want, got);
+
+    // A second request proves the exact full-input entry is reusable.
+    const got_cached = try encodeWithPrefixCache(&ctx, text);
+    defer a.free(got_cached);
+    try testing.expectEqualSlices(TokenId, want, got_cached);
+    try testing.expect(pc.mem.stats.hits > 0);
+}
+
 test "prefix cache: second /encode of the same input hits the cache (stats.hits increases)" {
     const a = testing.allocator;
     const fx = try PipeFixture.init(a);
@@ -3477,7 +3859,7 @@ test "tls streaming: chunked NDJSON of StreamEncoder output matches single-shot 
         try enc.feed(input[off..end], &batch);
         if (batch.items.len > 0) {
             line.clearRetainingCapacity();
-            try writeIdsBatchLine(&line.writer, batch.items);
+            _ = try writeIdsBatchLine(&line.writer, batch.items);
             try writeChunk(w, line.written());
             batch.clearRetainingCapacity();
         }
@@ -3486,7 +3868,7 @@ test "tls streaming: chunked NDJSON of StreamEncoder output matches single-shot 
     try enc.finish(&batch);
     if (batch.items.len > 0) {
         line.clearRetainingCapacity();
-        try writeIdsBatchLine(&line.writer, batch.items);
+        _ = try writeIdsBatchLine(&line.writer, batch.items);
         try writeChunk(w, line.written());
     }
     try writeChunk(w, "{\"done\":true}\n");

@@ -1,4 +1,40 @@
-# Benchmark results — ztok 1.5.0 vs competitors
+# Benchmark results — ztok 1.28.0 vs competitors
+
+## 1.28 chart refresh — 2026-07-10
+
+Reference host: AMD EPYC 7473X (24 cores / 48 threads), Zig 0.16,
+ReleaseFast. Every displayed value is the median of three independent
+runs, with eight warm-loop iterations per run. The complete raw runs,
+corpus recipes, token counts, and dependency versions are recorded in
+`docs/benchmark_data.json`.
+
+### cl100k scaling versus tiktoken 0.12
+
+| corpus / shape | ztok MB/s | tiktoken MB/s | speedup |
+|---|---:|---:|---:|
+| multilingual mix, single | 19.4 | 10.2 | 1.9× |
+| ASCII-heavy, single | 22.0 | 10.5 | 2.1× |
+| multilingual mix, batch ×8 | 94.9 | 53.7 | 1.8× |
+| ASCII-heavy, batch ×8 | 124.2 | 54.1 | 2.3× |
+| multilingual mix, batch ×48 + pin | 297.5 | 83.0 | 3.6× |
+| ASCII-heavy, batch ×48 + pin | 395.9 | 89.6 | 4.4× |
+
+ztok and tiktoken emitted exactly 2,688,006 ids on the 9,064,746-byte
+mix and 2,867,510 ids on the 10,632,310-byte ASCII corpus.
+
+### Single-thread field comparison on the multilingual mix
+
+| vocab / reference | ztok MB/s | reference MB/s | speedup |
+|---|---:|---:|---:|
+| cl100k / tiktoken | 19.4 | 10.2 | 1.9× |
+| GPT-2 / HF tokenizers | 11.7 | 1.6 | 7.3× |
+| Llama-2 BPE / SentencePiece | 3.1 | 1.5 | 2.1× |
+| T5 Unigram / SentencePiece | 16.5 | 10.1 | 1.6× |
+
+Token counts match exactly for cl100k and Llama-2 BPE. GPT-2 differs
+by 36 ids out of 3.47 million and T5 differs by 2,116 ids out of 2.89
+million (both below 0.1%); the chart caption calls this out rather than
+describing every pair as exactly id-matched.
 
 ## 1.16 hot table opt-out + capcode pre-size (post-1.15, agent D)
 
@@ -2853,4 +2889,3 @@ justified — the scan operates on u32 rank values, lane width is fixed
 by the data shape. AVX-512 audit is a documented no-op on this
 hardware; would need to re-run on a true Zen 4 (Genoa) or Intel
 Sapphire Rapids box to measure the actual delta.
-

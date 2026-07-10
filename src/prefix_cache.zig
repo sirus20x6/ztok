@@ -500,10 +500,10 @@ pub const Cache = struct {
 //     win — the kernel page cache already does the buffering we'd
 //     otherwise pay for. The on-disk format is stable either way:
 //     a future mmap-backed reader can scan the same file unchanged.
-//   * `flock(LOCK_EX)` for writer exclusion, `flock(LOCK_SH)` for
-//     readers. Linux advisory locks survive the file being open in
-//     multiple processes and are released automatically on close()
-//     or crash.
+//   * `flock(LOCK_EX)` on a stable `<path>.lock` sidecar for writer
+//     exclusion. Keeping the lock off the replaceable data inode preserves
+//     exclusion across compaction's atomic rename. The lock is released
+//     automatically on close() or crash.
 //   * The in-memory `Cache` stays the read fast-path. The persistent
 //     backend mirrors `insert`/`lookupOrInsert` writes synchronously
 //     to the log; reads never touch disk after the initial scan.
@@ -557,9 +557,11 @@ pub const PrefixCache = struct {
     /// keeps working unchanged.
     mem: Cache,
 
-    /// File descriptor for the persistent log. Owns the file lock for
-    /// its lifetime.
+    /// File descriptor for the persistent log.
     fd: posix.fd_t,
+    /// Stable sidecar lock descriptor (`<path>.lock`). The lock must not
+    /// live on `fd` because compaction atomically replaces that inode.
+    lock_fd: posix.fd_t,
     /// Current file length in bytes. Updated after every append /
     /// compaction.
     file_len: u64,
@@ -603,7 +605,7 @@ pub const PrefixCache = struct {
     const Crc64 = std.hash.crc.Crc64Ecma182;
 
     /// Open (or create) a persistent prefix cache at `cfg.path`. Acquires
-    /// an exclusive advisory lock on the file for the lifetime of the
+    /// an exclusive advisory lock on a stable sidecar for the lifetime of the
     /// returned cache so that two writers on the same host don't clobber
     /// each other. Concurrent processes block in `openPersistent` until
     /// the first releases the lock (via `closePersistent` or process
@@ -617,16 +619,18 @@ pub const PrefixCache = struct {
         const path_dup = try allocator.dupe(u8, cfg.path);
         errdefer allocator.free(path_dup);
 
+        const lock_path = try std.fmt.allocPrint(allocator, "{s}.lock", .{path_dup});
+        defer allocator.free(lock_path);
+        const lock_fd = try openOrCreateRW(lock_path);
+        errdefer _ = posix.system.close(lock_fd);
+        // A sidecar inode remains stable while data-file compaction uses
+        // atomic rename. LOCK_EX blocks other processes before they open or
+        // scan the data file, including processes already waiting during a
+        // rename.
+        try flockExclusive(lock_fd);
+
         const fd = try openOrCreateRW(path_dup);
         errdefer _ = posix.system.close(fd);
-
-        // Advisory lock. LOCK_EX on Linux blocks if another process
-        // already holds the lock. Tests that simulate "second writer"
-        // observe this by opening a second handle and seeing it block
-        // (which we exercise via a tryLock-equivalent below).
-        try flockExclusive(fd);
-        // No errdefer for the unlock — closing the fd releases the lock
-        // unconditionally on Linux.
 
         // Make sure the header is sane (or initialise it for a fresh
         // file). The scan below will then walk the records.
@@ -653,6 +657,7 @@ pub const PrefixCache = struct {
             },
             .mem = Cache.init(allocator, @max(@as(u32, 1), cfg.in_memory_capacity)),
             .fd = fd,
+            .lock_fd = lock_fd,
             .file_len = 0,
             .file_index = std.AutoHashMap(u64, FileEntry).init(allocator),
             .dead_bytes = 0,
@@ -682,7 +687,9 @@ pub const PrefixCache = struct {
         // function and the file is about to be closed anyway.
         _ = posix.fdatasync(self.fd) catch {};
         _ = posix.system.close(self.fd);
+        _ = posix.system.close(self.lock_fd);
         self.fd = -1;
+        self.lock_fd = -1;
         self.mem.deinit();
         self.file_index.deinit();
         self.allocator.free(self.cfg.path);
@@ -987,9 +994,25 @@ pub const PrefixCache = struct {
         const tmp_path = try std.fmt.allocPrint(self.allocator, "{s}.compact-tmp", .{self.cfg.path});
         defer self.allocator.free(tmp_path);
 
-        const tmp_fd = try openOrCreateRWExcl(tmp_path);
-        defer _ = posix.system.close(tmp_fd);
+        // A crash may leave the exclusive temp name behind. The live cache
+        // lock proves no other writer for this file is compacting now, so the
+        // stale artifact can be removed safely before retrying.
+        const tmp_fd = openOrCreateRWExcl(tmp_path) catch |err| switch (err) {
+            error.PathAlreadyExists => blk: {
+                try unlinkPath(tmp_path);
+                break :blk try openOrCreateRWExcl(tmp_path);
+            },
+            else => return err,
+        };
+        var tmp_fd_owned = true;
+        defer {
+            if (tmp_fd_owned) _ = posix.system.close(tmp_fd);
+        }
         errdefer unlinkPath(tmp_path) catch {};
+        // Lock the replacement inode before publishing it. This closes the
+        // rename→reopen race where a second process could acquire the new
+        // path while this process still held only the old inode's lock.
+        try flockExclusive(tmp_fd);
 
         try writeFreshHeader(tmp_fd);
         var new_len: u64 = header_size;
@@ -1022,11 +1045,11 @@ pub const PrefixCache = struct {
         // wrt. the directory entry).
         try renamePath(tmp_path, self.cfg.path);
 
-        // Reopen the renamed file so our fd points at the new inode.
-        const new_fd = try openOrCreateRW(self.cfg.path);
-        try flockExclusive(new_fd);
+        // `tmp_fd` already refers to (and locks) the renamed inode. Transfer
+        // ownership directly instead of reopening and creating a lock gap.
         _ = posix.system.close(self.fd);
-        self.fd = new_fd;
+        self.fd = tmp_fd;
+        tmp_fd_owned = false;
 
         self.file_index.deinit();
         self.file_index = new_index;
@@ -1734,6 +1757,28 @@ test "persistent: compaction shrinks the file when stale fraction > threshold" {
     try testing.expectEqualSlices(TokenId, &.{ 100, 101, 102 }, cold);
 }
 
+test "persistent: compaction recovers a temp file left by a crash" {
+    var tmp = std.testing.tmpDir(.{});
+    defer tmp.cleanup();
+    const path = try tmpAbsPath(testing.allocator, &tmp, "ztok_prefix_cache.dat");
+    defer testing.allocator.free(path);
+    const pc = try PrefixCache.openPersistent(testing.allocator, .{
+        .path = path,
+        .compact_at_stale_pct = 0,
+    });
+    defer pc.closePersistent();
+    try pc.insert("key", &.{ 7, 8, 9 });
+
+    const stale_path = try std.fmt.allocPrint(testing.allocator, "{s}.compact-tmp", .{path});
+    defer testing.allocator.free(stale_path);
+    const stale_fd = try openOrCreateRWExcl(stale_path);
+    _ = posix.system.close(stale_fd);
+
+    try pc.compactNow();
+    const got = (try pc.lookup("key")) orelse return error.Missing;
+    try testing.expectEqualSlices(TokenId, &.{ 7, 8, 9 }, got);
+}
+
 test "persistent: concurrent writer is blocked by file lock" {
     // Two PrefixCache instances on the same file from the same
     // process. The second one's `openPersistent` would block forever
@@ -1750,13 +1795,15 @@ test "persistent: concurrent writer is blocked by file lock" {
     try first.insert("locked-key", &.{ 7, 8, 9 });
     try first.sync();
 
-    // Now try to acquire an exclusive lock on the same file via a
+    // Now try to acquire an exclusive lock on the stable sidecar via a
     // separate fd. Should fail with "would block" because `first`
     // already holds it. (Note: Linux flock locks are advisory and
     // per-fd, so a second open + flock attempt is a faithful proxy
     // for the cross-process case — that's exactly the syscall path
     // that runs in two PIDs.)
-    const probe_fd = try openOrCreateRW(path);
+    const lock_path = try std.fmt.allocPrint(testing.allocator, "{s}.lock", .{path});
+    defer testing.allocator.free(lock_path);
+    const probe_fd = try openOrCreateRW(lock_path);
     defer _ = posix.system.close(probe_fd);
     const got_lock = try tryFlockExclusive(probe_fd);
     try testing.expect(!got_lock);

@@ -119,7 +119,7 @@ All optional. Toggle their `.enabled` flag in values.yaml. Defaults install zero
 
 ## Persistent prefix cache
 
-`persistentCache.enabled=true` provisions a PVC and mounts it at `persistentCache.mountPath`. Forward-looking: today's `ztok serve` does not expose a `--prefix-cache-dir` flag; when it does, no chart changes will be needed. Until then, this block is harmless to enable but doesn't change runtime behavior.
+`persistentCache.enabled=true` provisions a PVC, mounts it at `persistentCache.mountPath`, and passes that directory through `ztok serve --prefix-cache-dir`. The cache stores exact-input tokenization results and survives pod replacement.
 
 ## Values reference
 

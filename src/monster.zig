@@ -20,6 +20,7 @@
 //! task target.
 
 const std = @import("std");
+const builtin = @import("builtin");
 const TokenId = @import("token.zig").TokenId;
 const Span = @import("token.zig").Span;
 const unicode_props = @import("unicode_props.zig");
@@ -65,8 +66,10 @@ pub var profile_counters: struct {
 // the `pb`/`pa` tags). Rough but faithful to the six branch values.
 var monster_trace_enabled: bool = false;
 var monster_trace_inited: bool = false;
+const monster_trace_supported = builtin.os.tag != .freestanding;
 
 fn monsterTraceInit() void {
+    if (comptime !monster_trace_supported) return;
     if (monster_trace_inited) return;
     monster_trace_inited = true;
     // Read via libc getenv (the lib links libc; `std.posix.getenv` is
@@ -89,23 +92,23 @@ inline fn traceBranch(
     second_len: u32,
     score: i32,
 ) void {
-    if (monster_trace_enabled) {
+    if (comptime monster_trace_supported) if (monster_trace_enabled) {
         @branchHint(.unlikely);
         std.debug.print(
             "TRACE pos={d} {s} b={d} first_id={d}(len={d}) second_id={d}(len={d}) score={d}\n",
             .{ pos, tag, b, first_id, first_len, second_id, second_len, score },
         );
-    }
+    };
 }
 
 inline fn tracePick(pos: usize, emit_tag: []const u8, first_id: u32, second_id: u32, score: i32, advance: u32) void {
-    if (monster_trace_enabled) {
+    if (comptime monster_trace_supported) if (monster_trace_enabled) {
         @branchHint(.unlikely);
         std.debug.print(
             "TRACE pos={d} PICK emit={s} first_id={d} second_id={d} score={d} advance={d}\n",
             .{ pos, emit_tag, first_id, second_id, score, advance },
         );
-    }
+    };
 }
 
 /// Capcode mode for vocab-flag computation. Mirrors TM-Go's
@@ -2083,12 +2086,12 @@ pub const Monster = struct {
                                 after_second < chunk.len and
                                 self.begin_byte[chunk[after_second]] == BB_LETTER and
                                 self.nwords_tm[eff_second_id] == 0;
-                            if (monster_trace_enabled) {
+                            if (comptime monster_trace_supported) if (monster_trace_enabled) {
                                 @branchHint(.unlikely);
                                 const ef: u8 = if (eff_second_id < self.count) self.flags[eff_second_id] else 0;
                                 const efb: u8 = if (eff_second_id < self.count) self.bare_flags[eff_second_id] else 0;
                                 std.debug.print("TRACE pos={d} scoreNb_GATE b={d} eff_second_id={d} eff_len={d} eff_flag=0b{b:0>8} bare_flag=0b{b:0>8} nwords_tm={d} pb_fb={} inside_word={}\n", .{ i, b, eff_second_id, eff_second_len, ef, efb, self.nwords_tm[eff_second_id], eff_from_pb_fallback, inside_word });
-                            }
+                            };
                             if (inside_word) {
                                 var lb_total: u32 = 0;
                                 const lb_id = self.lilbufSpaceLongestMatch(use_mask, chunk[after..], &lb_total);
@@ -3987,7 +3990,6 @@ pub const Monster = struct {
     // marker) followed by the matched token. The decoder strips the
     // synthetic leading space using the DEL marker.
     const LILBUF_PREFIX_SPACE: [1]u8 = .{0x20};
-
 
     // Walk the trie with `[marker_byte, 0x20]` followed by `input` and return
     // the LONGEST terminal id we encountered along the path (or NO_TOKEN

@@ -236,11 +236,12 @@ test "StreamEncoder: 3-chunk feed matches single-shot encode (cl100k+bpe)" {
         rank += 1;
     }
     const extra = [_][]const u8{
-        "he", "hel", "hell", "hello",
-        " w", " wo", " wor", " worl", " world",
-        " q", " qu", " qui", " quic", " quick",
-        " b", " br", " bro", " brow", " brown",
-        " f", " fo", " fox",
+        "he",     "hel",    "hell",   "hello",
+        " w",     " wo",    " wor",   " worl",
+        " world", " q",     " qu",    " qui",
+        " quic",  " quick", " b",     " br",
+        " bro",   " brow",  " brown", " f",
+        " fo",    " fox",
     };
     for (extra) |bytes| {
         const encoded = b64.encode(&enc_buf, bytes);
