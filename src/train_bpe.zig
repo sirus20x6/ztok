@@ -848,6 +848,10 @@ test "SuperBPE preserves subwords then learns cross-whitespace tokens" {
         .superword_phase_vocab = 268,
     });
     defer bpe.deinit();
+    var subword_id: u32 = 256;
+    while (subword_id < 268) : (subword_id += 1) {
+        try testing.expect(std.mem.indexOfScalar(u8, bpe.idBytes(subword_id), ' ') == null);
+    }
     var found_superword = false;
     var id: u32 = 268;
     while (id < bpe.count) : (id += 1) {
@@ -857,6 +861,9 @@ test "SuperBPE preserves subwords then learns cross-whitespace tokens" {
         }
     }
     try testing.expect(found_superword);
+    id = 256;
+    while (id < bpe.count) : (id += 1)
+        try testing.expect(std.mem.indexOfScalar(u8, bpe.idBytes(id), '\n') == null);
     var out: [64]TokenId = undefined;
     const ids = bpe.encodeChunk("new york city", &out);
     var decoded: std.ArrayList(u8) = .empty;
