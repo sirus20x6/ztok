@@ -53,7 +53,7 @@ version: headline, perf numbers, equivalence deltas).
 | **Special tokens** | `added_tokens.Scanner` resolves specials before pre-tokenization; Unicode-aware lstrip/rstrip |
 | **Loaders** | `.tiktoken`, HF `tokenizer.json` (BPE / WordPiece / Unigram), SentencePiece `.model` (BPE / Unigram + byte_fallback), ztok `.ztm` (Monster), Mistral Tekken `.json`, HF `tokenizer_config.json` — with format auto-detect |
 | **Writers** | HF `tokenizer.json` (+ post-processors), SentencePiece `.model`, ztok `.ztm` |
-| **Training** | BPE, Unigram (EM + subword regularization), WordPiece, TokenMonster distillation, PathPiece (CTC-minimizing) |
+| **Training** | BPE, SuperBPE two-stage superwords, Unigram (EM + subword regularization), WordPiece, TokenMonster distillation, PathPiece (CTC-minimizing) |
 | **Performance** | cl100k vs **tiktoken** on identical corpus bytes (EPYC 24c/48t, ReleaseFast; median of 3 runs), shown as a range across a multilingual mix and an ASCII-heavy corpus: **~19–22 vs 10–11 MB/s** single-thread (1.8–2.2×), **~95–124 vs 54** batch ×8 (1.8–2.3×), **~297–396 vs 83–90** batch ×48 +pin (3.3–4.8×). Gap widens with core count — chart below. |
 | **Targets** | x86_64 / aarch64 native; wasm32-wasi (static lib); wasm32-freestanding (browser, SIMD128) |
 | **C ABI** | `libztok.{a,so}` + `include/ztok.h` — persistent batch pools, streaming encode, overlay channels, format auto-detect; CMake + pkg-config install via `zig build -p <prefix>` |
@@ -302,9 +302,13 @@ defer bpe.deinit();
 ## CLI
 
 ```sh
-ztok train     --kind bpe|unigram|wordpiece|monster \
+ztok train     --kind bpe|superbpe|unigram|wordpiece|monster \
                --input corpus.txt --vocab-size 32000 --output mine.tiktoken \
                --cl100k --threads 8
+# SuperBPE: pretoken-bounded subwords first, then cross-boundary phrases.
+ztok train     --kind superbpe --input corpus.txt --vocab-size 200000 \
+               --superword-phase-vocab 180000 --output superbpe.tiktoken --cl100k
+ztok encode    --model superbpe.tiktoken "by the way"  # no pretokenizer at inference
 ztok encode    --model mine.tiktoken --cl100k "the quick brown fox"
 ztok decode    --model mine.tiktoken 116 259 266 275 281
 ztok info      --model mine.tiktoken
@@ -452,15 +456,16 @@ ids, results:[{shape, mb_per_sec, ms_per_iter, ids}], error}]}` —
 stable across releases so downstream CI tools can track regressions.
 
 
-### Training all four model kinds
+### Training tokenizer model kinds
 
-`ztok train --kind ...` dispatches to BPE / Unigram / WordPiece / TokenMonster
+`ztok train --kind ...` dispatches to BPE / SuperBPE / Unigram / WordPiece / TokenMonster
 trainers; each writes its native on-disk format so downstream tools can
 load the result without conversion:
 
 | `--kind` | Output | Writer |
 |----------|--------|--------|
 | `bpe` (default) | `.tiktoken` | base64-encoded one-token-per-line |
+| `superbpe` | `.tiktoken` | two-stage pretoken-bounded → cross-boundary BPE curriculum |
 | `unigram` | SentencePiece `.model` | `sp_writer.writeUnigramFile` |
 | `wordpiece` | HF `tokenizer.json` | `hf_writer.writeWordPieceFile` |
 | `monster` | ztok `.ztm` | `monster_io.writeFile` |
@@ -473,6 +478,18 @@ $ ztok train --kind unigram --input bench/sample-1k.txt --vocab-size 1024 --outp
 train: kind=unigram, corpus=1024 bytes, target vocab=1024, workers=48, cl100k=false
 train: wrote mine.model (1024 tokens, unigram .model)
 ```
+
+SuperBPE follows [SuperBPE: Space Travel for Language Models](https://arxiv.org/abs/2503.13423):
+phase one is ordinary BPE constrained by the selected pretokenizer, while phase two resumes from
+the same learned merge ranks with those boundaries lifted. The default transition is 90% of the
+requested vocabulary, matching the paper's 180k-of-200k downstream-quality arm; use
+`--superword-phase-vocab` to compare transition points. The live-arena transition and recount also
+follow the efficient two-phase direction of
+[Faster Superword Tokenization](https://arxiv.org/abs/2604.05192). Newline-delimited records remain
+hard document boundaries, so learned tokens never cross examples. Because this changes embedding
+and unembedding geometry, SuperBPE is for new pretraining runs, not an in-place checkpoint upgrade.
+`--cl100k` is required while training to define phase-one boundaries; omit it when encoding with the
+result, because inference must allow the learned superword tokens to span those former boundaries.
 
 ### Side-by-side diff (`ztok diff`)
 
@@ -662,7 +679,7 @@ src/
   unicode_norm.zig  — NFC/NFD/NFKC/NFKD, 562KB of baked tables, full UCD conformance
   byte_level.zig    — GPT-2 byte_to_unicode 256-entry table (comptime-built)
   capcode.zig       — uppercase-as-marker compression (ASCII-only v1)
-  train_bpe.zig     — multithreaded incremental BPE training
+  train_bpe.zig     — multithreaded incremental BPE + two-stage SuperBPE training
   hf_json.zig       — tokenizer.json reader (BPE + WordPiece + Unigram)
   hf_bridge.zig     — HFTokenizer → Bpe / WordPiece / Unigram
   sp_model.zig      — SentencePiece .model loader (BPE + Unigram)
