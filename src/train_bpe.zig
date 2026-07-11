@@ -36,6 +36,15 @@
 //! Threading: only the initial pair-counting pass uses `BatchPool` (per-
 //! worker maps merged at the end). Merge iterations touch a handful of
 //! positions each — the spawn cost dwarfs the work.
+//!
+//! SuperBPE mode implements the two-stage pretokenization curriculum from
+//! Liu et al., COLM 2025 (https://arxiv.org/abs/2503.13423): phase one blocks
+//! merges at pretoken boundaries, then phase two lifts those boundaries while
+//! preserving the learned merge ranks.  The phase transition/recount uses the
+//! same live linked-list arena, avoiding a second raw-document representation.
+//! The frequency-aggregation direction and explicit two-phase formulation are
+//! also informed by Schmidt et al., *Faster Superword Tokenization* (2026),
+//! https://arxiv.org/abs/2604.05192.
 
 const std = @import("std");
 const TokenId = @import("token.zig").TokenId;
@@ -54,11 +63,17 @@ pub const TrainOptions = struct {
     /// or filtered (`.exclude`). See `negative_train.zig`.
     avoid: ?*const negative_train.AvoidList = null,
     avoid_mode: negative_train.Mode = .penalize,
+    /// 0 is ordinary BPE. Otherwise, pretoken boundaries are enforced until
+    /// this vocabulary size, then lifted for SuperBPE superword merges.
+    superword_phase_vocab: u32 = 0,
 };
 
 pub const Corpus = struct {
     words: []const []const u8,
     counts: []const u32,
+    /// Optional per-document masks. `mask[i] == true` blocks the adjacency
+    /// immediately before byte i during phase one only.
+    phase1_blocked_before: ?[]const []const bool = null,
 };
 
 inline fn packPair(left: u32, right: u32) u64 {
@@ -90,6 +105,7 @@ const WordArena = struct {
     next: []i32,
     starts: []u32,
     lens: []u32, // original byte-length; the linked list never resizes
+    phase1_blocked_before: ?[]bool,
 
     fn slabSize(corpus: Corpus) usize {
         var sum: usize = 0;
@@ -98,6 +114,8 @@ const WordArena = struct {
     }
 
     fn init(allocator: std.mem.Allocator, corpus: Corpus) !WordArena {
+        if (corpus.phase1_blocked_before) |masks|
+            if (masks.len != corpus.words.len) return error.CorpusLengthMismatch;
         const total = slabSize(corpus);
         const parts = try allocator.alloc(u32, total);
         errdefer allocator.free(parts);
@@ -109,9 +127,16 @@ const WordArena = struct {
         errdefer allocator.free(starts);
         const lens = try allocator.alloc(u32, corpus.words.len);
         errdefer allocator.free(lens);
+        const blocked = if (corpus.phase1_blocked_before != null)
+            try allocator.alloc(bool, total)
+        else
+            null;
+        errdefer if (blocked) |value| allocator.free(value);
 
         var cursor: u32 = 0;
         for (corpus.words, 0..) |w, i| {
+            if (corpus.phase1_blocked_before) |masks|
+                if (masks[i].len != w.len) return error.CorpusLengthMismatch;
             starts[i] = cursor;
             lens[i] = @intCast(w.len);
             for (w, 0..) |byte, j| {
@@ -119,6 +144,7 @@ const WordArena = struct {
                 parts[idx] = byte;
                 prev[idx] = if (j == 0) -1 else @intCast(idx - 1);
                 next[idx] = if (j + 1 == w.len) -1 else @intCast(idx + 1);
+                if (blocked) |value| value[idx] = corpus.phase1_blocked_before.?[i][j];
             }
             cursor += @intCast(w.len);
         }
@@ -128,6 +154,7 @@ const WordArena = struct {
             .next = next,
             .starts = starts,
             .lens = lens,
+            .phase1_blocked_before = blocked,
         };
     }
 
@@ -137,14 +164,21 @@ const WordArena = struct {
         allocator.free(self.next);
         allocator.free(self.starts);
         allocator.free(self.lens);
+        if (self.phase1_blocked_before) |value| allocator.free(value);
     }
 };
+
+inline fn phase1Allows(arena: *const WordArena, right_pos: u32) bool {
+    const blocked = arena.phase1_blocked_before orelse return true;
+    return !blocked[right_pos];
+}
 
 const CountCtx = struct {
     arena: *const WordArena,
     counts: []const u32,
     pair_maps: []PairCountMap,
     occ_maps: []PairOccMap,
+    phase1: bool,
 };
 
 const CountWorker = struct {
@@ -160,6 +194,7 @@ const CountWorker = struct {
         var i: u32 = 0;
         while (i + 1 < ln) : (i += 1) {
             const pos = start + i;
+            if (ctx.phase1 and !phase1Allows(ctx.arena, pos + 1)) continue;
             const key = packPair(parts[pos], parts[pos + 1]);
             const pgop = pair_map.getOrPut(key) catch return;
             if (!pgop.found_existing) pgop.value_ptr.* = 0;
@@ -182,6 +217,7 @@ fn initialCount(
     pool: ?*BatchPool,
     out_pairs: *PairCountMap,
     out_occ: *PairOccMap,
+    phase1: bool,
 ) !void {
     if (pool) |bp| {
         const n = bp.workerCount();
@@ -207,6 +243,7 @@ fn initialCount(
             .counts = counts,
             .pair_maps = pmaps,
             .occ_maps = omaps,
+            .phase1 = phase1,
         };
         try bp.runBatch(CountWorker, &ctx, arena.starts.len);
 
@@ -233,6 +270,7 @@ fn initialCount(
             var i: u32 = 0;
             while (i + 1 < ln) : (i += 1) {
                 const pos = start + i;
+                if (phase1 and !phase1Allows(arena, pos + 1)) continue;
                 const key = packPair(parts[pos], parts[pos + 1]);
                 const pgop = try out_pairs.getOrPut(key);
                 if (!pgop.found_existing) pgop.value_ptr.* = 0;
@@ -245,6 +283,35 @@ fn initialCount(
                     .pos = pos,
                 });
             }
+        }
+    }
+}
+
+fn clearOccurrences(allocator: std.mem.Allocator, map: *PairOccMap) void {
+    var it = map.iterator();
+    while (it.next()) |entry| entry.value_ptr.deinit(allocator);
+    map.clearRetainingCapacity();
+}
+
+/// Recount the current linked-list token stream when SuperBPE lifts the
+/// pretoken boundary restriction. This preserves every phase-one merge rank.
+fn recountLive(allocator: std.mem.Allocator, arena: *const WordArena, counts: []const u32, phase1: bool, pairs: *PairCountMap, occurrences: *PairOccMap) !void {
+    pairs.clearRetainingCapacity();
+    clearOccurrences(allocator, occurrences);
+    for (arena.starts, arena.lens, counts, 0..) |start, len, freq, word_idx| {
+        if (len < 2 or freq == 0) continue;
+        var pos = start;
+        while (arena.next[pos] >= 0) {
+            const right: u32 = @intCast(arena.next[pos]);
+            if (!phase1 or phase1Allows(arena, right)) {
+                const key = packPair(arena.parts[pos], arena.parts[right]);
+                try incPair(pairs, key, freq);
+                try pushOcc(allocator, occurrences, key, .{
+                    .word_idx = @intCast(word_idx),
+                    .pos = pos,
+                });
+            }
+            pos = right;
         }
     }
 }
@@ -371,6 +438,11 @@ fn pushOcc(
 pub fn train(allocator: std.mem.Allocator, corpus: Corpus, opts: TrainOptions) !Bpe {
     if (opts.vocab_size < 256) return error.VocabTooSmall;
     if (corpus.words.len != corpus.counts.len) return error.CorpusLengthMismatch;
+    if (opts.superword_phase_vocab != 0 and
+        (opts.superword_phase_vocab <= 256 or opts.superword_phase_vocab >= opts.vocab_size))
+        return error.InvalidSuperwordTransition;
+    if (opts.superword_phase_vocab != 0 and corpus.phase1_blocked_before == null)
+        return error.MissingPretokenBoundaries;
 
     var token_bytes: std.ArrayList(u8) = .empty;
     defer token_bytes.deinit(allocator);
@@ -398,7 +470,8 @@ pub fn train(allocator: std.mem.Allocator, corpus: Corpus, opts: TrainOptions) !
         pair_occ.deinit();
     }
 
-    try initialCount(allocator, &arena, corpus.counts, opts.pool, &pair_counts, &pair_occ);
+    var phase1 = opts.superword_phase_vocab != 0;
+    try initialCount(allocator, &arena, corpus.counts, opts.pool, &pair_counts, &pair_occ, phase1);
 
     var winning: std.ArrayList(Occurrence) = .empty;
     defer winning.deinit(allocator);
@@ -423,13 +496,25 @@ pub fn train(allocator: std.mem.Allocator, corpus: Corpus, opts: TrainOptions) !
 
     var cur_vocab: u32 = 256;
     while (cur_vocab < opts.vocab_size) {
+        if (phase1 and cur_vocab >= opts.superword_phase_vocab) {
+            phase1 = false;
+            try recountLive(allocator, &arena, corpus.counts, false, &pair_counts, &pair_occ);
+        }
         // Refresh the avoid context's byte/offset views — token_bytes
         // grows each merge as new pieces are appended.
         if (avoid_ptr) |ap| {
             ap.token_bytes = token_bytes.items;
             ap.token_offsets = token_offsets.items;
         }
-        const best = pickBestPair(&pair_counts, avoid_ptr) orelse break;
+        var best_opt = pickBestPair(&pair_counts, avoid_ptr);
+        // A tiny corpus can exhaust all within-pretoken pairs before the
+        // requested transition. Lift early instead of stopping below target.
+        if (best_opt == null and phase1) {
+            phase1 = false;
+            try recountLive(allocator, &arena, corpus.counts, false, &pair_counts, &pair_occ);
+            best_opt = pickBestPair(&pair_counts, avoid_ptr);
+        }
+        const best = best_opt orelse break;
         const left = unpackLeft(best);
         const right = unpackRight(best);
         const new_id = cur_vocab;
@@ -510,21 +595,25 @@ pub fn train(allocator: std.mem.Allocator, corpus: Corpus, opts: TrainOptions) !
             // into their reverse-index lists.
             if (prev_pos_i >= 0) {
                 const pp: u32 = @intCast(prev_pos_i);
-                const new_key = packPair(arena.parts[pp], new_id);
-                try incPair(&pair_counts, new_key, freq);
-                try pushOcc(allocator, &pair_occ, new_key, .{
-                    .word_idx = word_idx,
-                    .pos = pp,
-                });
+                if (!phase1 or phase1Allows(&arena, pos)) {
+                    const new_key = packPair(arena.parts[pp], new_id);
+                    try incPair(&pair_counts, new_key, freq);
+                    try pushOcc(allocator, &pair_occ, new_key, .{
+                        .word_idx = word_idx,
+                        .pos = pp,
+                    });
+                }
             }
             if (right_neighbor_i >= 0) {
                 const rn: u32 = @intCast(right_neighbor_i);
-                const new_key = packPair(new_id, arena.parts[rn]);
-                try incPair(&pair_counts, new_key, freq);
-                try pushOcc(allocator, &pair_occ, new_key, .{
-                    .word_idx = word_idx,
-                    .pos = pos,
-                });
+                if (!phase1 or phase1Allows(&arena, rn)) {
+                    const new_key = packPair(new_id, arena.parts[rn]);
+                    try incPair(&pair_counts, new_key, freq);
+                    try pushOcc(allocator, &pair_occ, new_key, .{
+                        .word_idx = word_idx,
+                        .pos = pos,
+                    });
+                }
             }
         }
 
@@ -555,6 +644,42 @@ pub fn train(allocator: std.mem.Allocator, corpus: Corpus, opts: TrainOptions) !
         .count = final_count,
         .by_bytes = by_bytes,
     };
+}
+
+/// Train SuperBPE on newline-delimited documents. Phase one uses `splitFn`
+/// boundaries; phase two lifts only those boundaries, never document lines.
+pub fn trainSuperwordFromBytes(
+    allocator: std.mem.Allocator,
+    raw: []const u8,
+    splitFn: *const fn (allocator: std.mem.Allocator, input: []const u8) anyerror![]Span,
+    opts: TrainOptions,
+) !Bpe {
+    if (opts.superword_phase_vocab == 0) return error.InvalidSuperwordTransition;
+    var words: std.ArrayList([]const u8) = .empty;
+    defer words.deinit(allocator);
+    var counts: std.ArrayList(u32) = .empty;
+    defer counts.deinit(allocator);
+    var masks: std.ArrayList([]const bool) = .empty;
+    defer {
+        for (masks.items) |mask| allocator.free(mask);
+        masks.deinit(allocator);
+    }
+    var lines = std.mem.splitScalar(u8, raw, '\n');
+    while (lines.next()) |line| {
+        if (line.len == 0) continue;
+        const spans = try splitFn(allocator, line);
+        defer allocator.free(spans);
+        const mask = try allocator.alloc(bool, line.len);
+        @memset(mask, false);
+        for (spans) |span| {
+            if (span.start > 0 and span.start < line.len) mask[span.start] = true;
+        }
+        try words.append(allocator, line);
+        try counts.append(allocator, 1);
+        try masks.append(allocator, mask);
+    }
+    if (words.items.len == 0) return error.EmptyCorpus;
+    return train(allocator, .{ .words = words.items, .counts = counts.items, .phase1_blocked_before = masks.items }, opts);
 }
 
 pub fn trainFromBytes(
@@ -699,6 +824,52 @@ test "multithreaded matches single-threaded" {
     try testing.expectEqual(bpe_serial.count, bpe_parallel.count);
     try testing.expectEqualSlices(u8, bpe_serial.bytes, bpe_parallel.bytes);
     try testing.expectEqualSlices(u32, bpe_serial.offsets, bpe_parallel.offsets);
+}
+
+fn whitespaceSpans(allocator: std.mem.Allocator, input: []const u8) ![]Span {
+    var spans: std.ArrayList(Span) = .empty;
+    errdefer spans.deinit(allocator);
+    var start: usize = 0;
+    var i: usize = 0;
+    while (i < input.len) : (i += 1) {
+        if (input[i] != ' ') continue;
+        if (start < i) try spans.append(allocator, .{ .start = @intCast(start), .end = @intCast(i) });
+        try spans.append(allocator, .{ .start = @intCast(i), .end = @intCast(i + 1) });
+        start = i + 1;
+    }
+    if (start < input.len) try spans.append(allocator, .{ .start = @intCast(start), .end = @intCast(input.len) });
+    return spans.toOwnedSlice(allocator);
+}
+
+test "SuperBPE preserves subwords then learns cross-whitespace tokens" {
+    const raw = "new york city\nnew york state\nnew york city\nnew jersey city";
+    var bpe = try trainSuperwordFromBytes(testing.allocator, raw, &whitespaceSpans, .{
+        .vocab_size = 280,
+        .superword_phase_vocab = 268,
+    });
+    defer bpe.deinit();
+    var subword_id: u32 = 256;
+    while (subword_id < 268) : (subword_id += 1) {
+        try testing.expect(std.mem.indexOfScalar(u8, bpe.idBytes(subword_id), ' ') == null);
+    }
+    var found_superword = false;
+    var id: u32 = 268;
+    while (id < bpe.count) : (id += 1) {
+        if (std.mem.indexOfScalar(u8, bpe.idBytes(id), ' ') != null) {
+            found_superword = true;
+            break;
+        }
+    }
+    try testing.expect(found_superword);
+    id = 256;
+    while (id < bpe.count) : (id += 1)
+        try testing.expect(std.mem.indexOfScalar(u8, bpe.idBytes(id), '\n') == null);
+    var out: [64]TokenId = undefined;
+    const ids = bpe.encodeChunk("new york city", &out);
+    var decoded: std.ArrayList(u8) = .empty;
+    defer decoded.deinit(testing.allocator);
+    for (ids) |token| try decoded.appendSlice(testing.allocator, bpe.idBytes(token));
+    try testing.expectEqualStrings("new york city", decoded.items);
 }
 
 // Hand-traced 3-merge BPE on the corpus

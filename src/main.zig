@@ -9,7 +9,7 @@
 //!   ztok roundtrip --model PATH [--cl100k] [--optimal] [--summary] [INPUT_FILE|--stdin]
 //!   ztok diff      --a PATH --b PATH [--cl100k] [--format text|json] [INPUT_FILE|--stdin]
 //!   ztok eval      --model PATH [--cl100k] [--format text|json] [--top-k N] [--bottom-k N] [--hidden-dim N] [--fairness] [INPUT_FILE|--stdin]
-//!   ztok train     --kind bpe|unigram|wordpiece|monster --input PATH --vocab-size N --output PATH [--cl100k] [--threads N] [model-specific flags]
+//!   ztok train     --kind bpe|superbpe|unigram|wordpiece|monster --input PATH --vocab-size N --output PATH [--cl100k] [--threads N] [model-specific flags]
 //!   ztok serve     --model PATH [--cl100k] [--host HOST] [--port N] [--workers N]
 //!   ztok grpc-serve --model PATH [--cl100k] [--host HOST] [--port N] [--workers N]
 //!
@@ -118,10 +118,11 @@ fn printUsage(out: *std.Io.Writer) !void {
         \\  ztok decode    --model PATH ID [ID...]
         \\  ztok info      --model PATH
         \\  ztok explain   --model PATH [--cl100k] [--format text|json] [TEXT|--stdin]
-        \\  ztok train     --kind bpe|unigram|wordpiece|monster|pathpiece --input PATH --vocab-size N
+        \\  ztok train     --kind bpe|superbpe|unigram|wordpiece|monster|pathpiece --input PATH --vocab-size N
         \\                 --output PATH [--cl100k] [--threads N]
         \\                 [--em-iterations N] [--shrink-rate F]   (unigram)
         \\                 [--branches N]                          (monster)
+        \\                 [--superword-phase-vocab N]            (SuperBPE; default 90% of vocab)
         \\                 [--avoid PATH] [--avoid-mode penalize|exclude]
         \\  ztok tokenize-dataset --model PATH --input PATH --output PATH [--cl100k]
         \\                 [--format bin|npy] [--seq-len N] [--dtype auto|u16|u32]
@@ -178,6 +179,7 @@ fn printUsage(out: *std.Io.Writer) !void {
         \\  If TEXT is omitted on encode/chunk, stdin is read.
         \\  train output formats by --kind:
         \\    bpe       -> .tiktoken
+        \\    superbpe  -> .tiktoken (two-phase subword -> cross-boundary curriculum)
         \\    unigram   -> SentencePiece .model
         \\    wordpiece -> HF tokenizer.json
         \\    monster   -> ztok .ztm
@@ -251,6 +253,7 @@ const Args = struct {
     branches: ?u32 = null,
     avoid_path: ?[]const u8 = null,
     avoid_mode: ?[]const u8 = null,
+    superword_phase_vocab: ?u32 = null,
     // serve
     host: ?[]const u8 = null,
     port: ?u16 = null,
@@ -455,6 +458,10 @@ const Args = struct {
             } else if (std.mem.eql(u8, tok, "--branches")) {
                 if (i + 1 >= raw.len) return error.MissingValue;
                 a.branches = try std.fmt.parseInt(u32, raw[i + 1], 10);
+                i += 1;
+            } else if (std.mem.eql(u8, tok, "--superword-phase-vocab")) {
+                if (i + 1 >= raw.len) return error.MissingValue;
+                a.superword_phase_vocab = try std.fmt.parseInt(u32, raw[i + 1], 10);
                 i += 1;
             } else if (std.mem.eql(u8, tok, "--avoid")) {
                 if (i + 1 >= raw.len) return error.MissingValue;
@@ -954,10 +961,11 @@ fn loadBpeFromPath(gpa: std.mem.Allocator, io: std.Io, path: []const u8) !ztok.B
     return ztok.Bpe.loadTiktokenFile(gpa, path);
 }
 
-const TrainKind = enum { bpe, unigram, wordpiece, monster, pathpiece };
+const TrainKind = enum { bpe, superbpe, unigram, wordpiece, monster, pathpiece };
 
 fn parseTrainKind(s: []const u8) ?TrainKind {
     if (std.mem.eql(u8, s, "bpe")) return .bpe;
+    if (std.mem.eql(u8, s, "superbpe")) return .superbpe;
     if (std.mem.eql(u8, s, "unigram")) return .unigram;
     if (std.mem.eql(u8, s, "wordpiece")) return .wordpiece;
     if (std.mem.eql(u8, s, "monster")) return .monster;
@@ -983,12 +991,13 @@ fn cmdTrain(gpa: std.mem.Allocator, io: std.Io, raw: []const []const u8, out: *s
     };
 
     const kind: TrainKind = if (args.kind) |k| (parseTrainKind(k) orelse {
-        try out.print("train: unknown --kind '{s}' (expected bpe|unigram|wordpiece|monster|pathpiece)\n", .{k});
+        try out.print("train: unknown --kind '{s}' (expected bpe|superbpe|unigram|wordpiece|monster|pathpiece)\n", .{k});
         return;
     }) else .bpe;
 
     const min_vsz: u32 = switch (kind) {
         .bpe, .wordpiece, .monster, .pathpiece => 256,
+        .superbpe => 258,
         .unigram => 257,
     };
     if (vocab_size < min_vsz) {
@@ -1047,6 +1056,11 @@ fn cmdTrain(gpa: std.mem.Allocator, io: std.Io, raw: []const []const u8, out: *s
     const SplitFn = *const fn (std.mem.Allocator, []const u8) anyerror![]ztok.Span;
     const split_fn: SplitFn = if (args.cl100k) &ztok.cl100k.split else &identitySplit;
 
+    if (kind == .superbpe and !args.cl100k) {
+        try out.writeAll("train: kind=superbpe requires --cl100k pretokenization for phase one\n");
+        return;
+    }
+
     switch (kind) {
         .bpe => {
             var bpe = try ztok.train_bpe.trainFromBytes(gpa, raw_bytes, split_fn, .{
@@ -1059,6 +1073,32 @@ fn cmdTrain(gpa: std.mem.Allocator, io: std.Io, raw: []const []const u8, out: *s
             try writeTiktokenFile(gpa, io, output_path, &bpe);
             try out.print("train: wrote {s} ({d} tokens, {d} bytes total)\n", .{
                 output_path, bpe.count, bpe.bytes.len,
+            });
+        },
+        .superbpe => {
+            // SuperBPE (Liu et al., COLM 2025, arXiv:2503.13423) learns
+            // ordinary subwords first, then lifts pretoken boundaries. A
+            // 90%-of-merges default mirrors the paper's strongest 180k/200k
+            // model; callers can reproduce its 80k/160k arms explicitly.
+            const transition = args.superword_phase_vocab orelse @as(u32, @intCast(
+                256 + (@as(u64, vocab_size - 256) * 9) / 10,
+            ));
+            if (transition <= 256 or transition >= vocab_size) {
+                try out.print("train: --superword-phase-vocab must be in (256, {d})\n", .{vocab_size});
+                return;
+            }
+            try out.print("train: SuperBPE transition={d} (subword merges before cross-boundary merges)\n", .{transition});
+            var bpe = try ztok.train_bpe.trainSuperwordFromBytes(gpa, raw_bytes, split_fn, .{
+                .vocab_size = vocab_size,
+                .pool = &pool,
+                .avoid = avoid_ptr,
+                .avoid_mode = avoid_mode,
+                .superword_phase_vocab = transition,
+            });
+            defer bpe.deinit();
+            try writeTiktokenFile(gpa, io, output_path, &bpe);
+            try out.print("train: wrote {s} ({d} tokens, {d} bytes total, SuperBPE transition {d})\n", .{
+                output_path, bpe.count, bpe.bytes.len, transition,
             });
         },
         .unigram => {

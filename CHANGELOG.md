@@ -12,6 +12,20 @@ Headline numbers throughout this changelog come from `bench/RESULTS.md`
 (AMD EPYC 7473X reference box: 24 physical / 48 SMT cores, ReleaseFast,
 10 MB mixed-text corpus, unless noted otherwise).
 
+## [Unreleased]
+
+### Added
+
+- **SuperBPE training** — `ztok train --kind superbpe --cl100k` implements
+  the two-phase pretokenization curriculum from Liu et al. (COLM 2025,
+  https://arxiv.org/abs/2503.13423): ordinary subword merges run to an
+  explicit transition point, then pretoken boundaries are lifted while the
+  original merge ranks and newline document boundaries are preserved. The
+  in-place live-arena recount follows the efficient two-phase direction of
+  Schmidt et al. (2026, https://arxiv.org/abs/2604.05192). The transition is
+  configurable with `--superword-phase-vocab` and defaults to 90% of the
+  requested vocabulary.
+
 ## [1.28.0] — 2026-05-29
 
 **Headline: three architecture-driven features across every binding, plus
