@@ -22,7 +22,7 @@ const ztok = @import("ztok");
 // build.zig.zon at build time via addOptions.
 const VERSION = ztok.VERSION;
 
-const Cmd = enum { encode, encode_multimodal, decode, info, explain, train, tokenize_dataset, chunk, validate, roundtrip, diff, eval, transcode, serve, grpc_serve, bench, fingerprint, adapt_vocab, merge_vocab, visualize, help, version };
+const Cmd = enum { encode, encode_multimodal, decode, info, explain, train, tokenize_dataset, chunk, validate, roundtrip, diff, eval, transcode, serve, grpc_serve, bench, fingerprint, adapt_vocab, merge_vocab, visualize, superpose, help, version };
 
 pub fn main(init: std.process.Init) !void {
     const gpa = init.gpa;
@@ -79,6 +79,7 @@ pub fn main(init: std.process.Init) !void {
         .adapt_vocab => try cmdAdaptVocab(gpa, io, rest, out),
         .merge_vocab => try cmdMergeVocab(gpa, io, rest, out),
         .visualize => try cmdVisualize(gpa, io, rest, out),
+        .superpose => try cmdSuperpose(gpa, io, rest, out),
     }
 }
 
@@ -103,6 +104,7 @@ fn parseCmd(s: []const u8) ?Cmd {
     if (std.mem.eql(u8, s, "adapt-vocab")) return .adapt_vocab;
     if (std.mem.eql(u8, s, "merge-vocab")) return .merge_vocab;
     if (std.mem.eql(u8, s, "visualize")) return .visualize;
+    if (std.mem.eql(u8, s, "superpose")) return .superpose;
     if (std.mem.eql(u8, s, "help") or std.mem.eql(u8, s, "-h") or std.mem.eql(u8, s, "--help")) return .help;
     if (std.mem.eql(u8, s, "version") or std.mem.eql(u8, s, "-v") or std.mem.eql(u8, s, "--version")) return .version;
     return null;
@@ -167,6 +169,12 @@ fn printUsage(out: *std.Io.Writer) !void {
         \\  ztok merge-vocab --a VOCAB_A --b VOCAB_B --output MERGED
         \\                 [--on-conflict keep-a|keep-b|error] [--prefix-b STR]
         \\  ztok visualize VOCAB [--corpus PATH] [--out report.html] [--top-k N]
+        \\  ztok superpose fixed --model PATH [--cl100k] [--group-size N]
+        \\                 [--stride N] [--fusion mean|weighted-mean|norm-preserving-mean]
+        \\                 [--json] [--text TEXT | TEXT]
+        \\  ztok superpose semantic --input semantic_spans.json [--config ccss_config.json]
+        \\                 --output ccss_plan.json
+        \\  ztok superpose inspect --plan ccss_plan.json
         \\  ztok version
         \\
         \\Notes:
@@ -302,6 +310,14 @@ const Args = struct {
     pad_last: bool = false,
     pad_id: ?u32 = null,
     doc_mode: ?[]const u8 = null,
+    // experimental superposition
+    group_size: ?u16 = null,
+    fusion: ?[]const u8 = null,
+    config_path: ?[]const u8 = null,
+    plan_path: ?[]const u8 = null,
+    text: ?[]const u8 = null,
+    json: bool = false,
+    no_partial: bool = false,
     positional: std.ArrayList([]const u8) = .empty,
 
     fn parse(allocator: std.mem.Allocator, raw: []const []const u8) !Args {
@@ -320,6 +336,14 @@ const Args = struct {
             } else if (std.mem.eql(u8, tok, "--output")) {
                 if (i + 1 >= raw.len) return error.MissingValue;
                 a.output_path = raw[i + 1];
+                i += 1;
+            } else if (std.mem.eql(u8, tok, "--config")) {
+                if (i + 1 >= raw.len) return error.MissingValue;
+                a.config_path = raw[i + 1];
+                i += 1;
+            } else if (std.mem.eql(u8, tok, "--plan")) {
+                if (i + 1 >= raw.len) return error.MissingValue;
+                a.plan_path = raw[i + 1];
                 i += 1;
             } else if (std.mem.eql(u8, tok, "--vocab-size")) {
                 if (i + 1 >= raw.len) return error.MissingValue;
@@ -600,6 +624,22 @@ const Args = struct {
                 if (i + 1 >= raw.len) return error.MissingValue;
                 a.doc_mode = raw[i + 1];
                 i += 1;
+            } else if (std.mem.eql(u8, tok, "--group-size")) {
+                if (i + 1 >= raw.len) return error.MissingValue;
+                a.group_size = try std.fmt.parseInt(u16, raw[i + 1], 10);
+                i += 1;
+            } else if (std.mem.eql(u8, tok, "--fusion")) {
+                if (i + 1 >= raw.len) return error.MissingValue;
+                a.fusion = raw[i + 1];
+                i += 1;
+            } else if (std.mem.eql(u8, tok, "--text")) {
+                if (i + 1 >= raw.len) return error.MissingValue;
+                a.text = raw[i + 1];
+                i += 1;
+            } else if (std.mem.eql(u8, tok, "--json")) {
+                a.json = true;
+            } else if (std.mem.eql(u8, tok, "--no-partial")) {
+                a.no_partial = true;
             } else if (std.mem.eql(u8, tok, "--base")) {
                 if (i + 1 >= raw.len) return error.MissingValue;
                 a.base_path = raw[i + 1];
@@ -639,6 +679,373 @@ const Args = struct {
         self.positional.deinit(allocator);
     }
 };
+
+fn cmdSuperpose(
+    gpa: std.mem.Allocator,
+    io: std.Io,
+    raw: []const []const u8,
+    out: *std.Io.Writer,
+) !void {
+    if (raw.len == 0) {
+        try out.writeAll(
+            "superpose: expected mode fixed|semantic|inspect\n" ++
+                "usage: ztok superpose fixed --model PATH [--group-size N] [--json] [--text TEXT]\n",
+        );
+        std.process.exit(2);
+    }
+    if (std.mem.eql(u8, raw[0], "semantic"))
+        return cmdSuperposeSemantic(gpa, io, raw[1..], out);
+    if (std.mem.eql(u8, raw[0], "inspect"))
+        return cmdSuperposeInspect(gpa, io, raw[1..], out);
+    if (!std.mem.eql(u8, raw[0], "fixed")) {
+        try out.print(
+            "superpose: unknown mode '{s}' (expected fixed|semantic|inspect)\n",
+            .{raw[0]},
+        );
+        std.process.exit(2);
+    }
+
+    var args = try Args.parse(gpa, raw[1..]);
+    defer args.deinit(gpa);
+    const model_path = args.model_path orelse {
+        try out.writeAll("superpose fixed: --model PATH required\n");
+        std.process.exit(2);
+    };
+    const fusion = if (args.fusion) |name|
+        ztok.superposition.FusionKind.parse(name) orelse {
+            try out.print(
+                "superpose fixed: unknown fusion '{s}' (expected mean|weighted-mean|norm-preserving-mean)\n",
+                .{name},
+            );
+            std.process.exit(2);
+        }
+    else
+        ztok.superposition.FusionKind.norm_preserving_mean;
+
+    const stride: ?u16 = if (args.stride) |value| std.math.cast(u16, value) orelse {
+        try out.writeAll("superpose fixed: --stride exceeds 65535\n");
+        std.process.exit(2);
+    } else null;
+
+    var loaded = loadPipelineAutoDetect(gpa, io, model_path) catch |err| {
+        try out.print("superpose fixed: failed to load {s}: {s}\n", .{ model_path, @errorName(err) });
+        std.process.exit(2);
+    };
+    defer loaded.deinit();
+    var vocab = ztok.Vocab.empty(gpa);
+    defer vocab.deinit();
+    const pipe: ztok.Pipeline = .{
+        .normalizer = .identity,
+        .pre_tokenizer = if (args.cl100k) .cl100k else .identity,
+        .model = loaded.modelValue(),
+        .decoder = .concat,
+        .vocab = &vocab,
+    };
+
+    const text = if (args.text) |value|
+        try gpa.dupe(u8, value)
+    else if (args.positional.items.len > 0)
+        try std.mem.join(gpa, " ", args.positional.items)
+    else
+        try readStdin(gpa, io);
+    defer gpa.free(text);
+
+    var encoded = pipe.encodeWithSuperpositionPlan(gpa, text, .{
+        .group_size = args.group_size orelse 4,
+        .stride = stride,
+        .allow_partial_final_group = !args.no_partial,
+        .fusion = fusion,
+    }) catch |err| {
+        try out.print("superpose fixed: failed to build plan: {s}\n", .{@errorName(err)});
+        std.process.exit(2);
+    };
+    defer encoded.deinit(gpa);
+
+    const json_mode = args.json or
+        (args.format != null and std.mem.eql(u8, args.format.?, "json"));
+    if (json_mode) {
+        try ztok.superposition.writeJson(out, &encoded.plan);
+        try out.writeByte('\n');
+        return;
+    }
+    if (args.format) |format| {
+        if (!std.mem.eql(u8, format, "text")) {
+            try out.print("superpose fixed: unknown --format '{s}' (expected text|json)\n", .{format});
+            std.process.exit(2);
+        }
+    }
+
+    try out.print(
+        "schema={s} original_tokens={d} output_groups={d} fusion={s}\n",
+        .{
+            ztok.superposition.SuperpositionSchema,
+            encoded.plan.original_token_count,
+            encoded.plan.output_token_count,
+            fusion.cliName(),
+        },
+    );
+    for (encoded.plan.groups) |group| {
+        try out.print(
+            "[{d}] {s} tokens=[{d},{d}) bytes=[{d},{d}) center={d:.3}\n",
+            .{
+                group.output_index,
+                group.kind.jsonName(),
+                group.position_start,
+                group.position_end,
+                group.byte_start,
+                group.byte_end,
+                group.center_position,
+            },
+        );
+        for (group.sources) |source| {
+            const source_text = text[source.byte_start..source.byte_end];
+            try out.print(
+                "  token[{d}] id={d} bytes=[{d},{d}) weight={d:.6} text={s}\n",
+                .{
+                    source.token_index,
+                    source.token_id,
+                    source.byte_start,
+                    source.byte_end,
+                    source.weight,
+                    source_text,
+                },
+            );
+        }
+    }
+}
+
+fn cmdSuperposeSemantic(
+    gpa: std.mem.Allocator,
+    io: std.Io,
+    raw: []const []const u8,
+    out: *std.Io.Writer,
+) !void {
+    var args = try Args.parse(gpa, raw);
+    defer args.deinit(gpa);
+    const input_path = args.input_path orelse {
+        try out.writeAll(
+            "superpose semantic: --input semantic_spans.json required\n",
+        );
+        std.process.exit(2);
+    };
+    const output_path = args.output_path orelse {
+        try out.writeAll(
+            "superpose semantic: --output ccss_plan.json required\n",
+        );
+        std.process.exit(2);
+    };
+    const input_bytes = std.Io.Dir.cwd().readFileAlloc(
+        io,
+        input_path,
+        gpa,
+        .unlimited,
+    ) catch |err| {
+        try out.print("superpose semantic: failed to read {s}: {s}\n", .{
+            input_path,
+            @errorName(err),
+        });
+        std.process.exit(2);
+    };
+    defer gpa.free(input_bytes);
+
+    var owned = ztok.semantic_exchange.loadFromBytes(gpa, input_bytes) catch |err| {
+        try out.print("superpose semantic: invalid exchange input: {s}\n", .{
+            @errorName(err),
+        });
+        std.process.exit(2);
+    };
+    defer owned.deinit();
+
+    const config = if (args.config_path) |config_path| blk: {
+        const config_bytes = std.Io.Dir.cwd().readFileAlloc(
+            io,
+            config_path,
+            gpa,
+            .unlimited,
+        ) catch |err| {
+            try out.print("superpose semantic: failed to read config {s}: {s}\n", .{
+                config_path,
+                @errorName(err),
+            });
+            std.process.exit(2);
+        };
+        defer gpa.free(config_bytes);
+        break :blk owned.loadConfig(config_bytes) catch |err| {
+            try out.print("superpose semantic: invalid config: {s}\n", .{
+                @errorName(err),
+            });
+            std.process.exit(2);
+        };
+    } else try owned.defaultConfig();
+
+    var plan = ztok.semantic_superposition.buildSemanticPlan(
+        gpa,
+        owned.input,
+        config,
+    ) catch |err| {
+        try out.print("superpose semantic: plan failed: {s}\n", .{
+            @errorName(err),
+        });
+        std.process.exit(2);
+    };
+    defer plan.deinit(gpa);
+    const plan_json = try ztok.semantic_superposition.toJsonAlloc(
+        gpa,
+        owned.input,
+        &plan,
+    );
+    defer gpa.free(plan_json);
+    {
+        var file = std.Io.Dir.cwd().createFile(
+            io,
+            output_path,
+            .{ .truncate = true },
+        ) catch |err| {
+            try out.print("superpose semantic: failed to create {s}: {s}\n", .{
+                output_path,
+                @errorName(err),
+            });
+            std.process.exit(2);
+        };
+        defer file.close(io);
+        var buffer: [64 * 1024]u8 = undefined;
+        var file_writer = file.writer(io, &buffer);
+        try file_writer.interface.writeAll(plan_json);
+        try file_writer.interface.writeByte('\n');
+        try file_writer.interface.flush();
+    }
+    try out.print(
+        "wrote {s}: captions={d} spans={d} consensus={d} units={d} compression={d:.4}\n",
+        .{
+            output_path,
+            plan.caption_count,
+            plan.diagnostics.semantic_span_count,
+            plan.consensus_groups.len,
+            plan.units.len,
+            plan.diagnostics.compression_ratio,
+        },
+    );
+}
+
+fn cmdSuperposeInspect(
+    gpa: std.mem.Allocator,
+    io: std.Io,
+    raw: []const []const u8,
+    out: *std.Io.Writer,
+) !void {
+    var args = try Args.parse(gpa, raw);
+    defer args.deinit(gpa);
+    const plan_path = args.plan_path orelse args.input_path orelse {
+        try out.writeAll("superpose inspect: --plan ccss_plan.json required\n");
+        std.process.exit(2);
+    };
+    const bytes = std.Io.Dir.cwd().readFileAlloc(
+        io,
+        plan_path,
+        gpa,
+        .unlimited,
+    ) catch |err| {
+        try out.print("superpose inspect: failed to read {s}: {s}\n", .{
+            plan_path,
+            @errorName(err),
+        });
+        std.process.exit(2);
+    };
+    defer gpa.free(bytes);
+    var parsed = std.json.parseFromSlice(std.json.Value, gpa, bytes, .{}) catch |err| {
+        try out.print("superpose inspect: invalid JSON: {s}\n", .{@errorName(err)});
+        std.process.exit(2);
+    };
+    defer parsed.deinit();
+    if (parsed.value != .object) return error.MalformedJson;
+    const root = parsed.value.object;
+    const schema = root.get("schema") orelse return error.MalformedJson;
+    if (schema != .string) return error.MalformedJson;
+    try out.print("schema={s}", .{schema.string});
+    if (root.get("image_id")) |image| if (image == .string)
+        try out.print(" image_id={s}", .{image.string});
+    if (root.get("caption_count")) |count| if (count == .integer)
+        try out.print(" captions={d}", .{count.integer});
+    try out.writeByte('\n');
+
+    const units = root.get("units") orelse return error.MalformedJson;
+    if (units != .array) return error.MalformedJson;
+    for (units.array.items) |unit_value| {
+        if (unit_value != .object) continue;
+        const unit = unit_value.object;
+        const id = if (unit.get("unit_id")) |value|
+            if (value == .integer) value.integer else -1
+        else
+            -1;
+        const kind = if (unit.get("kind")) |value|
+            if (value == .string) value.string else "unknown"
+        else
+            "unknown";
+        try out.print("[{d}] {s}", .{ id, kind });
+        if (unit.get("role")) |role| {
+            if (role == .string) try out.print(" role={s}", .{role.string});
+        } else if (unit.get("role_id")) |role| {
+            if (role == .integer) try out.print(" role_id={d}", .{role.integer});
+        }
+        if (unit.get("members")) |members| {
+            if (members == .array) {
+                try out.writeAll(" members=");
+                for (members.array.items, 0..) |member, index| {
+                    if (index != 0) try out.writeByte(',');
+                    if (member == .string) try out.writeAll(member.string);
+                }
+            }
+        } else if (unit.get("span_id")) |span_id| {
+            if (span_id == .string) try out.print(" span={s}", .{span_id.string});
+        }
+        if (unit.get("support_fraction")) |support| switch (support) {
+            .float => |value| try out.print(" support={d:.3}", .{value}),
+            .integer => |value| try out.print(" support={d}", .{value}),
+            else => {},
+        };
+        if (unit.get("minimum_pair_similarity")) |similarity| switch (similarity) {
+            .float => |value| try out.print(" min_similarity={d:.4}", .{value}),
+            .integer => |value| try out.print(" min_similarity={d}", .{value}),
+            else => {},
+        };
+        if (unit.get("reason")) |reason| if (reason == .string)
+            try out.print(" reason={s}", .{reason.string});
+        try out.writeByte('\n');
+    }
+
+    if (root.get("diagnostics")) |diagnostics| {
+        if (diagnostics == .object) {
+            const object = diagnostics.object;
+            try out.writeAll("diagnostics");
+            if (object.get("original_token_count")) |value| if (value == .integer)
+                try out.print(" original_tokens={d}", .{value.integer});
+            if (object.get("semantic_span_count")) |value| if (value == .integer)
+                try out.print(" spans={d}", .{value.integer});
+            if (object.get("output_unit_count")) |value| if (value == .integer)
+                try out.print(" units={d}", .{value.integer});
+            if (object.get("compression_ratio")) |value| switch (value) {
+                .float => |number| try out.print(" compression={d:.4}", .{number}),
+                .integer => |number| try out.print(" compression={d}", .{number}),
+                else => {},
+            };
+            try out.writeByte('\n');
+            if (object.get("rejected_pairs")) |rejected| {
+                if (rejected == .array) for (rejected.array.items) |pair_value| {
+                    if (pair_value != .object) continue;
+                    const pair = pair_value.object;
+                    const left = if (pair.get("left")) |v| if (v == .string) v.string else "?" else "?";
+                    const right = if (pair.get("right")) |v| if (v == .string) v.string else "?" else "?";
+                    const reason = if (pair.get("reason")) |v| if (v == .string) v.string else "unknown" else "unknown";
+                    try out.print("  rejected {s} ~ {s}: {s}\n", .{
+                        left,
+                        right,
+                        reason,
+                    });
+                };
+            }
+        }
+    }
+}
 
 fn cmdEncode(gpa: std.mem.Allocator, io: std.Io, raw: []const []const u8, out: *std.Io.Writer) !void {
     var args = try Args.parse(gpa, raw);

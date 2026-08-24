@@ -80,6 +80,45 @@ pool owns persistent worker threads + arenas.
 Configuration constants: `NORMALIZER_{IDENTITY,NFC,NFD,NFKC,NFKD,BYTE_LEVEL}`,
 `PRETOK_{IDENTITY,CL100K}`, `DECODER_{CONCAT,WORDPIECE,BYTE_LEVEL}`.
 
+### Experimental superposition plans
+
+```python
+from ztok.superposition import (
+    FixedSuperpositionConfig,
+    SemanticSpan,
+    SemanticSuperpositionConfig,
+    build_fixed_plan,
+    build_semantic_plan,
+)
+
+with ztok.Pipeline.from_path("tokenizer.json") as pipeline:
+    fixed = build_fixed_plan(
+        pipeline,
+        "A bright white light.",
+        FixedSuperpositionConfig(group_size=4),
+    )
+
+semantic = build_semantic_plan(
+    spans=[
+        SemanticSpan(
+            "c0-bright", caption_id=0,
+            token_start=0, token_end=1, byte_start=0, byte_end=6,
+            role="lighting_intensity", entity_id="light-1",
+        ),
+        SemanticSpan(
+            "c1-brilliant", caption_id=1,
+            token_start=0, token_end=1, byte_start=0, byte_end=9,
+            role="lighting_intensity", entity_id="light-1",
+        ),
+    ],
+    embeddings=[[1.0, 0.0], [0.999, 0.02]],
+    config=SemanticSuperpositionConfig(),
+)
+```
+
+These calls do not change `Pipeline.encode` and never produce synthetic
+token IDs. Contextual span embeddings are caller supplied.
+
 ### Exceptions
 
 All errors derive from `ZtokError`. Status codes map to subclasses:

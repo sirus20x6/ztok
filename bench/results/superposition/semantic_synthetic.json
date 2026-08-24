@@ -1,0 +1,73 @@
+{
+  "schema": "ztok.superposition_benchmark.v1",
+  "benchmark": "synthetic_semantic_safety",
+  "git_commit": "72c52c2da8e2456dbf6e5b2e0cdee68b8cb0c320",
+  "git_dirty": true,
+  "tokenizer_identifier": "hand-authored token/span offsets",
+  "vocabulary_identifier": "synthetic semantic span IDs",
+  "embedding_model": "hand-authored 3D safety vectors",
+  "embedding_layer": "n/a",
+  "span_extraction_policy": "hand-authored word and phrase spans",
+  "span_count": 19,
+  "expected_pair_count": 7,
+  "actual_pair_count": 7,
+  "pair_precision": 1.0,
+  "pair_recall": 1.0,
+  "cluster_purity": 1.0,
+  "contradiction_false_merge_rate": 0.0,
+  "retained_unique_detail_rate": 1.0,
+  "false_positive_pairs": [],
+  "missed_merge_pairs": [],
+  "forbidden_merged_pairs": [],
+  "cluster_examples": [
+    {
+      "members": [
+        "bright",
+        "brilliant",
+        "intense"
+      ],
+      "role": "lighting_intensity",
+      "minimum_similarity": 0.9991962,
+      "support_fraction": 0.6
+    },
+    {
+      "members": [
+        "white",
+        "pale"
+      ],
+      "role": "color",
+      "minimum_similarity": 0.99979967,
+      "support_fraction": 0.4
+    },
+    {
+      "members": [
+        "luminous",
+        "glowing"
+      ],
+      "role": "emission",
+      "minimum_similarity": 0.99994993,
+      "support_fraction": 0.4
+    },
+    {
+      "members": [
+        "red-dress",
+        "crimson-gown"
+      ],
+      "role": "color",
+      "minimum_similarity": 0.9997877,
+      "support_fraction": 0.4
+    },
+    {
+      "members": [
+        "over-shoulder",
+        "glancing-backward"
+      ],
+      "role": "gaze_action",
+      "minimum_similarity": 0.999882,
+      "support_fraction": 0.4
+    }
+  ],
+  "runtime_seconds": 0.004646243003662676,
+  "peak_rss_kib": 164952,
+  "pass": true
+}

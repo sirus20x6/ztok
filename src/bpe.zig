@@ -42,6 +42,7 @@
 const std = @import("std");
 const TokenId = @import("token.zig").TokenId;
 const Span = @import("token.zig").Span;
+const merge_graph_mod = @import("merge_graph.zig");
 
 /// Initial segmentation strategy for `encodeChunkScratch`. The default
 /// `.bpe_merge` is the canonical tiktoken / HF byte-level path: start
@@ -233,12 +234,26 @@ pub const Bpe = struct {
     /// older HF BPE behavior bit-identical.
     ignore_merges: bool = false,
 
+    /// Ordered merge provenance retained from formats that provide it.
+    /// The graph is inspectable independently of its optional packed lookup
+    /// overlay, allowing corpus-analysis tools to reuse the same relations.
+    merge_graph: ?merge_graph_mod.Graph = null,
+
+    /// Canonical ByteLevel raw byte -> initial token ID mapping. When paired
+    /// with `merge_graph`, cache misses can merge token IDs directly without
+    /// materializing GPT-2's byte-to-Unicode UTF-8 representation.
+    byte_level_ids: ?[]TokenId = null,
+    /// Benchmark/debug kill switch; production loaders leave this enabled.
+    merge_index_enabled: bool = true,
+
     pub fn deinit(self: *Bpe) void {
         self.by_bytes.deinit();
         if (self.bytes.len > 0) self.allocator.free(self.bytes);
         if (self.offsets.len > 0) self.allocator.free(self.offsets);
         if (self.piece_ranks) |pr| self.allocator.free(pr);
         if (self.hot_table) |ht| self.allocator.free(ht);
+        if (self.merge_graph) |*graph| graph.deinit();
+        if (self.byte_level_ids) |ids| self.allocator.free(ids);
         self.* = .{
             .allocator = self.allocator,
             .bytes = &.{},
@@ -251,6 +266,9 @@ pub const Bpe = struct {
             .piece_ranks = null,
             .hot_table = null,
             .ignore_merges = false,
+            .merge_graph = null,
+            .byte_level_ids = null,
+            .merge_index_enabled = true,
         };
     }
 
@@ -550,6 +568,7 @@ pub const Bpe = struct {
     /// pre-tokenized chunks (cl100k average is ~3-10 bytes); anything
     /// larger spills to the allocator.
     const STACK_LIMIT: usize = 256;
+    const RAW_LINKED_LIMIT: usize = 32;
 
     /// Min-rank scan over `ranks`. Routes to the SIMD path in
     /// `src/simd_min.zig` which lowers to `vpminud` on AVX2/AVX-512 and
@@ -565,6 +584,78 @@ pub const Bpe = struct {
         return .{ .idx = 0, .rank = RANK_INVALID };
     }
 
+    /// Short raw-ByteLevel merge core. Stable source indices form a tiny
+    /// doubly-linked list, so each merge updates two links instead of shifting
+    /// the remaining symbol/rank tails. Cache-missing natural-language
+    /// pretokens overwhelmingly fit this domain.
+    fn encodeByteLevelRawLinked(
+        graph: *const merge_graph_mod.Graph,
+        initial_ids: []const TokenId,
+        raw: []const u8,
+        out: []TokenId,
+    ) ?[]TokenId {
+        std.debug.assert(raw.len > 0 and raw.len <= RAW_LINKED_LIMIT);
+        var symbols: [RAW_LINKED_LIMIT]TokenId = undefined;
+        var ranks: [RAW_LINKED_LIMIT]u32 = @splat(RANK_INVALID);
+        var next: [RAW_LINKED_LIMIT]u8 = undefined;
+        var prev: [RAW_LINKED_LIMIT]u8 = undefined;
+        const n = raw.len;
+        for (raw, 0..) |byte, i| {
+            symbols[i] = initial_ids[byte];
+            next[i] = @intCast(i + 1);
+            prev[i] = if (i == 0) std.math.maxInt(u8) else @intCast(i - 1);
+        }
+        for (0..n - 1) |i| {
+            ranks[i] = if (graph.lookupMerge(symbols[i], symbols[i + 1])) |merge|
+                merge.rank
+            else
+                RANK_INVALID;
+        }
+
+        while (true) {
+            const selected = scanMin(ranks[0..n]);
+            if (selected.rank == RANK_INVALID) break;
+            const at: usize = selected.idx;
+            const dead: usize = next[at];
+            if (dead >= n) return null;
+            const merge = graph.lookupMerge(symbols[at], symbols[dead]) orelse return null;
+            std.debug.assert(merge.rank == selected.rank);
+
+            const new_right: usize = next[dead];
+            const left: usize = prev[at];
+            if (new_right < n) graph.prefetchMerge(merge.result, symbols[new_right]);
+            if (left < n) graph.prefetchMerge(symbols[left], merge.result);
+            symbols[at] = merge.result;
+            next[at] = @intCast(new_right);
+            ranks[dead] = RANK_INVALID;
+
+            if (new_right < n) {
+                prev[new_right] = @intCast(at);
+                ranks[at] = if (graph.lookupMerge(symbols[at], symbols[new_right])) |right_merge|
+                    right_merge.rank
+                else
+                    RANK_INVALID;
+            } else {
+                ranks[at] = RANK_INVALID;
+            }
+            if (left < n) {
+                ranks[left] = if (graph.lookupMerge(symbols[left], symbols[at])) |left_merge|
+                    left_merge.rank
+                else
+                    RANK_INVALID;
+            }
+        }
+
+        var written: usize = 0;
+        var at: usize = 0;
+        while (at < n) {
+            out[written] = symbols[at];
+            written += 1;
+            at = next[at];
+        }
+        return out[0..written];
+    }
+
     /// Encode `chunk` into `out`. `out.len` must be >= chunk.len, since
     /// a worst-case-no-merges encoding yields one id per byte.
     ///
@@ -574,6 +665,90 @@ pub const Bpe = struct {
     /// per-thread arena to avoid GPA traffic on large chunks.
     pub fn encodeChunk(self: *const Bpe, chunk: []const u8, out: []TokenId) []TokenId {
         return self.encodeChunkScratch(self.allocator, chunk, out);
+    }
+
+    /// Encode one raw canonical ByteLevel pretoken through token-ID pair
+    /// relations. Returns null when this BPE lacks the optional mapping/index,
+    /// allowing callers to retain the generic byte-string BPE fallback.
+    pub fn encodeByteLevelRawScratch(
+        self: *const Bpe,
+        scratch: std.mem.Allocator,
+        raw: []const u8,
+        out: []TokenId,
+    ) ?[]TokenId {
+        if (!self.merge_index_enabled) return null;
+        const graph = if (self.merge_graph) |*g| g else return null;
+        const initial_ids = self.byte_level_ids orelse return null;
+        if (!graph.hasAccelerator() or initial_ids.len != 256) return null;
+        if (raw.len == 0) return out[0..0];
+        std.debug.assert(out.len >= raw.len);
+        if (raw.len <= RAW_LINKED_LIMIT) {
+            return encodeByteLevelRawLinked(graph, initial_ids, raw, out);
+        }
+
+        var stack_symbols: [STACK_LIMIT]TokenId = undefined;
+        var stack_ranks: [STACK_LIMIT]u32 = undefined;
+        const symbols = if (raw.len <= STACK_LIMIT)
+            stack_symbols[0..raw.len]
+        else
+            scratch.alloc(TokenId, raw.len) catch return null;
+        const ranks = if (raw.len <= STACK_LIMIT)
+            stack_ranks[0..raw.len]
+        else
+            scratch.alloc(u32, raw.len) catch return null;
+
+        for (raw, 0..) |byte, i| symbols[i] = initial_ids[byte];
+        var live: u32 = @intCast(raw.len);
+        if (live >= 2) {
+            var i: u32 = 0;
+            while (i + 1 < live) : (i += 1) {
+                ranks[i] = if (graph.lookupMerge(symbols[i], symbols[i + 1])) |merge|
+                    merge.rank
+                else
+                    RANK_INVALID;
+            }
+        }
+        ranks[live - 1] = RANK_INVALID;
+
+        while (live >= 2) {
+            const selected = scanMin(ranks[0 .. live - 1]);
+            if (selected.rank == RANK_INVALID) break;
+            const merge_index = selected.idx;
+            const merge = graph.lookupMerge(
+                symbols[merge_index],
+                symbols[merge_index + 1],
+            ) orelse return null;
+            // The rank array and graph are immutable views of the same
+            // ordered relations; this assertion detects accidental drift.
+            std.debug.assert(merge.rank == selected.rank);
+            symbols[merge_index] = merge.result;
+
+            var j = merge_index + 1;
+            while (j + 1 < live) : (j += 1) {
+                symbols[j] = symbols[j + 1];
+                ranks[j] = ranks[j + 1];
+            }
+            live -= 1;
+
+            if (merge_index > 0) {
+                const left = merge_index - 1;
+                ranks[left] = if (graph.lookupMerge(symbols[left], symbols[merge_index])) |merge_result|
+                    merge_result.rank
+                else
+                    RANK_INVALID;
+            }
+            if (merge_index + 1 < live) {
+                ranks[merge_index] = if (graph.lookupMerge(
+                    symbols[merge_index],
+                    symbols[merge_index + 1],
+                )) |merge_result| merge_result.rank else RANK_INVALID;
+            } else {
+                ranks[merge_index] = RANK_INVALID;
+            }
+        }
+
+        @memcpy(out[0..live], symbols[0..live]);
+        return out[0..live];
     }
 
     /// Same as `encodeChunk` but the heap-spillover scratch (for chunks

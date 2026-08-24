@@ -1,0 +1,16 @@
+{
+  "dataset_id": "curated-structural-mapping-v1",
+  "expected_pair_count": 3,
+  "expected_unique_count": 2,
+  "false_negative_pairs": 0,
+  "false_positive_pairs": 0,
+  "forbidden_false_merges": 0,
+  "pair_precision": 1.0,
+  "pair_recall": 1.0,
+  "predicted_pair_count": 3,
+  "retained_unique_count": 2,
+  "schema": "ztok.dataset_superposition.benchmark.v1",
+  "superbatch_count": 1,
+  "true_positive_pairs": 3,
+  "unique_detail_retention": 1.0
+}

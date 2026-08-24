@@ -1,0 +1,6 @@
+{
+  "cosine_threshold": 0.70,
+  "minimum_aligned_spans": 2,
+  "minimum_alignment_coverage": 0.5,
+  "verbose_diagnostics": true
+}

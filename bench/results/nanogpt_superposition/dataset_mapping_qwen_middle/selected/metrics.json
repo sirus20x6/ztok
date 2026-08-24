@@ -1,0 +1,26 @@
+{
+  "cosine_threshold": 0.6,
+  "dataset_id": "curated-structural-mapping-v1",
+  "embedding_adapter": {
+    "device": "cuda",
+    "dtype": "bfloat16",
+    "model": "Qwen/Qwen3-Embedding-0.6B",
+    "pooling": "mean_teacher_tokens_overlapping_character_span",
+    "requested_layer": 14,
+    "resolved_hidden_state_index": 14,
+    "revision": "97b0c614be4d77ee51c0cef4e5f07c00f9eb65b3"
+  },
+  "expected_pair_count": 3,
+  "expected_unique_count": 2,
+  "false_negative_pairs": 0,
+  "false_positive_pairs": 0,
+  "forbidden_false_merges": 0,
+  "pair_precision": 1.0,
+  "pair_recall": 1.0,
+  "predicted_pair_count": 3,
+  "retained_unique_count": 2,
+  "schema": "ztok.dataset_superposition.benchmark.v1",
+  "superbatch_count": 1,
+  "true_positive_pairs": 3,
+  "unique_detail_retention": 1.0
+}

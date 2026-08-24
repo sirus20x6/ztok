@@ -22,6 +22,18 @@ bench/_results/
 bench/_cache/
 bench/corpora/_cache/
 
+# Experiment reports and plots are retained; bulky reconstructable intermediates are not.
+bench/results/nanogpt_superposition/**/*.jsonl
+bench/results/nanogpt_superposition/**/*_run_snapshot/
+bench/results/nanogpt_superposition/**/annotated.json
+bench/results/nanogpt_superposition/**/contextualized.json
+bench/results/nanogpt_superposition/**/retrieved.json
+bench/results/nanogpt_superposition/**/semantic_*.json
+bench/results/nanogpt_superposition/**/plan*.json
+bench/results/nanogpt_superposition/**/input.json
+bench/results/nanogpt_superposition/**/expansions.json
+bench/results/nanogpt_superposition/**/smoke_histogram*.json
+
 # Vendored reference clones (shallow git clones of tiktoken / HF tokenizers /
 # SentencePiece / TokenMonster — fetched separately, not part of ztok source).
 # The ztok ports that reference them live in src/.
@@ -32,6 +44,7 @@ refs/
 *.pyc
 .pytest_cache/
 *.egg-info/
+.venv*/
 
 # Node.js binding
 bindings/nodejs/node_modules/

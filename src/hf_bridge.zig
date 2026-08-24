@@ -21,6 +21,8 @@ const BertNormalizerConfig = @import("normalizer.zig").BertNormalizerConfig;
 const SequenceNormalizer = @import("normalizer.zig").SequenceNormalizer;
 const PrependNormalizer = @import("normalizer.zig").PrependNormalizer;
 const hf_regex = @import("hf_regex.zig");
+const merge_graph_mod = @import("merge_graph.zig");
+const byte_level = @import("byte_level.zig");
 
 /// Build a `Bpe` from an HF tokenizer's BPE vocab. Returns OwnedBy caller
 /// — call `.deinit()` when done. Caller may free the source `HFTokenizer`
@@ -99,6 +101,7 @@ pub fn bpeFromHFWithOptions(
     var r: u32 = 0;
     while (r < count) : (r += 1) {
         const key = bytes[offsets[r]..offsets[r + 1]];
+        if (key.len > max_piece_len) max_piece_len = @intCast(key.len);
 
         if (sp_reshelled) {
             // Detect `<0xNN>` byte tokens and route them to bf_table only.
@@ -115,8 +118,20 @@ pub fn bpeFromHFWithOptions(
         }
 
         try by_bytes.put(key, r);
-        if (key.len > max_piece_len) max_piece_len = @intCast(key.len);
     }
+
+    // Keep the ordered merge relationships as first-class data. The graph's
+    // lookup tables accelerate encoding, while its relation slice remains a
+    // stable, inspectable source for diagnostics and corpus-derived models.
+    var merge_graph = try buildMergeGraph(
+        allocator,
+        hf,
+        bytes,
+        offsets,
+        &by_bytes,
+        max_piece_len,
+    );
+    errdefer if (merge_graph) |*graph| graph.deinit();
 
     // SP-reshelled path: derive piece_ranks from merge order, set
     // longest_match mode, attach byte_fallback. Bail back to the
@@ -176,6 +191,7 @@ pub fn bpeFromHFWithOptions(
             .piece_ranks = piece_ranks,
             .hot_table = null,
             .ignore_merges = hf.ignore_merges,
+            .merge_graph = merge_graph,
         };
     }
 
@@ -188,6 +204,13 @@ pub fn bpeFromHFWithOptions(
         null;
     errdefer if (hot_table) |ht| allocator.free(ht);
 
+    const byte_level_ids = if (hf.pre_tok_kind == .byte_level and
+        hf.pretok_chain == null)
+        try buildByteLevelIds(allocator, &by_bytes)
+    else
+        null;
+    errdefer if (byte_level_ids) |ids| allocator.free(ids);
+
     return .{
         .allocator = allocator,
         .bytes = bytes,
@@ -196,7 +219,63 @@ pub fn bpeFromHFWithOptions(
         .by_bytes = by_bytes,
         .hot_table = hot_table,
         .ignore_merges = hf.ignore_merges,
+        .merge_graph = merge_graph,
+        .byte_level_ids = byte_level_ids,
     };
+}
+
+fn buildMergeGraph(
+    allocator: std.mem.Allocator,
+    hf: *const HFTokenizer,
+    bytes: []const u8,
+    offsets: []const u32,
+    by_bytes: *const std.StringHashMap(TokenId),
+    max_piece_len: u32,
+) !?merge_graph_mod.Graph {
+    if (hf.merges.len == 0) return null;
+    const cat_capacity = @max(@as(usize, 2), @as(usize, max_piece_len) * 2);
+    const cat_buf = try allocator.alloc(u8, cat_capacity);
+    defer allocator.free(cat_buf);
+    var relations: std.ArrayList(merge_graph_mod.Relation) = .empty;
+    defer relations.deinit(allocator);
+    try relations.ensureTotalCapacity(allocator, hf.merges.len);
+
+    for (hf.merges, 0..) |merge, rank| {
+        if (merge.left + 1 >= offsets.len or merge.right + 1 >= offsets.len) continue;
+        const left_bytes = bytes[offsets[merge.left]..offsets[merge.left + 1]];
+        const right_bytes = bytes[offsets[merge.right]..offsets[merge.right + 1]];
+        const total = left_bytes.len + right_bytes.len;
+        if (total > cat_buf.len) continue;
+        @memcpy(cat_buf[0..left_bytes.len], left_bytes);
+        @memcpy(cat_buf[left_bytes.len..total], right_bytes);
+        const result = by_bytes.get(cat_buf[0..total]) orelse continue;
+        try relations.append(allocator, .{
+            .left = merge.left,
+            .right = merge.right,
+            .result = result,
+            .rank = @intCast(rank),
+        });
+    }
+    if (relations.items.len == 0) return null;
+    return try merge_graph_mod.Graph.init(allocator, relations.items, .{});
+}
+
+fn buildByteLevelIds(
+    allocator: std.mem.Allocator,
+    by_bytes: *const std.StringHashMap(TokenId),
+) !?[]TokenId {
+    const ids = try allocator.alloc(TokenId, 256);
+    errdefer allocator.free(ids);
+    var encoded: [4]u8 = undefined;
+    for (0..256) |raw| {
+        const cp = byte_level.byte_to_unicode[raw];
+        const len = std.unicode.utf8Encode(cp, &encoded) catch unreachable;
+        ids[raw] = by_bytes.get(encoded[0..len]) orelse {
+            allocator.free(ids);
+            return null;
+        };
+    }
+    return ids;
 }
 
 /// Parse `<0xNN>` -> byte. Local copy of `hf_json.parseByteTokenName`
@@ -721,6 +800,48 @@ test "bpeFromHF non-SP-reshelled fixtures stay on .bpe_merge path" {
         try std.testing.expect(bpe.byte_fallback == null);
     }
     if (!any_ran) return error.SkipZigTest;
+}
+
+test "GPT-2 indexed raw-byte merges match generic mapped-byte BPE" {
+    const io = std.Io.Threaded.global_single_threaded.io();
+    const path = "bench/vocabs/gpt2_hf.json";
+    const json = std.Io.Dir.cwd().readFileAlloc(
+        io,
+        path,
+        std.testing.allocator,
+        .unlimited,
+    ) catch return error.SkipZigTest;
+    defer std.testing.allocator.free(json);
+    var hf = try hf_json.loadFromBytes(std.testing.allocator, json);
+    defer hf.deinit();
+    var bpe = try bpeFromHF(std.testing.allocator, &hf);
+    defer bpe.deinit();
+    try std.testing.expect(bpe.merge_graph != null);
+    try std.testing.expect(bpe.byte_level_ids != null);
+
+    var prng = std.Random.DefaultPrng.init(0x7A70_6D65_7267_65);
+    const random = prng.random();
+    var raw: [96]u8 = undefined;
+    var mapped_storage: [192]u8 = undefined;
+    var generic_out: [192]TokenId = undefined;
+    var indexed_out: [96]TokenId = undefined;
+    var scratch_arena = std.heap.ArenaAllocator.init(std.testing.allocator);
+    defer scratch_arena.deinit();
+    var case_index: usize = 0;
+    while (case_index < 2000) : (case_index += 1) {
+        _ = scratch_arena.reset(.retain_capacity);
+        const scratch = scratch_arena.allocator();
+        const raw_len = 1 + random.uintLessThan(usize, raw.len);
+        random.bytes(raw[0..raw_len]);
+        const mapped = byte_level.encodeBytes(raw[0..raw_len], &mapped_storage);
+        const generic = bpe.encodeChunkScratch(scratch, mapped, &generic_out);
+        const indexed = bpe.encodeByteLevelRawScratch(
+            scratch,
+            raw[0..raw_len],
+            &indexed_out,
+        ) orelse return error.TestUnexpectedResult;
+        try std.testing.expectEqualSlices(TokenId, generic, indexed);
+    }
 }
 
 test "bpeFromHF llama3 ignore_merges short-circuits the whole-chunk multilingual piece" {

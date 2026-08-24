@@ -1,0 +1,60 @@
+{
+  "schema": "ztok.nanogpt_superposition.xielu_fusion_comparison.v1",
+  "decision": "retain_opt_in_reject_as_default",
+  "reason": "The fused epilogue was 0.2966% slower and 0.2270% worse in validation bits/byte than the standalone CUDA xIELU path at the identical source-byte budget.",
+  "environment": {
+    "gpu": "NVIDIA RTX PRO 6000 Blackwell Workstation Edition",
+    "torch": "2.13.0",
+    "parameter_dtype": "torch.bfloat16",
+    "seed": 260506546,
+    "git_commit": "72c52c2da8e2456dbf6e5b2e0cdee68b8cb0c320",
+    "git_dirty": true,
+    "xielu_cuda_source_commit": "185b5126b4d3d6d8b8795f9476b6c61d6e952c3f"
+  },
+  "matched_budget": {
+    "steps": 7003,
+    "source_bytes": 455725318,
+    "ordinary_token_equivalents": 106725720,
+    "model_positions": 106669696,
+    "estimated_flops": 24818614588637184
+  },
+  "runs": {
+    "relu_squared": {
+      "elapsed_seconds": 714.7271631716285,
+      "validation_bits_per_byte": 1.341767664494937,
+      "validation_loss": 3.8954076766967773,
+      "peak_vram_bytes": 13461296128
+    },
+    "xielu_cuda": {
+      "elapsed_seconds": 669.0887803164078,
+      "validation_bits_per_byte": 1.3306512155884838,
+      "validation_loss": 3.863134503364563,
+      "peak_vram_bytes": 12642454528
+    },
+    "xielu_fused": {
+      "elapsed_seconds": 671.0731482714764,
+      "validation_bits_per_byte": 1.3336711841396345,
+      "validation_loss": 3.871902048587799,
+      "peak_vram_bytes": 12642454528
+    }
+  },
+  "comparisons_percent": {
+    "xielu_fused_elapsed_vs_xielu_cuda": 0.2965776760043948,
+    "xielu_fused_validation_bpb_vs_xielu_cuda": 0.22695417971081433,
+    "xielu_fused_elapsed_vs_relu_squared": -6.107787299762856,
+    "xielu_fused_validation_bpb_vs_relu_squared": -0.6034189502062692,
+    "xielu_cuda_elapsed_vs_relu_squared": -6.3854272241030685,
+    "xielu_cuda_validation_bpb_vs_relu_squared": -0.8284928308089468
+  },
+  "paired_non_eval_steps": {
+    "count": 6939,
+    "excluded_first_steps": 50,
+    "xielu_cuda_mean_seconds": 0.0954377969785153,
+    "xielu_fused_mean_seconds": 0.09568840026597472,
+    "xielu_cuda_median_seconds": 0.09552108403295279,
+    "xielu_fused_median_seconds": 0.0955241050105542,
+    "mean_fused_minus_cuda_seconds": 0.00025060328745943127,
+    "median_fused_minus_cuda_seconds": -0.00000540795736014843,
+    "fraction_fused_faster": 0.5006485084306096
+  }
+}

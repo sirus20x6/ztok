@@ -31,6 +31,7 @@ from ctypes import (
     Structure,
     c_char,
     c_char_p,
+    c_float,
     c_int,
     c_size_t,
     c_uint,
@@ -102,6 +103,16 @@ OVERLAY_USER_BASE = 0x8000
 OVERLAY_DOMAIN_NONE = 0
 OVERLAY_DOMAIN_X86_64 = 1
 
+SUPERPOSITION_FUSION_MEAN = 0
+SUPERPOSITION_FUSION_WEIGHTED_MEAN = 1
+SUPERPOSITION_FUSION_NORM_PRESERVING_MEAN = 2
+
+SUPERPOSITION_GROUP_FIXED_WINDOW = 0
+SUPERPOSITION_GROUP_PARTIAL_WINDOW = 1
+SUPERPOSITION_GROUP_PRESERVED_SPECIAL = 2
+SUPERPOSITION_GROUP_PRESERVED_BOUNDARY = 3
+SUPERPOSITION_GROUP_UNCOVERED_TAIL = 4
+
 
 # Typedefs.
 TokenId = c_uint32
@@ -149,6 +160,53 @@ class ZtokOverlayChannel(Structure):
         ("kind", c_uint),
         ("out", TokenIdPtr),
         ("out_cap", c_size_t),
+    ]
+
+
+class ZtokSuperpositionFixedConfig(Structure):
+    _fields_ = [
+        ("group_size", ctypes.c_uint16),
+        ("stride", ctypes.c_uint16),
+        ("fusion", c_uint8),
+        ("preserve_special_tokens", c_uint8),
+        ("preserve_boundary_tokens", c_uint8),
+        ("allow_partial_final_group", c_uint8),
+    ]
+
+
+class ZtokSuperpositionMetadata(Structure):
+    _fields_ = [
+        ("special_token_mask", POINTER(c_uint8)),
+        ("boundary_token_mask", POINTER(c_uint8)),
+        ("hard_boundary_before", POINTER(c_uint8)),
+        ("source_weights", POINTER(c_float)),
+    ]
+
+
+class ZtokSuperpositionSource(Structure):
+    _fields_ = [
+        ("token_index", c_uint32),
+        ("token_id", TokenId),
+        ("byte_start", c_uint32),
+        ("byte_end", c_uint32),
+        ("weight", c_float),
+    ]
+
+
+class ZtokSuperpositionGroup(Structure):
+    _fields_ = [
+        ("output_index", c_uint32),
+        ("source_start", c_uint32),
+        ("source_count", c_uint32),
+        ("fusion", c_uint8),
+        ("kind", c_uint8),
+        ("reserved", ctypes.c_uint16),
+        ("position_start", c_uint32),
+        ("position_end", c_uint32),
+        ("byte_start", c_uint32),
+        ("byte_end", c_uint32),
+        ("center_position", c_float),
+        ("normalized_center", c_float),
     ]
 
 
@@ -225,6 +283,71 @@ def bind(lib: ctypes.CDLL) -> ctypes.CDLL:
         c_uint,                     # ztok_overlay_domain
     ]
     lib.ztok_pipeline_set_overlay_domain.restype = c_int
+
+    # --- experimental fixed superposition plans --------------------------
+    lib.ztok_superposition_plan_build.argtypes = [
+        TokenIdPtr,
+        POINTER(c_uint32),
+        POINTER(c_uint32),
+        c_size_t,
+        POINTER(ZtokSuperpositionFixedConfig),
+        POINTER(ZtokSuperpositionMetadata),
+        POINTER(c_int),
+    ]
+    lib.ztok_superposition_plan_build.restype = c_void_p
+
+    lib.ztok_pipeline_encode_superposition.argtypes = [
+        c_void_p,
+        c_char_p,
+        c_size_t,
+        POINTER(ZtokSuperpositionFixedConfig),
+        POINTER(c_int),
+    ]
+    lib.ztok_pipeline_encode_superposition.restype = c_void_p
+
+    lib.ztok_superposition_plan_free.argtypes = [c_void_p]
+    lib.ztok_superposition_plan_free.restype = None
+    lib.ztok_superposition_schema_version.argtypes = []
+    lib.ztok_superposition_schema_version.restype = c_uint32
+
+    lib.ztok_superposition_plan_original_token_count.argtypes = [c_void_p]
+    lib.ztok_superposition_plan_original_token_count.restype = c_size_t
+    lib.ztok_superposition_plan_output_token_count.argtypes = [c_void_p]
+    lib.ztok_superposition_plan_output_token_count.restype = c_size_t
+    lib.ztok_superposition_plan_source_count.argtypes = [c_void_p]
+    lib.ztok_superposition_plan_source_count.restype = c_size_t
+    lib.ztok_superposition_plan_original_ids.argtypes = [c_void_p]
+    lib.ztok_superposition_plan_original_ids.restype = TokenIdPtr
+    lib.ztok_superposition_plan_original_offset.argtypes = [
+        c_void_p,
+        c_size_t,
+        POINTER(c_uint32),
+        POINTER(c_uint32),
+    ]
+    lib.ztok_superposition_plan_original_offset.restype = c_int
+    lib.ztok_superposition_plan_sources.argtypes = [c_void_p]
+    lib.ztok_superposition_plan_sources.restype = POINTER(ZtokSuperpositionSource)
+    lib.ztok_superposition_plan_groups.argtypes = [c_void_p]
+    lib.ztok_superposition_plan_groups.restype = POINTER(ZtokSuperpositionGroup)
+    lib.ztok_superposition_plan_json.argtypes = [
+        c_void_p,
+        POINTER(c_char),
+        c_size_t,
+        POINTER(c_size_t),
+    ]
+    lib.ztok_superposition_plan_json.restype = c_int
+    lib.ztok_ccss_build_json.argtypes = [
+        c_char_p,
+        c_size_t,
+        c_char_p,
+        c_size_t,
+        POINTER(c_char),
+        c_size_t,
+        POINTER(c_size_t),
+    ]
+    lib.ztok_ccss_build_json.restype = c_int
+    lib.ztok_ccss_schema_version.argtypes = []
+    lib.ztok_ccss_schema_version.restype = c_uint32
 
     # --- batch ------------------------------------------------------------
     lib.ztok_encode_batch.argtypes = [

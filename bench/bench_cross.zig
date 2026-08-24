@@ -39,6 +39,12 @@ const Args = struct {
     corpus_path: []const u8,
     iters: u32 = 5,
     batch: u32 = 0,
+    workers: ?u32 = null,
+    cache_entries_per_worker: usize = 0,
+    cache_stats: bool = false,
+    disable_merge_index: bool = false,
+    ragged: bool = false,
+    pretok_only: bool = false,
     dump_sample: bool = false,
     sample_lines: u32 = 100,
     /// When set, instead of (or in addition to) the per-line id dump,
@@ -58,6 +64,12 @@ fn parseArgs(gpa: std.mem.Allocator, owned: *std.ArrayList([]const u8)) !?Args {
     var corpus_path: ?[]const u8 = null;
     var iters: u32 = 5;
     var batch: u32 = 0;
+    var workers: ?u32 = null;
+    var cache_entries_per_worker: usize = 0;
+    var cache_stats = false;
+    var disable_merge_index = false;
+    var ragged = false;
+    var pretok_only = false;
     var dump_sample = false;
     var sample_lines: u32 = 100;
     var dump_normalized = false;
@@ -96,6 +108,20 @@ fn parseArgs(gpa: std.mem.Allocator, owned: *std.ArrayList([]const u8)) !?Args {
         } else if (std.mem.eql(u8, a, "--batch")) {
             batch = try std.fmt.parseInt(u32, owned.items[i + 1], 10);
             i += 1;
+        } else if (std.mem.eql(u8, a, "--cache-entries")) {
+            cache_entries_per_worker = try std.fmt.parseInt(usize, owned.items[i + 1], 10);
+            i += 1;
+        } else if (std.mem.eql(u8, a, "--workers")) {
+            workers = try std.fmt.parseInt(u32, owned.items[i + 1], 10);
+            i += 1;
+        } else if (std.mem.eql(u8, a, "--cache-stats")) {
+            cache_stats = true;
+        } else if (std.mem.eql(u8, a, "--disable-merge-index")) {
+            disable_merge_index = true;
+        } else if (std.mem.eql(u8, a, "--ragged")) {
+            ragged = true;
+        } else if (std.mem.eql(u8, a, "--pretok-only")) {
+            pretok_only = true;
         } else if (std.mem.eql(u8, a, "--dump-sample")) {
             dump_sample = true;
         } else if (std.mem.eql(u8, a, "--dump-normalized")) {
@@ -116,6 +142,12 @@ fn parseArgs(gpa: std.mem.Allocator, owned: *std.ArrayList([]const u8)) !?Args {
         .corpus_path = c,
         .iters = iters,
         .batch = batch,
+        .workers = workers,
+        .cache_entries_per_worker = cache_entries_per_worker,
+        .cache_stats = cache_stats,
+        .disable_merge_index = disable_merge_index,
+        .ragged = ragged,
+        .pretok_only = pretok_only,
         .dump_sample = dump_sample,
         .sample_lines = sample_lines,
         .dump_normalized = dump_normalized,
@@ -126,6 +158,8 @@ fn printUsage() void {
     std.debug.print(
         \\usage: bench_cross --kind {{monster|unigram|sp-bpe|hf-unigram|hf-bpe|hf-wordpiece|tekken}} \
         \\                   --model VOCAB --corpus PATH [--iters N] [--batch N]
+        \\                   [--workers N] [--cache-entries N] [--cache-stats] [--pretok-only]
+        \\                   [--disable-merge-index] [--ragged]
         \\                   [--dump-sample] [--dump-normalized] [--sample-lines N]
         \\
     , .{});
@@ -750,6 +784,9 @@ pub fn main(init: std.process.Init) !void {
 
     var loaded = try loadModel(gpa, io, args);
     defer loaded.deinit();
+    if (args.disable_merge_index) {
+        if (loaded.bpe) |*bpe| bpe.merge_index_enabled = false;
+    }
 
     var v = ztok.Vocab.empty(gpa);
     defer v.deinit();
@@ -832,6 +869,30 @@ pub fn main(init: std.process.Init) !void {
     // unaffected.
     if (args.dump_sample or args.dump_normalized) return;
 
+    if (args.pretok_only) {
+        var total_spans: u64 = 0;
+        const t0 = nanosNow();
+        var k: u32 = 0;
+        while (k < args.iters) : (k += 1) {
+            var scanner = ztok.hf_bytelevel_pretok.SpanScanner.init(corpus);
+            var relative_ends: [264]u32 = undefined;
+            while (true) {
+                const batch_ends = scanner.fillRelativeEnds(&relative_ends, 256);
+                total_spans += batch_ends.count;
+                if (batch_ends.count == 0) break;
+            }
+        }
+        const elapsed_ns = nanosNow() - t0;
+        const bytes_total = @as(u64, corpus.len) * args.iters;
+        const mb_per_sec = @as(f64, @floatFromInt(bytes_total)) /
+            (@as(f64, @floatFromInt(elapsed_ns)) / 1e9) / 1e6;
+        try out.print("mode:    GPT-2 pretoken-only, iters={d}\n", .{args.iters});
+        try out.print("spans/run: {d}\n", .{total_spans / args.iters});
+        try out.print("time:    {d:.2} ms\n", .{@as(f64, @floatFromInt(elapsed_ns)) / 1e6});
+        try out.print("MB/s:    {d:.1}\n", .{mb_per_sec});
+        return;
+    }
+
     if (args.batch == 0) {
         // Single-thread.
         var total_ids: u64 = 0;
@@ -858,8 +919,23 @@ pub fn main(init: std.process.Init) !void {
         try out.print("bytes/tok: {d:.2}\n", .{bpt});
     } else {
         // Batch.
-        var pool = try ztok.thread_pool.BatchPool.init(gpa, null);
+        var pool = try ztok.thread_pool.BatchPool.initWithOptions(gpa, args.workers, .{
+            // Keep ztok workers on distinct physical cores before using SMT
+            // siblings; the cache/BPE hot path is sensitive to migration.
+            .pin_to_physical_cores = true,
+        });
         defer pool.deinit();
+        var cache: ?ztok.ChunkedEncodeCache = if (args.cache_entries_per_worker > 0)
+            try ztok.ChunkedEncodeCache.initForPool(gpa, &pool, args.cache_entries_per_worker)
+        else
+            null;
+        defer if (cache) |*c| c.deinit();
+        if (cache) |*c| {
+            if (loaded.bpe) |*bpe| try c.seedByteLevelBpe(bpe);
+            if (args.cache_stats) {
+                for (c.workers) |*worker_cache| worker_cache.enableStats(true);
+            }
+        }
 
         // The identity pre-tokenizer has trivial findSafeCut behavior
         // (returns the desired position). `encodeChunked` falls back to
@@ -870,11 +946,26 @@ pub fn main(init: std.process.Init) !void {
         // numbers are still meaningful.
         var total_ids: u64 = 0;
         const t0 = nanosNow();
+        var first_iter_ns: u64 = 0;
         var k: u32 = 0;
         while (k < args.iters) : (k += 1) {
-            const ids = try pipe.encodeChunked(gpa, &pool, corpus, args.batch);
-            total_ids += ids.len;
-            gpa.free(ids);
+            const iter_start = nanosNow();
+            if (args.ragged) {
+                var encoded = if (cache) |*c|
+                    try pipe.encodeChunkedRaggedCached(gpa, &pool, corpus, args.batch, c)
+                else
+                    try pipe.encodeChunkedRagged(gpa, &pool, corpus, args.batch);
+                total_ids += encoded.tokenCount();
+                encoded.deinit();
+            } else {
+                const ids = if (cache) |*c|
+                    try pipe.encodeChunkedCached(gpa, &pool, corpus, args.batch, c)
+                else
+                    try pipe.encodeChunked(gpa, &pool, corpus, args.batch);
+                total_ids += ids.len;
+                gpa.free(ids);
+            }
+            if (k == 0) first_iter_ns = nanosNow() - iter_start;
         }
         const elapsed_ns = nanosNow() - t0;
         const bytes_total = @as(u64, corpus.len) * args.iters;
@@ -884,13 +975,56 @@ pub fn main(init: std.process.Init) !void {
             (@as(f64, @floatFromInt(elapsed_ns)) / 1e9);
         const bpt = @as(f64, @floatFromInt(corpus.len)) /
             @as(f64, @floatFromInt(total_ids / args.iters));
-        try out.print("mode:    batch, chunks={d}, workers={d}, iters={d}\n", .{
-            args.batch, pool.workerCount(), args.iters,
+        try out.print("mode:    {s}, chunks={d}, workers={d}, iters={d}\n", .{
+            if (args.ragged) "ragged" else "batch", args.batch, pool.workerCount(), args.iters,
         });
         try out.print("ids/run: {d}\n", .{total_ids / args.iters});
         try out.print("time:    {d:.2} ms\n", .{@as(f64, @floatFromInt(elapsed_ns)) / 1e6});
         try out.print("MB/s:    {d:.1}\n", .{mb_per_sec});
+        if (args.iters > 1 and elapsed_ns > first_iter_ns) {
+            const cold_mb_s = @as(f64, @floatFromInt(corpus.len)) /
+                (@as(f64, @floatFromInt(first_iter_ns)) / 1e9) / 1e6;
+            const warm_bytes = @as(u64, corpus.len) * (args.iters - 1);
+            const warm_mb_s = @as(f64, @floatFromInt(warm_bytes)) /
+                (@as(f64, @floatFromInt(elapsed_ns - first_iter_ns)) / 1e9) / 1e6;
+            try out.print("cold/warm: {d:.1} / {d:.1} MB/s\n", .{ cold_mb_s, warm_mb_s });
+        }
         try out.print("tok/s:   {d:.0}\n", .{tokens_per_sec});
         try out.print("bytes/tok: {d:.2}\n", .{bpt});
+        if (cache != null and args.cache_stats) {
+            const c = &cache.?;
+            const stats_cache = c.stats();
+            const probes = stats_cache.hits + stats_cache.misses;
+            const hit_rate = if (probes == 0) 0.0 else 100.0 * @as(f64, @floatFromInt(stats_cache.hits)) /
+                @as(f64, @floatFromInt(probes));
+            try out.print(
+                "cache:   hits={d} (home={d}, displaced={d}) misses={d} inserts={d} bypasses={d} hit-rate={d:.1}%\n",
+                .{
+                    stats_cache.hits,
+                    stats_cache.home_hits,
+                    stats_cache.displaced_hits,
+                    stats_cache.misses,
+                    stats_cache.inserts,
+                    stats_cache.bypasses,
+                    hit_rate,
+                },
+            );
+            var min_worker_probes: u64 = std.math.maxInt(u64);
+            var max_worker_probes: u64 = 0;
+            var active_workers: usize = 0;
+            for (c.workers) |worker_cache| {
+                const worker_probes = worker_cache.stats.hits + worker_cache.stats.misses +
+                    worker_cache.stats.bypasses;
+                if (worker_probes != 0) active_workers += 1;
+                min_worker_probes = @min(min_worker_probes, worker_probes);
+                max_worker_probes = @max(max_worker_probes, worker_probes);
+            }
+            try out.print("workers: active={d}/{d}, pretokens/worker min={d} max={d}\n", .{
+                active_workers,
+                c.workers.len,
+                min_worker_probes,
+                max_worker_probes,
+            });
+        }
     }
 }

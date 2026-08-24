@@ -172,6 +172,64 @@ pub const Scanner = struct {
         }
         return null;
     }
+
+    /// Find the next byte that can begin any added token. Common HF
+    /// vocabularies have one root byte (`<` or `[`), so this lowers to the
+    /// standard library's vectorized memchr instead of probing the trie at
+    /// every corpus byte.
+    fn nextRootCandidate(self: *const Scanner, input: []const u8, start: u32) ?u32 {
+        const root = self.nodes[0];
+        if (root.children_len == 0) return null;
+        const kids = self.children[root.children_start .. root.children_start + root.children_len];
+        if (kids.len <= 4) {
+            var best: ?usize = null;
+            for (kids) |kid| {
+                const found = std.mem.indexOfScalarPos(u8, input, start, kid.byte) orelse continue;
+                best = if (best) |current| @min(current, found) else found;
+            }
+            return if (best) |found| @intCast(found) else null;
+        }
+
+        // Unusual many-root vocabulary: retain the exact scalar fallback.
+        var pos: usize = start;
+        while (pos < input.len) : (pos += 1) {
+            if (self.findChild(0, input[pos]) != null) return @intCast(pos);
+        }
+        return null;
+    }
+
+    /// Whether independently scanning disjoint chunks preserves added-token
+    /// whitespace semantics. Strip-enabled tokens need overlap/state across a
+    /// cut and stay on the conservative whole-input scan path.
+    pub fn supportsIndependentChunks(self: *const Scanner) bool {
+        for (self.tokens) |token| {
+            if (token.lstrip or token.rstrip) return false;
+        }
+        return true;
+    }
+
+    /// True when no added-token byte string straddles `pos`. Call only after
+    /// `supportsIndependentChunks`; matching or rejected `single_word`
+    /// occurrences are both treated conservatively.
+    pub fn isIndependentCut(self: *const Scanner, input: []const u8, pos: usize) bool {
+        if (pos == 0 or pos == input.len) return true;
+        for (self.tokens) |token| {
+            const len = token.content.len;
+            if (len < 2) continue;
+            const first = pos -| (len - 1);
+            const last_exclusive = @min(pos, input.len -| len) + 1;
+            // A token spelling longer than the entire input cannot straddle
+            // this cut. Saturating arithmetic above may otherwise produce an
+            // inverted range near the end of very short inputs.
+            if (first >= last_exclusive) continue;
+            for (first..last_exclusive) |start| {
+                const end = start + len;
+                if (start < pos and end > pos and end <= input.len and
+                    std.mem.eql(u8, input[start..end], token.content)) return false;
+            }
+        }
+        return true;
+    }
 };
 
 const BuildNode = struct {
@@ -265,17 +323,20 @@ pub fn scan(
     }
     if (input.len == 0) return try allocator.alloc(Segment, 0);
 
-    // Pre-size: worst case alternates text/special, so 2*N + 1 caps it.
-    // No reallocation inside the hot loop.
+    // Added tokens are normally sparse. Reserving the theoretical 2*N+1
+    // worst case on a dataset-sized input creates a multi-gigabyte virtual
+    // allocation just to return one text segment; grow only when matches
+    // actually occur.
     var segs: std.ArrayList(Segment) = .empty;
     defer segs.deinit(allocator);
-    try segs.ensureTotalCapacity(allocator, input.len * 2 + 1);
+    try segs.ensureTotalCapacity(allocator, 64);
 
     var i: u32 = 0;
     var text_start: u32 = 0;
     const n: u32 = @intCast(input.len);
 
     while (i < n) {
+        i = self.nextRootCandidate(input, i) orelse break;
         // Walk the trie from position i, recording the longest accepted hit.
         var node: u32 = 0;
         var j: u32 = i;
@@ -332,7 +393,7 @@ pub fn scan(
                 }
             }
             if (text_end > text_start) {
-                segs.appendAssumeCapacity(.{ .text = .{ .start = text_start, .end = text_end } });
+                try segs.append(allocator, .{ .text = .{ .start = text_start, .end = text_end } });
             }
             // Special's source range absorbs lstrip'd ws on the left and rstrip'd
             // ws on the right; record it before/after we advance `i`.
@@ -345,7 +406,7 @@ pub fn scan(
                     i += d.len;
                 }
             }
-            segs.appendAssumeCapacity(.{ .special = .{ .id = tok.id, .start = special_start, .end = i } });
+            try segs.append(allocator, .{ .special = .{ .id = tok.id, .start = special_start, .end = i } });
             text_start = i;
         } else {
             i += 1;
@@ -353,7 +414,7 @@ pub fn scan(
     }
 
     if (text_start < n) {
-        segs.appendAssumeCapacity(.{ .text = .{ .start = text_start, .end = n } });
+        try segs.append(allocator, .{ .text = .{ .start = text_start, .end = n } });
     }
 
     return segs.toOwnedSlice(allocator);
@@ -406,6 +467,36 @@ test "two adjacent specials" {
     try std.testing.expectEqual(@as(TokenId, 50256), segs[0].special.id);
     try std.testing.expect(segs[1] == .special);
     try std.testing.expectEqual(@as(TokenId, 50256), segs[1].special.id);
+}
+
+test "independent chunk cuts reject a straddling added token" {
+    const toks = [_]AddedToken{
+        .{ .id = 7, .content = "<|special|>" },
+    };
+    var scanner = try Scanner.init(std.testing.allocator, &toks);
+    defer scanner.deinit();
+    const input = "left <|special|> right";
+    try std.testing.expect(scanner.supportsIndependentChunks());
+    try std.testing.expect(!scanner.isIndependentCut(input, 10));
+    try std.testing.expect(scanner.isIndependentCut(input, 5));
+}
+
+test "independent cut handles token spelling longer than input" {
+    const toks = [_]AddedToken{
+        .{ .id = 7, .content = "<|a-very-long-special-token|>" },
+    };
+    var scanner = try Scanner.init(std.testing.allocator, &toks);
+    defer scanner.deinit();
+    try std.testing.expect(scanner.isIndependentCut("tiny", 3));
+}
+
+test "strip-enabled added tokens require conservative whole-input scan" {
+    const toks = [_]AddedToken{
+        .{ .id = 7, .content = "<s>", .lstrip = true },
+    };
+    var scanner = try Scanner.init(std.testing.allocator, &toks);
+    defer scanner.deinit();
+    try std.testing.expect(!scanner.supportsIndependentChunks());
 }
 
 test "longest-match wins" {

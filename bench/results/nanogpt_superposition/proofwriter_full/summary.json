@@ -1,0 +1,41 @@
+{
+  "answer_counts": {
+    "False": 95091,
+    "True": 95091,
+    "Unknown": 158614
+  },
+  "dataset": "wentingzhao/proofwriter",
+  "maximum_group_size": 8,
+  "modes": {
+    "logical_isomorphism_ceiling": {
+      "eligible_primer_compression_ratio": 0.1780783742243794,
+      "group_count": 23214,
+      "grouped_source_units": 3663679,
+      "grouped_trace_count": 150585,
+      "logical_unit_count": 8804858,
+      "primer_output_units": 652422,
+      "proof_trace_count": 261985,
+      "superposition_slot_count": 99900,
+      "superposition_source_occurrences": 543043,
+      "trace_coverage": 0.5747848159245759
+    },
+    "role_safe": {
+      "eligible_primer_compression_ratio": 0.20734657189558386,
+      "group_count": 2634,
+      "grouped_source_units": 349333,
+      "grouped_trace_count": 14510,
+      "logical_unit_count": 8804858,
+      "primer_output_units": 72433,
+      "proof_trace_count": 261985,
+      "superposition_slot_count": 6210,
+      "superposition_source_occurrences": 30452,
+      "trace_coverage": 0.05538485027768766
+    }
+  },
+  "proof_rows_exclude_unknown": true,
+  "revision": "c468a2e9a467cc3ed8a90c2caa318e620fe59f41",
+  "row_count": 348796,
+  "schema": "ztok.proofwriter_superposition.v1",
+  "split": "train",
+  "tokenizer": "/thearray/git/ztok/experiments/nanogpt_superposition/data/fineweb_edu_100m/bpe32k.tiktoken"
+}

@@ -771,11 +771,28 @@ fn parsePreTokenizer(hf: *HFTokenizer, root: std.json.ObjectMap) Error!void {
         hf.pre_tok_kind = .other;
         hf.pre_tok_other = try hf.allocator.dupe(u8, s);
     }
-    // Also build the structured chain so the bridge can materialize a
-    // runtime PreTokenizer.chain when the JSON describes a multi-op
-    // Sequence (or any single op modeled by `hf_bytelevel.Chain`).
-    if (try parsePretokChain(hf.allocator, v)) |chain| {
-        hf.pretok_chain = chain;
+    // Keep canonical GPT-2 ByteLevel on the dedicated hand-written fast
+    // path. Materializing this one operation as a generic Chain is both
+    // slower and prevents Pipeline.encodeChunked from proving that its
+    // newline cuts are exact. Non-canonical ByteLevel configurations (for
+    // example add_prefix_space=true or use_regex=false) still require the
+    // generic executor, as do multi-op Sequence configurations.
+    var canonical_byte_level = false;
+    if (std.mem.eql(u8, s, "ByteLevel")) {
+        const add_prefix_space = if (v.object.get("add_prefix_space")) |b|
+            b == .bool and b.bool
+        else
+            false;
+        const use_regex = if (v.object.get("use_regex")) |b|
+            b != .bool or b.bool
+        else
+            true;
+        canonical_byte_level = !add_prefix_space and use_regex;
+    }
+    if (!canonical_byte_level) {
+        if (try parsePretokChain(hf.allocator, v)) |chain| {
+            hf.pretok_chain = chain;
+        }
     }
 }
 
@@ -1093,6 +1110,24 @@ test "loadFromBytes captures normalizer/pre_tok/decoder kinds" {
     try testing.expectEqual(@as(?[]u8, null), hf.normalizer_other);
     try testing.expectEqual(@as(?[]u8, null), hf.pre_tok_other);
     try testing.expectEqual(@as(?[]u8, null), hf.decoder_other);
+    // add_prefix_space=true changes tokenization and must retain the generic
+    // chain; only canonical GPT-2 ByteLevel is routed to the fast path.
+    try testing.expect(hf.pretok_chain != null);
+}
+
+test "canonical GPT-2 ByteLevel uses dedicated fast path" {
+    const input =
+        \\{
+        \\  "added_tokens": [],
+        \\  "pre_tokenizer": {"type": "ByteLevel", "add_prefix_space": false, "trim_offsets": true},
+        \\  "model": {"type": "BPE", "vocab": {"a": 0}, "merges": []}
+        \\}
+    ;
+    var hf = try loadFromBytes(testing.allocator, input);
+    defer hf.deinit();
+
+    try testing.expectEqual(PreTokKind.byte_level, hf.pre_tok_kind);
+    try testing.expectEqual(@as(?hf_bytelevel.Chain, null), hf.pretok_chain);
 }
 
 test "loadFromBytes parses minimal Unigram" {

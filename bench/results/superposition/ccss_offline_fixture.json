@@ -1,0 +1,1261 @@
+{
+  "schema": "ztok.ccss_benchmark.v1",
+  "git_commit": "72c52c2da8e2456dbf6e5b2e0cdee68b8cb0c320",
+  "git_dirty": true,
+  "tokenizer_identifier": "fixture-offsets",
+  "vocabulary_identifier": "fixture-token-ids",
+  "embedding_model": "hand-authored-vectors",
+  "embedding_layer": "n/a",
+  "span_extraction_policy": "fixture-phrases-v1",
+  "threshold_config": {
+    "default_cosine_threshold": 0.92,
+    "minimum_score": 0.92,
+    "role_thresholds": {
+      "lighting_intensity": 0.88,
+      "color": 0.94,
+      "illumination_relation": 0.97
+    },
+    "fusion": "norm-preserving-mean",
+    "minimum_support_count": 2,
+    "maximum_cluster_size": 12,
+    "verbose_diagnostics": true
+  },
+  "metrics": {
+    "images": 1,
+    "captions": 3,
+    "source_tokens": 18,
+    "semantic_spans": 6,
+    "consensus_groups": 2,
+    "unique_units": 0,
+    "relation_units": 1,
+    "uncertainty_units": 0,
+    "output_units": 3,
+    "compression_ratio": 0.16666666666666666,
+    "compression_factor": 6.0,
+    "cluster_size_distribution": {
+      "2": 1,
+      "3": 1
+    },
+    "support_distribution": {
+      "100%": 1,
+      ">=50%": 1
+    },
+    "runtime_seconds": 0.0017736390000209212,
+    "images_per_second": 563.812590943368,
+    "peak_rss_kib": 166512,
+    "qualitative_clusters": [
+      {
+        "image_id": "fixture-lighting",
+        "role": "lighting_intensity",
+        "members": [
+          "c0-bright",
+          "c1-brilliant",
+          "c2-intense"
+        ],
+        "weights": [
+          0.33684567,
+          0.33340034,
+          0.329754
+        ],
+        "minimum_similarity": 0.9991962,
+        "support_fraction": 1.0
+      },
+      {
+        "image_id": "fixture-lighting",
+        "role": "color",
+        "members": [
+          "c0-white",
+          "c1-pale"
+        ],
+        "weights": [
+          0.516129,
+          0.48387098
+        ],
+        "minimum_similarity": 0.99979967,
+        "support_fraction": 0.6666667
+      }
+    ],
+    "contradiction_cases": []
+  },
+  "go_no_go": {
+    "compression_2x": true,
+    "protected_false_merge_below_1pct": null,
+    "unique_detail_retention_95pct": null,
+    "beats_mean_pooling": null,
+    "resampler_non_degradation": null,
+    "stable_single_caption_inference": null
+  },
+  "ablations": [
+    {
+      "name": "threshold_0.85",
+      "config": {
+        "default_cosine_threshold": 0.85,
+        "minimum_score": 0.85,
+        "role_thresholds": {
+          "lighting_intensity": 0.88,
+          "color": 0.94,
+          "illumination_relation": 0.97
+        },
+        "fusion": "norm-preserving-mean",
+        "minimum_support_count": 2,
+        "maximum_cluster_size": 12,
+        "verbose_diagnostics": true
+      },
+      "metrics": {
+        "images": 1,
+        "captions": 3,
+        "source_tokens": 18,
+        "semantic_spans": 6,
+        "consensus_groups": 2,
+        "unique_units": 0,
+        "relation_units": 1,
+        "uncertainty_units": 0,
+        "output_units": 3,
+        "compression_ratio": 0.16666666666666666,
+        "compression_factor": 6.0,
+        "cluster_size_distribution": {
+          "2": 1,
+          "3": 1
+        },
+        "support_distribution": {
+          "100%": 1,
+          ">=50%": 1
+        },
+        "runtime_seconds": 0.0005779730272479355,
+        "images_per_second": 1730.1845464339044,
+        "peak_rss_kib": 166512,
+        "qualitative_clusters": [
+          {
+            "image_id": "fixture-lighting",
+            "role": "lighting_intensity",
+            "members": [
+              "c0-bright",
+              "c1-brilliant",
+              "c2-intense"
+            ],
+            "weights": [
+              0.33684567,
+              0.33340034,
+              0.329754
+            ],
+            "minimum_similarity": 0.9991962,
+            "support_fraction": 1.0
+          },
+          {
+            "image_id": "fixture-lighting",
+            "role": "color",
+            "members": [
+              "c0-white",
+              "c1-pale"
+            ],
+            "weights": [
+              0.516129,
+              0.48387098
+            ],
+            "minimum_similarity": 0.99979967,
+            "support_fraction": 0.6666667
+          }
+        ],
+        "contradiction_cases": []
+      }
+    },
+    {
+      "name": "threshold_0.88",
+      "config": {
+        "default_cosine_threshold": 0.88,
+        "minimum_score": 0.88,
+        "role_thresholds": {
+          "lighting_intensity": 0.88,
+          "color": 0.94,
+          "illumination_relation": 0.97
+        },
+        "fusion": "norm-preserving-mean",
+        "minimum_support_count": 2,
+        "maximum_cluster_size": 12,
+        "verbose_diagnostics": true
+      },
+      "metrics": {
+        "images": 1,
+        "captions": 3,
+        "source_tokens": 18,
+        "semantic_spans": 6,
+        "consensus_groups": 2,
+        "unique_units": 0,
+        "relation_units": 1,
+        "uncertainty_units": 0,
+        "output_units": 3,
+        "compression_ratio": 0.16666666666666666,
+        "compression_factor": 6.0,
+        "cluster_size_distribution": {
+          "2": 1,
+          "3": 1
+        },
+        "support_distribution": {
+          "100%": 1,
+          ">=50%": 1
+        },
+        "runtime_seconds": 0.0005413619801402092,
+        "images_per_second": 1847.1928888338382,
+        "peak_rss_kib": 166512,
+        "qualitative_clusters": [
+          {
+            "image_id": "fixture-lighting",
+            "role": "lighting_intensity",
+            "members": [
+              "c0-bright",
+              "c1-brilliant",
+              "c2-intense"
+            ],
+            "weights": [
+              0.33684567,
+              0.33340034,
+              0.329754
+            ],
+            "minimum_similarity": 0.9991962,
+            "support_fraction": 1.0
+          },
+          {
+            "image_id": "fixture-lighting",
+            "role": "color",
+            "members": [
+              "c0-white",
+              "c1-pale"
+            ],
+            "weights": [
+              0.516129,
+              0.48387098
+            ],
+            "minimum_similarity": 0.99979967,
+            "support_fraction": 0.6666667
+          }
+        ],
+        "contradiction_cases": []
+      }
+    },
+    {
+      "name": "threshold_0.90",
+      "config": {
+        "default_cosine_threshold": 0.9,
+        "minimum_score": 0.9,
+        "role_thresholds": {
+          "lighting_intensity": 0.88,
+          "color": 0.94,
+          "illumination_relation": 0.97
+        },
+        "fusion": "norm-preserving-mean",
+        "minimum_support_count": 2,
+        "maximum_cluster_size": 12,
+        "verbose_diagnostics": true
+      },
+      "metrics": {
+        "images": 1,
+        "captions": 3,
+        "source_tokens": 18,
+        "semantic_spans": 6,
+        "consensus_groups": 2,
+        "unique_units": 0,
+        "relation_units": 1,
+        "uncertainty_units": 0,
+        "output_units": 3,
+        "compression_ratio": 0.16666666666666666,
+        "compression_factor": 6.0,
+        "cluster_size_distribution": {
+          "2": 1,
+          "3": 1
+        },
+        "support_distribution": {
+          "100%": 1,
+          ">=50%": 1
+        },
+        "runtime_seconds": 0.0005523120053112507,
+        "images_per_second": 1810.5708193622527,
+        "peak_rss_kib": 166512,
+        "qualitative_clusters": [
+          {
+            "image_id": "fixture-lighting",
+            "role": "lighting_intensity",
+            "members": [
+              "c0-bright",
+              "c1-brilliant",
+              "c2-intense"
+            ],
+            "weights": [
+              0.33684567,
+              0.33340034,
+              0.329754
+            ],
+            "minimum_similarity": 0.9991962,
+            "support_fraction": 1.0
+          },
+          {
+            "image_id": "fixture-lighting",
+            "role": "color",
+            "members": [
+              "c0-white",
+              "c1-pale"
+            ],
+            "weights": [
+              0.516129,
+              0.48387098
+            ],
+            "minimum_similarity": 0.99979967,
+            "support_fraction": 0.6666667
+          }
+        ],
+        "contradiction_cases": []
+      }
+    },
+    {
+      "name": "threshold_0.92",
+      "config": {
+        "default_cosine_threshold": 0.92,
+        "minimum_score": 0.92,
+        "role_thresholds": {
+          "lighting_intensity": 0.88,
+          "color": 0.94,
+          "illumination_relation": 0.97
+        },
+        "fusion": "norm-preserving-mean",
+        "minimum_support_count": 2,
+        "maximum_cluster_size": 12,
+        "verbose_diagnostics": true
+      },
+      "metrics": {
+        "images": 1,
+        "captions": 3,
+        "source_tokens": 18,
+        "semantic_spans": 6,
+        "consensus_groups": 2,
+        "unique_units": 0,
+        "relation_units": 1,
+        "uncertainty_units": 0,
+        "output_units": 3,
+        "compression_ratio": 0.16666666666666666,
+        "compression_factor": 6.0,
+        "cluster_size_distribution": {
+          "2": 1,
+          "3": 1
+        },
+        "support_distribution": {
+          "100%": 1,
+          ">=50%": 1
+        },
+        "runtime_seconds": 0.0005322420038282871,
+        "images_per_second": 1878.8445722194858,
+        "peak_rss_kib": 166512,
+        "qualitative_clusters": [
+          {
+            "image_id": "fixture-lighting",
+            "role": "lighting_intensity",
+            "members": [
+              "c0-bright",
+              "c1-brilliant",
+              "c2-intense"
+            ],
+            "weights": [
+              0.33684567,
+              0.33340034,
+              0.329754
+            ],
+            "minimum_similarity": 0.9991962,
+            "support_fraction": 1.0
+          },
+          {
+            "image_id": "fixture-lighting",
+            "role": "color",
+            "members": [
+              "c0-white",
+              "c1-pale"
+            ],
+            "weights": [
+              0.516129,
+              0.48387098
+            ],
+            "minimum_similarity": 0.99979967,
+            "support_fraction": 0.6666667
+          }
+        ],
+        "contradiction_cases": []
+      }
+    },
+    {
+      "name": "threshold_0.94",
+      "config": {
+        "default_cosine_threshold": 0.94,
+        "minimum_score": 0.94,
+        "role_thresholds": {
+          "lighting_intensity": 0.88,
+          "color": 0.94,
+          "illumination_relation": 0.97
+        },
+        "fusion": "norm-preserving-mean",
+        "minimum_support_count": 2,
+        "maximum_cluster_size": 12,
+        "verbose_diagnostics": true
+      },
+      "metrics": {
+        "images": 1,
+        "captions": 3,
+        "source_tokens": 18,
+        "semantic_spans": 6,
+        "consensus_groups": 2,
+        "unique_units": 0,
+        "relation_units": 1,
+        "uncertainty_units": 0,
+        "output_units": 3,
+        "compression_ratio": 0.16666666666666666,
+        "compression_factor": 6.0,
+        "cluster_size_distribution": {
+          "2": 1,
+          "3": 1
+        },
+        "support_distribution": {
+          "100%": 1,
+          ">=50%": 1
+        },
+        "runtime_seconds": 0.0005230020033195615,
+        "images_per_second": 1912.0385651543788,
+        "peak_rss_kib": 166512,
+        "qualitative_clusters": [
+          {
+            "image_id": "fixture-lighting",
+            "role": "lighting_intensity",
+            "members": [
+              "c0-bright",
+              "c1-brilliant",
+              "c2-intense"
+            ],
+            "weights": [
+              0.33684567,
+              0.33340034,
+              0.329754
+            ],
+            "minimum_similarity": 0.9991962,
+            "support_fraction": 1.0
+          },
+          {
+            "image_id": "fixture-lighting",
+            "role": "color",
+            "members": [
+              "c0-white",
+              "c1-pale"
+            ],
+            "weights": [
+              0.516129,
+              0.48387098
+            ],
+            "minimum_similarity": 0.99979967,
+            "support_fraction": 0.6666667
+          }
+        ],
+        "contradiction_cases": []
+      }
+    },
+    {
+      "name": "threshold_0.96",
+      "config": {
+        "default_cosine_threshold": 0.96,
+        "minimum_score": 0.96,
+        "role_thresholds": {
+          "lighting_intensity": 0.88,
+          "color": 0.94,
+          "illumination_relation": 0.97
+        },
+        "fusion": "norm-preserving-mean",
+        "minimum_support_count": 2,
+        "maximum_cluster_size": 12,
+        "verbose_diagnostics": true
+      },
+      "metrics": {
+        "images": 1,
+        "captions": 3,
+        "source_tokens": 18,
+        "semantic_spans": 6,
+        "consensus_groups": 2,
+        "unique_units": 0,
+        "relation_units": 1,
+        "uncertainty_units": 0,
+        "output_units": 3,
+        "compression_ratio": 0.16666666666666666,
+        "compression_factor": 6.0,
+        "cluster_size_distribution": {
+          "2": 1,
+          "3": 1
+        },
+        "support_distribution": {
+          "100%": 1,
+          ">=50%": 1
+        },
+        "runtime_seconds": 0.000562763016205281,
+        "images_per_second": 1776.9469051875765,
+        "peak_rss_kib": 166512,
+        "qualitative_clusters": [
+          {
+            "image_id": "fixture-lighting",
+            "role": "lighting_intensity",
+            "members": [
+              "c0-bright",
+              "c1-brilliant",
+              "c2-intense"
+            ],
+            "weights": [
+              0.33684567,
+              0.33340034,
+              0.329754
+            ],
+            "minimum_similarity": 0.9991962,
+            "support_fraction": 1.0
+          },
+          {
+            "image_id": "fixture-lighting",
+            "role": "color",
+            "members": [
+              "c0-white",
+              "c1-pale"
+            ],
+            "weights": [
+              0.516129,
+              0.48387098
+            ],
+            "minimum_similarity": 0.99979967,
+            "support_fraction": 0.6666667
+          }
+        ],
+        "contradiction_cases": []
+      }
+    },
+    {
+      "name": "fusion_mean",
+      "config": {
+        "default_cosine_threshold": 0.92,
+        "minimum_score": 0.92,
+        "role_thresholds": {
+          "lighting_intensity": 0.88,
+          "color": 0.94,
+          "illumination_relation": 0.97
+        },
+        "fusion": "mean",
+        "minimum_support_count": 2,
+        "maximum_cluster_size": 12,
+        "verbose_diagnostics": true
+      },
+      "metrics": {
+        "images": 1,
+        "captions": 3,
+        "source_tokens": 18,
+        "semantic_spans": 6,
+        "consensus_groups": 2,
+        "unique_units": 0,
+        "relation_units": 1,
+        "uncertainty_units": 0,
+        "output_units": 3,
+        "compression_ratio": 0.16666666666666666,
+        "compression_factor": 6.0,
+        "cluster_size_distribution": {
+          "2": 1,
+          "3": 1
+        },
+        "support_distribution": {
+          "100%": 1,
+          ">=50%": 1
+        },
+        "runtime_seconds": 0.0005515220109373331,
+        "images_per_second": 1813.164262112515,
+        "peak_rss_kib": 166512,
+        "qualitative_clusters": [
+          {
+            "image_id": "fixture-lighting",
+            "role": "lighting_intensity",
+            "members": [
+              "c0-bright",
+              "c1-brilliant",
+              "c2-intense"
+            ],
+            "weights": [
+              0.33684567,
+              0.33340034,
+              0.329754
+            ],
+            "minimum_similarity": 0.9991962,
+            "support_fraction": 1.0
+          },
+          {
+            "image_id": "fixture-lighting",
+            "role": "color",
+            "members": [
+              "c0-white",
+              "c1-pale"
+            ],
+            "weights": [
+              0.516129,
+              0.48387098
+            ],
+            "minimum_similarity": 0.99979967,
+            "support_fraction": 0.6666667
+          }
+        ],
+        "contradiction_cases": []
+      }
+    },
+    {
+      "name": "fusion_weighted-mean",
+      "config": {
+        "default_cosine_threshold": 0.92,
+        "minimum_score": 0.92,
+        "role_thresholds": {
+          "lighting_intensity": 0.88,
+          "color": 0.94,
+          "illumination_relation": 0.97
+        },
+        "fusion": "weighted-mean",
+        "minimum_support_count": 2,
+        "maximum_cluster_size": 12,
+        "verbose_diagnostics": true
+      },
+      "metrics": {
+        "images": 1,
+        "captions": 3,
+        "source_tokens": 18,
+        "semantic_spans": 6,
+        "consensus_groups": 2,
+        "unique_units": 0,
+        "relation_units": 1,
+        "uncertainty_units": 0,
+        "output_units": 3,
+        "compression_ratio": 0.16666666666666666,
+        "compression_factor": 6.0,
+        "cluster_size_distribution": {
+          "2": 1,
+          "3": 1
+        },
+        "support_distribution": {
+          "100%": 1,
+          ">=50%": 1
+        },
+        "runtime_seconds": 0.0005626630154438317,
+        "images_per_second": 1777.2627177409101,
+        "peak_rss_kib": 166512,
+        "qualitative_clusters": [
+          {
+            "image_id": "fixture-lighting",
+            "role": "lighting_intensity",
+            "members": [
+              "c0-bright",
+              "c1-brilliant",
+              "c2-intense"
+            ],
+            "weights": [
+              0.33684567,
+              0.33340034,
+              0.329754
+            ],
+            "minimum_similarity": 0.9991962,
+            "support_fraction": 1.0
+          },
+          {
+            "image_id": "fixture-lighting",
+            "role": "color",
+            "members": [
+              "c0-white",
+              "c1-pale"
+            ],
+            "weights": [
+              0.516129,
+              0.48387098
+            ],
+            "minimum_similarity": 0.99979967,
+            "support_fraction": 0.6666667
+          }
+        ],
+        "contradiction_cases": []
+      }
+    },
+    {
+      "name": "fusion_norm-preserving-mean",
+      "config": {
+        "default_cosine_threshold": 0.92,
+        "minimum_score": 0.92,
+        "role_thresholds": {
+          "lighting_intensity": 0.88,
+          "color": 0.94,
+          "illumination_relation": 0.97
+        },
+        "fusion": "norm-preserving-mean",
+        "minimum_support_count": 2,
+        "maximum_cluster_size": 12,
+        "verbose_diagnostics": true
+      },
+      "metrics": {
+        "images": 1,
+        "captions": 3,
+        "source_tokens": 18,
+        "semantic_spans": 6,
+        "consensus_groups": 2,
+        "unique_units": 0,
+        "relation_units": 1,
+        "uncertainty_units": 0,
+        "output_units": 3,
+        "compression_ratio": 0.16666666666666666,
+        "compression_factor": 6.0,
+        "cluster_size_distribution": {
+          "2": 1,
+          "3": 1
+        },
+        "support_distribution": {
+          "100%": 1,
+          ">=50%": 1
+        },
+        "runtime_seconds": 0.000522672024089843,
+        "images_per_second": 1913.2456950252003,
+        "peak_rss_kib": 166512,
+        "qualitative_clusters": [
+          {
+            "image_id": "fixture-lighting",
+            "role": "lighting_intensity",
+            "members": [
+              "c0-bright",
+              "c1-brilliant",
+              "c2-intense"
+            ],
+            "weights": [
+              0.33684567,
+              0.33340034,
+              0.329754
+            ],
+            "minimum_similarity": 0.9991962,
+            "support_fraction": 1.0
+          },
+          {
+            "image_id": "fixture-lighting",
+            "role": "color",
+            "members": [
+              "c0-white",
+              "c1-pale"
+            ],
+            "weights": [
+              0.516129,
+              0.48387098
+            ],
+            "minimum_similarity": 0.99979967,
+            "support_fraction": 0.6666667
+          }
+        ],
+        "contradiction_cases": []
+      }
+    },
+    {
+      "name": "constraints_cosine_only",
+      "config": {
+        "default_cosine_threshold": 0.92,
+        "minimum_score": 0.92,
+        "role_thresholds": {
+          "lighting_intensity": 0.88,
+          "color": 0.94,
+          "illumination_relation": 0.97
+        },
+        "fusion": "norm-preserving-mean",
+        "minimum_support_count": 2,
+        "maximum_cluster_size": 12,
+        "verbose_diagnostics": true,
+        "require_role_match": false,
+        "require_entity_match": false,
+        "grounding_weight": 0.0
+      },
+      "metrics": {
+        "images": 1,
+        "captions": 3,
+        "source_tokens": 18,
+        "semantic_spans": 6,
+        "consensus_groups": 2,
+        "unique_units": 0,
+        "relation_units": 1,
+        "uncertainty_units": 0,
+        "output_units": 3,
+        "compression_ratio": 0.16666666666666666,
+        "compression_factor": 6.0,
+        "cluster_size_distribution": {
+          "2": 1,
+          "3": 1
+        },
+        "support_distribution": {
+          "100%": 1,
+          ">=50%": 1
+        },
+        "runtime_seconds": 0.0005835529882460833,
+        "images_per_second": 1713.6404407859904,
+        "peak_rss_kib": 166512,
+        "qualitative_clusters": [
+          {
+            "image_id": "fixture-lighting",
+            "role": "lighting_intensity",
+            "members": [
+              "c0-bright",
+              "c1-brilliant",
+              "c2-intense"
+            ],
+            "weights": [
+              0.33684567,
+              0.33340034,
+              0.329754
+            ],
+            "minimum_similarity": 0.9991962,
+            "support_fraction": 1.0
+          },
+          {
+            "image_id": "fixture-lighting",
+            "role": "color",
+            "members": [
+              "c0-white",
+              "c1-pale"
+            ],
+            "weights": [
+              0.516129,
+              0.48387098
+            ],
+            "minimum_similarity": 0.99979967,
+            "support_fraction": 0.6666667
+          }
+        ],
+        "contradiction_cases": []
+      }
+    },
+    {
+      "name": "constraints_role",
+      "config": {
+        "default_cosine_threshold": 0.92,
+        "minimum_score": 0.92,
+        "role_thresholds": {
+          "lighting_intensity": 0.88,
+          "color": 0.94,
+          "illumination_relation": 0.97
+        },
+        "fusion": "norm-preserving-mean",
+        "minimum_support_count": 2,
+        "maximum_cluster_size": 12,
+        "verbose_diagnostics": true,
+        "require_role_match": true,
+        "require_entity_match": false,
+        "grounding_weight": 0.0
+      },
+      "metrics": {
+        "images": 1,
+        "captions": 3,
+        "source_tokens": 18,
+        "semantic_spans": 6,
+        "consensus_groups": 2,
+        "unique_units": 0,
+        "relation_units": 1,
+        "uncertainty_units": 0,
+        "output_units": 3,
+        "compression_ratio": 0.16666666666666666,
+        "compression_factor": 6.0,
+        "cluster_size_distribution": {
+          "2": 1,
+          "3": 1
+        },
+        "support_distribution": {
+          "100%": 1,
+          ">=50%": 1
+        },
+        "runtime_seconds": 0.0005517620011232793,
+        "images_per_second": 1812.375622033043,
+        "peak_rss_kib": 166512,
+        "qualitative_clusters": [
+          {
+            "image_id": "fixture-lighting",
+            "role": "lighting_intensity",
+            "members": [
+              "c0-bright",
+              "c1-brilliant",
+              "c2-intense"
+            ],
+            "weights": [
+              0.33684567,
+              0.33340034,
+              0.329754
+            ],
+            "minimum_similarity": 0.9991962,
+            "support_fraction": 1.0
+          },
+          {
+            "image_id": "fixture-lighting",
+            "role": "color",
+            "members": [
+              "c0-white",
+              "c1-pale"
+            ],
+            "weights": [
+              0.516129,
+              0.48387098
+            ],
+            "minimum_similarity": 0.99979967,
+            "support_fraction": 0.6666667
+          }
+        ],
+        "contradiction_cases": []
+      }
+    },
+    {
+      "name": "constraints_role_entity",
+      "config": {
+        "default_cosine_threshold": 0.92,
+        "minimum_score": 0.92,
+        "role_thresholds": {
+          "lighting_intensity": 0.88,
+          "color": 0.94,
+          "illumination_relation": 0.97
+        },
+        "fusion": "norm-preserving-mean",
+        "minimum_support_count": 2,
+        "maximum_cluster_size": 12,
+        "verbose_diagnostics": true,
+        "require_role_match": true,
+        "require_entity_match": true,
+        "grounding_weight": 0.0
+      },
+      "metrics": {
+        "images": 1,
+        "captions": 3,
+        "source_tokens": 18,
+        "semantic_spans": 6,
+        "consensus_groups": 2,
+        "unique_units": 0,
+        "relation_units": 1,
+        "uncertainty_units": 0,
+        "output_units": 3,
+        "compression_ratio": 0.16666666666666666,
+        "compression_factor": 6.0,
+        "cluster_size_distribution": {
+          "2": 1,
+          "3": 1
+        },
+        "support_distribution": {
+          "100%": 1,
+          ">=50%": 1
+        },
+        "runtime_seconds": 0.0005476520163938403,
+        "images_per_second": 1825.9770256754732,
+        "peak_rss_kib": 166512,
+        "qualitative_clusters": [
+          {
+            "image_id": "fixture-lighting",
+            "role": "lighting_intensity",
+            "members": [
+              "c0-bright",
+              "c1-brilliant",
+              "c2-intense"
+            ],
+            "weights": [
+              0.33684567,
+              0.33340034,
+              0.329754
+            ],
+            "minimum_similarity": 0.9991962,
+            "support_fraction": 1.0
+          },
+          {
+            "image_id": "fixture-lighting",
+            "role": "color",
+            "members": [
+              "c0-white",
+              "c1-pale"
+            ],
+            "weights": [
+              0.516129,
+              0.48387098
+            ],
+            "minimum_similarity": 0.99979967,
+            "support_fraction": 0.6666667
+          }
+        ],
+        "contradiction_cases": []
+      }
+    },
+    {
+      "name": "constraints_role_entity_grounding",
+      "config": {
+        "default_cosine_threshold": 0.92,
+        "minimum_score": 0.92,
+        "role_thresholds": {
+          "lighting_intensity": 0.88,
+          "color": 0.94,
+          "illumination_relation": 0.97
+        },
+        "fusion": "norm-preserving-mean",
+        "minimum_support_count": 2,
+        "maximum_cluster_size": 12,
+        "verbose_diagnostics": true,
+        "require_role_match": true,
+        "require_entity_match": true,
+        "grounding_weight": 0.1
+      },
+      "metrics": {
+        "images": 1,
+        "captions": 3,
+        "source_tokens": 18,
+        "semantic_spans": 6,
+        "consensus_groups": 2,
+        "unique_units": 0,
+        "relation_units": 1,
+        "uncertainty_units": 0,
+        "output_units": 3,
+        "compression_ratio": 0.16666666666666666,
+        "compression_factor": 6.0,
+        "cluster_size_distribution": {
+          "2": 1,
+          "3": 1
+        },
+        "support_distribution": {
+          "100%": 1,
+          ">=50%": 1
+        },
+        "runtime_seconds": 0.0005660229944624007,
+        "images_per_second": 1766.7126773706138,
+        "peak_rss_kib": 166512,
+        "qualitative_clusters": [
+          {
+            "image_id": "fixture-lighting",
+            "role": "lighting_intensity",
+            "members": [
+              "c0-bright",
+              "c1-brilliant",
+              "c2-intense"
+            ],
+            "weights": [
+              0.33684567,
+              0.33340034,
+              0.329754
+            ],
+            "minimum_similarity": 0.9991962,
+            "support_fraction": 1.0
+          },
+          {
+            "image_id": "fixture-lighting",
+            "role": "color",
+            "members": [
+              "c0-white",
+              "c1-pale"
+            ],
+            "weights": [
+              0.516129,
+              0.48387098
+            ],
+            "minimum_similarity": 0.99979967,
+            "support_fraction": 0.6666667
+          }
+        ],
+        "contradiction_cases": []
+      }
+    },
+    {
+      "name": "support_2",
+      "config": {
+        "default_cosine_threshold": 0.92,
+        "minimum_score": 0.92,
+        "role_thresholds": {
+          "lighting_intensity": 0.88,
+          "color": 0.94,
+          "illumination_relation": 0.97
+        },
+        "fusion": "norm-preserving-mean",
+        "minimum_support_count": 2,
+        "maximum_cluster_size": 12,
+        "verbose_diagnostics": true,
+        "minimum_support_fraction": 0.0
+      },
+      "metrics": {
+        "images": 1,
+        "captions": 3,
+        "source_tokens": 18,
+        "semantic_spans": 6,
+        "consensus_groups": 2,
+        "unique_units": 0,
+        "relation_units": 1,
+        "uncertainty_units": 0,
+        "output_units": 3,
+        "compression_ratio": 0.16666666666666666,
+        "compression_factor": 6.0,
+        "cluster_size_distribution": {
+          "2": 1,
+          "3": 1
+        },
+        "support_distribution": {
+          "100%": 1,
+          ">=50%": 1
+        },
+        "runtime_seconds": 0.0005285119987092912,
+        "images_per_second": 1892.104630438204,
+        "peak_rss_kib": 166512,
+        "qualitative_clusters": [
+          {
+            "image_id": "fixture-lighting",
+            "role": "lighting_intensity",
+            "members": [
+              "c0-bright",
+              "c1-brilliant",
+              "c2-intense"
+            ],
+            "weights": [
+              0.33684567,
+              0.33340034,
+              0.329754
+            ],
+            "minimum_similarity": 0.9991962,
+            "support_fraction": 1.0
+          },
+          {
+            "image_id": "fixture-lighting",
+            "role": "color",
+            "members": [
+              "c0-white",
+              "c1-pale"
+            ],
+            "weights": [
+              0.516129,
+              0.48387098
+            ],
+            "minimum_similarity": 0.99979967,
+            "support_fraction": 0.6666667
+          }
+        ],
+        "contradiction_cases": []
+      }
+    },
+    {
+      "name": "support_3",
+      "config": {
+        "default_cosine_threshold": 0.92,
+        "minimum_score": 0.92,
+        "role_thresholds": {
+          "lighting_intensity": 0.88,
+          "color": 0.94,
+          "illumination_relation": 0.97
+        },
+        "fusion": "norm-preserving-mean",
+        "minimum_support_count": 3,
+        "maximum_cluster_size": 12,
+        "verbose_diagnostics": true,
+        "minimum_support_fraction": 0.0
+      },
+      "metrics": {
+        "images": 1,
+        "captions": 3,
+        "source_tokens": 18,
+        "semantic_spans": 6,
+        "consensus_groups": 1,
+        "unique_units": 2,
+        "relation_units": 1,
+        "uncertainty_units": 0,
+        "output_units": 4,
+        "compression_ratio": 0.2222222222222222,
+        "compression_factor": 4.5,
+        "cluster_size_distribution": {
+          "3": 1
+        },
+        "support_distribution": {
+          "100%": 1
+        },
+        "runtime_seconds": 0.0005759330233559012,
+        "images_per_second": 1736.3130076707619,
+        "peak_rss_kib": 166512,
+        "qualitative_clusters": [
+          {
+            "image_id": "fixture-lighting",
+            "role": "lighting_intensity",
+            "members": [
+              "c0-bright",
+              "c1-brilliant",
+              "c2-intense"
+            ],
+            "weights": [
+              0.33684567,
+              0.33340034,
+              0.329754
+            ],
+            "minimum_similarity": 0.9991962,
+            "support_fraction": 1.0
+          }
+        ],
+        "contradiction_cases": []
+      }
+    },
+    {
+      "name": "support_50pct",
+      "config": {
+        "default_cosine_threshold": 0.92,
+        "minimum_score": 0.92,
+        "role_thresholds": {
+          "lighting_intensity": 0.88,
+          "color": 0.94,
+          "illumination_relation": 0.97
+        },
+        "fusion": "norm-preserving-mean",
+        "minimum_support_count": 1,
+        "maximum_cluster_size": 12,
+        "verbose_diagnostics": true,
+        "minimum_support_fraction": 0.5
+      },
+      "metrics": {
+        "images": 1,
+        "captions": 3,
+        "source_tokens": 18,
+        "semantic_spans": 6,
+        "consensus_groups": 2,
+        "unique_units": 0,
+        "relation_units": 1,
+        "uncertainty_units": 0,
+        "output_units": 3,
+        "compression_ratio": 0.16666666666666666,
+        "compression_factor": 6.0,
+        "cluster_size_distribution": {
+          "2": 1,
+          "3": 1
+        },
+        "support_distribution": {
+          "100%": 1,
+          ">=50%": 1
+        },
+        "runtime_seconds": 0.0005299219628795981,
+        "images_per_second": 1887.0703047784543,
+        "peak_rss_kib": 166512,
+        "qualitative_clusters": [
+          {
+            "image_id": "fixture-lighting",
+            "role": "lighting_intensity",
+            "members": [
+              "c0-bright",
+              "c1-brilliant",
+              "c2-intense"
+            ],
+            "weights": [
+              0.33684567,
+              0.33340034,
+              0.329754
+            ],
+            "minimum_similarity": 0.9991962,
+            "support_fraction": 1.0
+          },
+          {
+            "image_id": "fixture-lighting",
+            "role": "color",
+            "members": [
+              "c0-white",
+              "c1-pale"
+            ],
+            "weights": [
+              0.516129,
+              0.48387098
+            ],
+            "minimum_similarity": 0.99979967,
+            "support_fraction": 0.6666667
+          }
+        ],
+        "contradiction_cases": []
+      }
+    },
+    {
+      "name": "fusion_learned_set_downstream",
+      "status": "requires downstream trainable adapter"
+    }
+  ]
+}

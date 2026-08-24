@@ -1,0 +1,21 @@
+{
+  "schema": "ztok.nanogpt_superposition.semantic_cases.v1",
+  "cases": [
+    {"class": "tight_lexical", "context": "The light was", "candidates": [" bright", " brilliant", " radiant"]},
+    {"class": "tight_lexical", "context": "The runner was", "candidates": [" quick", " fast", " rapid"]},
+    {"class": "tight_lexical", "context": "The building was", "candidates": [" large", " big", " sizable"]},
+    {"class": "tight_lexical", "context": "The witness", "candidates": [" said", " stated", " remarked"]},
+    {"class": "morphology", "context": "Every morning she", "candidates": [" jumps", " runs", " walks"]},
+    {"class": "related_distinct", "context": "The room appeared", "candidates": [" bright", " white", " luminous"]},
+    {"class": "related_distinct", "context": "They saw a", "candidates": [" dog", " animal", " wolf"]},
+    {"class": "contradiction", "context": "The light was", "candidates": [" bright", " dark"]},
+    {"class": "contradiction", "context": "Turn", "candidates": [" left", " right"]},
+    {"class": "contradiction", "context": "The value will", "candidates": [" increase", " decrease"]},
+    {"class": "contradiction", "context": "The door is", "candidates": [" open", " closed"]},
+    {"class": "contradiction", "context": "The person is", "candidates": [" standing", " seated"]},
+    {"class": "binding", "context": "A red cube is beside a", "candidates": [" blue", " red"]},
+    {"class": "exact_sensitive", "context": "The comparison operator is", "candidates": [" <", " <="]},
+    {"class": "exact_sensitive", "context": "The boolean value is", "candidates": [" true", " false"]},
+    {"class": "exact_sensitive", "context": "The next digit is", "candidates": [" 4", " 5"]}
+  ]
+}

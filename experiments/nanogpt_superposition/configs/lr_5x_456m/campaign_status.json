@@ -1,0 +1,12 @@
+{
+  "schema": "ztok.nanogpt_superposition.campaign.v1",
+  "started_unix": 1785506717.6279733,
+  "updated_unix": 1785506717.6279745,
+  "state": "running",
+  "current_index": 0,
+  "current_config": "/thearray/git/ztok/experiments/nanogpt_superposition/configs/lr_5x_456m/ztok-superposition-lrablation-5x-456m-rwkv-ordinary_bpe-ordinary1-norm_preserving_mean-b2bytes.json",
+  "completed": [],
+  "configs": [
+    "/thearray/git/ztok/experiments/nanogpt_superposition/configs/lr_5x_456m/ztok-superposition-lrablation-5x-456m-rwkv-ordinary_bpe-ordinary1-norm_preserving_mean-b2bytes.json"
+  ]
+}

@@ -1,0 +1,328 @@
+{
+  "schema": "ztok.nanogpt_superposition.report.v1",
+  "runs": [
+    {
+      "path": "/thearray/git/moe-mla/runs/ztok-superposition-gate1-20m-transformer-ordinary_bpe-ordinary1-norm_preserving_mean-b2bytes",
+      "name": "ztok-superposition-gate1-20m-transformer-ordinary_bpe-ordinary1-norm_preserving_mean-b2bytes",
+      "architecture": "transformer",
+      "tokenizer": "ordinary_bpe",
+      "representation": "ordinary",
+      "group_size": 1,
+      "fusion": "norm_preserving_mean",
+      "target": "bag",
+      "parameters": {
+        "total": 34759872,
+        "embedding": 14680064,
+        "non_embedding": 20079808,
+        "auxiliary": 0,
+        "total_with_auxiliary": 34759872
+      },
+      "source_bytes": 20037156,
+      "elapsed_seconds": 14.19146544544492,
+      "model_positions": 4691456,
+      "estimated_flops": 1571385847578624,
+      "estimated_flops_per_ordinary_source_token": 334770479.16850394,
+      "validation_bits_per_byte": 2.3270001377569716,
+      "ordinary_validation_loss": 6.435983419418335,
+      "peak_vram_bytes": 9113459200,
+      "device": "cuda",
+      "git_commit": "72c52c2da8e2456dbf6e5b2e0cdee68b8cb0c320",
+      "git_dirty": true,
+      "dataset": {
+        "schema": "ztok.nanogpt_superposition.dataset.v1",
+        "seed": 260506546,
+        "tokenizer": {
+          "kind": "bpe",
+          "path": "/thearray/git/ztok/experiments/nanogpt_superposition/data/fineweb_edu_100m/bpe32k.tiktoken",
+          "sha256": "cdf67b315ad2299aef10bd6a8b4894a0d982570bda2c4b06d000024dda2d7995",
+          "vocabulary_size": 32768
+        },
+        "source": {
+          "paths": [
+            "/thearray/git/datasets/smollm_corpus/fineweb-edu-dedup/train-00000-of-00234.parquet"
+          ],
+          "document_order_hash": "34673066135facceda4d88455ea5546d023c0f3ec118312208372631e7266e1a",
+          "document_count": 96251,
+          "corpus_token_count": 99963942,
+          "selected_source_bytes": 460372342,
+          "language_distribution": {
+            "en": 1.0
+          }
+        },
+        "splits": {
+          "train": {
+            "documents": 95239,
+            "tokens": 105980151,
+            "source_bytes": 455689978,
+            "bytes_per_token": 4.299767208295448,
+            "split_hash": "e8170bae432defbfe0735d688b20f72c458be271032759f63e4e40f3331c97ad"
+          },
+          "validation": {
+            "documents": 1012,
+            "tokens": 1080139,
+            "source_bytes": 4682364,
+            "bytes_per_token": 4.33496429626187,
+            "split_hash": "f8b454aaffdc51055ee62e10514e841a32b06c57708af8f4f8278087dccf7415"
+          }
+        }
+      },
+      "optimizer": {
+        "learning_rate": 0.0003,
+        "min_learning_rate": 3e-05,
+        "warmup_steps": 100,
+        "weight_decay": 0.1,
+        "grad_clip": 1.0
+      },
+      "recovery": {
+        "status": "baseline",
+        "seconds": 0.0,
+        "source_bytes": 0
+      }
+    },
+    {
+      "path": "/thearray/git/moe-mla/runs/ztok-superposition-gate1-20m-transformer-ordinary_bpe-fixed2-norm_preserving_mean-b2bytes",
+      "name": "ztok-superposition-gate1-20m-transformer-ordinary_bpe-fixed2-norm_preserving_mean-b2bytes",
+      "architecture": "transformer",
+      "tokenizer": "ordinary_bpe",
+      "representation": "fixed",
+      "group_size": 2,
+      "fusion": "norm_preserving_mean",
+      "target": "bag",
+      "parameters": {
+        "total": 34759872,
+        "embedding": 14680064,
+        "non_embedding": 20079808,
+        "auxiliary": 0,
+        "total_with_auxiliary": 34759872
+      },
+      "source_bytes": 20037156,
+      "elapsed_seconds": 12.18103283335222,
+      "model_positions": 3250520,
+      "estimated_flops": 1015080711966720,
+      "estimated_flops_per_ordinary_source_token": 216254369.9012169,
+      "validation_bits_per_byte": 2.4166658348654946,
+      "ordinary_validation_loss": 6.683979511260986,
+      "peak_vram_bytes": 9275577344,
+      "device": "cuda",
+      "git_commit": "72c52c2da8e2456dbf6e5b2e0cdee68b8cb0c320",
+      "git_dirty": true,
+      "dataset": {
+        "schema": "ztok.nanogpt_superposition.dataset.v1",
+        "seed": 260506546,
+        "tokenizer": {
+          "kind": "bpe",
+          "path": "/thearray/git/ztok/experiments/nanogpt_superposition/data/fineweb_edu_100m/bpe32k.tiktoken",
+          "sha256": "cdf67b315ad2299aef10bd6a8b4894a0d982570bda2c4b06d000024dda2d7995",
+          "vocabulary_size": 32768
+        },
+        "source": {
+          "paths": [
+            "/thearray/git/datasets/smollm_corpus/fineweb-edu-dedup/train-00000-of-00234.parquet"
+          ],
+          "document_order_hash": "34673066135facceda4d88455ea5546d023c0f3ec118312208372631e7266e1a",
+          "document_count": 96251,
+          "corpus_token_count": 99963942,
+          "selected_source_bytes": 460372342,
+          "language_distribution": {
+            "en": 1.0
+          }
+        },
+        "splits": {
+          "train": {
+            "documents": 95239,
+            "tokens": 105980151,
+            "source_bytes": 455689978,
+            "bytes_per_token": 4.299767208295448,
+            "split_hash": "e8170bae432defbfe0735d688b20f72c458be271032759f63e4e40f3331c97ad"
+          },
+          "validation": {
+            "documents": 1012,
+            "tokens": 1080139,
+            "source_bytes": 4682364,
+            "bytes_per_token": 4.33496429626187,
+            "split_hash": "f8b454aaffdc51055ee62e10514e841a32b06c57708af8f4f8278087dccf7415"
+          }
+        }
+      },
+      "optimizer": {
+        "learning_rate": 0.0003,
+        "min_learning_rate": 3e-05,
+        "warmup_steps": 100,
+        "weight_decay": 0.1,
+        "grad_clip": 1.0
+      },
+      "recovery": {
+        "status": "not_recovered",
+        "target_bits_per_byte": 2.3270001377569716
+      }
+    },
+    {
+      "path": "/thearray/git/moe-mla/runs/ztok-superposition-gate1-20m-rwkv-ordinary_bpe-ordinary1-norm_preserving_mean-b2bytes",
+      "name": "ztok-superposition-gate1-20m-rwkv-ordinary_bpe-ordinary1-norm_preserving_mean-b2bytes",
+      "architecture": "rwkv",
+      "tokenizer": "ordinary_bpe",
+      "representation": "ordinary",
+      "group_size": 1,
+      "fusion": "norm_preserving_mean",
+      "target": "bag",
+      "parameters": {
+        "total": 35124096,
+        "embedding": 14680064,
+        "non_embedding": 20444032,
+        "auxiliary": 0,
+        "total_with_auxiliary": 35124096
+      },
+      "source_bytes": 20037156,
+      "elapsed_seconds": 32.07028679206269,
+      "model_positions": 4691456,
+      "estimated_flops": 1091551234228224,
+      "estimated_flops_per_ordinary_source_token": 232545768.61732283,
+      "validation_bits_per_byte": 2.2102126988539137,
+      "ordinary_validation_loss": 6.112974405288696,
+      "peak_vram_bytes": 14852889600,
+      "device": "cuda",
+      "git_commit": "72c52c2da8e2456dbf6e5b2e0cdee68b8cb0c320",
+      "git_dirty": true,
+      "dataset": {
+        "schema": "ztok.nanogpt_superposition.dataset.v1",
+        "seed": 260506546,
+        "tokenizer": {
+          "kind": "bpe",
+          "path": "/thearray/git/ztok/experiments/nanogpt_superposition/data/fineweb_edu_100m/bpe32k.tiktoken",
+          "sha256": "cdf67b315ad2299aef10bd6a8b4894a0d982570bda2c4b06d000024dda2d7995",
+          "vocabulary_size": 32768
+        },
+        "source": {
+          "paths": [
+            "/thearray/git/datasets/smollm_corpus/fineweb-edu-dedup/train-00000-of-00234.parquet"
+          ],
+          "document_order_hash": "34673066135facceda4d88455ea5546d023c0f3ec118312208372631e7266e1a",
+          "document_count": 96251,
+          "corpus_token_count": 99963942,
+          "selected_source_bytes": 460372342,
+          "language_distribution": {
+            "en": 1.0
+          }
+        },
+        "splits": {
+          "train": {
+            "documents": 95239,
+            "tokens": 105980151,
+            "source_bytes": 455689978,
+            "bytes_per_token": 4.299767208295448,
+            "split_hash": "e8170bae432defbfe0735d688b20f72c458be271032759f63e4e40f3331c97ad"
+          },
+          "validation": {
+            "documents": 1012,
+            "tokens": 1080139,
+            "source_bytes": 4682364,
+            "bytes_per_token": 4.33496429626187,
+            "split_hash": "f8b454aaffdc51055ee62e10514e841a32b06c57708af8f4f8278087dccf7415"
+          }
+        }
+      },
+      "optimizer": {
+        "learning_rate": 0.0003,
+        "min_learning_rate": 3e-05,
+        "warmup_steps": 100,
+        "weight_decay": 0.1,
+        "grad_clip": 1.0
+      },
+      "recovery": {
+        "status": "baseline",
+        "seconds": 0.0,
+        "source_bytes": 0
+      }
+    },
+    {
+      "path": "/thearray/git/moe-mla/runs/ztok-superposition-gate1-20m-rwkv-ordinary_bpe-fixed2-norm_preserving_mean-b2bytes",
+      "name": "ztok-superposition-gate1-20m-rwkv-ordinary_bpe-fixed2-norm_preserving_mean-b2bytes",
+      "architecture": "rwkv",
+      "tokenizer": "ordinary_bpe",
+      "representation": "fixed",
+      "group_size": 2,
+      "fusion": "norm_preserving_mean",
+      "target": "bag",
+      "parameters": {
+        "total": 35124096,
+        "embedding": 14680064,
+        "non_embedding": 20444032,
+        "auxiliary": 0,
+        "total_with_auxiliary": 35124096
+      },
+      "source_bytes": 20037156,
+      "elapsed_seconds": 26.020642619405407,
+      "model_positions": 3250520,
+      "estimated_flops": 756291675310080,
+      "estimated_flops_per_ordinary_source_token": 161121551.98854688,
+      "validation_bits_per_byte": 2.2875567340306024,
+      "ordinary_validation_loss": 6.3268914222717285,
+      "peak_vram_bytes": 14897807872,
+      "device": "cuda",
+      "git_commit": "72c52c2da8e2456dbf6e5b2e0cdee68b8cb0c320",
+      "git_dirty": true,
+      "dataset": {
+        "schema": "ztok.nanogpt_superposition.dataset.v1",
+        "seed": 260506546,
+        "tokenizer": {
+          "kind": "bpe",
+          "path": "/thearray/git/ztok/experiments/nanogpt_superposition/data/fineweb_edu_100m/bpe32k.tiktoken",
+          "sha256": "cdf67b315ad2299aef10bd6a8b4894a0d982570bda2c4b06d000024dda2d7995",
+          "vocabulary_size": 32768
+        },
+        "source": {
+          "paths": [
+            "/thearray/git/datasets/smollm_corpus/fineweb-edu-dedup/train-00000-of-00234.parquet"
+          ],
+          "document_order_hash": "34673066135facceda4d88455ea5546d023c0f3ec118312208372631e7266e1a",
+          "document_count": 96251,
+          "corpus_token_count": 99963942,
+          "selected_source_bytes": 460372342,
+          "language_distribution": {
+            "en": 1.0
+          }
+        },
+        "splits": {
+          "train": {
+            "documents": 95239,
+            "tokens": 105980151,
+            "source_bytes": 455689978,
+            "bytes_per_token": 4.299767208295448,
+            "split_hash": "e8170bae432defbfe0735d688b20f72c458be271032759f63e4e40f3331c97ad"
+          },
+          "validation": {
+            "documents": 1012,
+            "tokens": 1080139,
+            "source_bytes": 4682364,
+            "bytes_per_token": 4.33496429626187,
+            "split_hash": "f8b454aaffdc51055ee62e10514e841a32b06c57708af8f4f8278087dccf7415"
+          }
+        }
+      },
+      "optimizer": {
+        "learning_rate": 0.0003,
+        "min_learning_rate": 3e-05,
+        "warmup_steps": 100,
+        "weight_decay": 0.1,
+        "grad_clip": 1.0
+      },
+      "recovery": {
+        "status": "not_recovered",
+        "target_bits_per_byte": 2.2102126988539137
+      }
+    }
+  ],
+  "branch_equivalence": {
+    "cases": [],
+    "evaluated": 0,
+    "safe_fusion_precision": null,
+    "safe_fusion_recall": null,
+    "unsafe_fusion_count": 0
+  },
+  "plots": [
+    "bits_per_byte_vs_gpu_seconds.png",
+    "bits_per_byte_vs_source_bytes.png",
+    "recovery_loss.png",
+    "throughput_vs_group_size.png"
+  ]
+}

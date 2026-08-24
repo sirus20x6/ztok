@@ -1,0 +1,8 @@
+numpy>=2.0
+torch>=2.5
+transformers>=4.52
+spacy>=3.8
+nltk>=3.10
+matplotlib>=3.9
+pytest>=8.0
+zstandard>=0.23

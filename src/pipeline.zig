@@ -10,6 +10,7 @@
 //! ids without subjecting them to BPE/Unigram tokenization.
 
 const std = @import("std");
+const builtin = @import("builtin");
 
 const TokenId = @import("token.zig").TokenId;
 const Span = @import("token.zig").Span;
@@ -25,6 +26,27 @@ const BatchPool = @import("thread_pool.zig").BatchPool;
 const added_tokens_mod = @import("added_tokens.zig");
 const trace_mod = @import("trace.zig");
 const asm_normalizer = @import("asm_normalizer.zig");
+const superposition = @import("superposition.zig");
+const pretoken_cache = @import("pretoken_cache.zig");
+const hf_bytelevel_pretok = @import("hf_bytelevel_pretok.zig");
+const byte_level = @import("byte_level.zig");
+const BpeModel = @import("bpe.zig").Bpe;
+
+/// Best-effort transparent-huge-page hint for corpus-scale token buffers.
+/// The range is rounded inward to ordinary page boundaries, so it works for
+/// caller allocators whose large allocation carries a small header offset.
+fn hintHugeTokenBuffer(ids: []TokenId) void {
+    if (builtin.os.tag != .linux or
+        ids.len < (2 * 1024 * 1024) / @sizeOf(TokenId)) return;
+    const page = 4096;
+    const bytes = std.mem.sliceAsBytes(ids);
+    const allocation_start = @intFromPtr(bytes.ptr);
+    const start = std.mem.alignForward(usize, allocation_start, page);
+    const end = std.mem.alignBackward(usize, allocation_start + bytes.len, page);
+    if (end <= start) return;
+    const ptr: [*]u8 = @ptrFromInt(start);
+    _ = std.os.linux.madvise(ptr, end - start, std.os.linux.MADV.HUGEPAGE);
+}
 
 /// Result of `Pipeline.encodeWithOffsets`. `ids` and `offsets` have the
 /// same length; `offsets[i]` is the byte range in the ORIGINAL input
@@ -154,6 +176,137 @@ pub const ScratchArena = struct {
     }
 };
 
+/// Persistent worker-local pretok caches for dataset/file tokenization.
+///
+/// Create one cache set per Pipeline and reuse it across calls. Entries are
+/// open-addressed and bounded: table storage is approximately
+/// `32 * workers * ceilPowerOfTwo(entries_per_worker)` bytes, plus rare
+/// spill outputs. Ordinary
+/// `Pipeline.encode` and `Pipeline.encodeChunked` never consult this cache;
+/// callers opt in through `encodeChunkedCached`.
+pub const ChunkedEncodeCache = struct {
+    allocator: std.mem.Allocator,
+    workers: []pretoken_cache.Cache,
+
+    pub fn init(
+        allocator: std.mem.Allocator,
+        worker_count: usize,
+        entries_per_worker: usize,
+    ) !ChunkedEncodeCache {
+        const count = @max(@as(usize, 1), worker_count);
+        const workers = try allocator.alloc(pretoken_cache.Cache, count);
+        var initialized: usize = 0;
+        errdefer {
+            for (workers[0..initialized]) |*cache| cache.deinit();
+            allocator.free(workers);
+        }
+        for (workers) |*cache| {
+            cache.* = try pretoken_cache.Cache.init(allocator, entries_per_worker);
+            initialized += 1;
+        }
+        return .{ .allocator = allocator, .workers = workers };
+    }
+
+    pub fn initForPool(
+        allocator: std.mem.Allocator,
+        pool: *const BatchPool,
+        entries_per_worker: usize,
+    ) !ChunkedEncodeCache {
+        return init(allocator, pool.workerCount(), entries_per_worker);
+    }
+
+    pub fn deinit(self: *ChunkedEncodeCache) void {
+        for (self.workers) |*cache| cache.deinit();
+        self.allocator.free(self.workers);
+        self.workers = &.{};
+    }
+
+    pub fn stats(self: *const ChunkedEncodeCache) pretoken_cache.Stats {
+        var total: pretoken_cache.Stats = .{};
+        for (self.workers) |cache| {
+            total.hits += cache.stats.hits;
+            total.home_hits += cache.stats.home_hits;
+            total.displaced_hits += cache.stats.displaced_hits;
+            total.misses += cache.stats.misses;
+            total.inserts += cache.stats.inserts;
+            total.bypasses += cache.stats.bypasses;
+        }
+        return total;
+    }
+
+    /// Seed every worker with byte-decoded vocabulary pieces. For canonical
+    /// GPT-2 ByteLevel BPE, any pretoken equal to one vocabulary piece can be
+    /// emitted immediately even on its first corpus occurrence. Call once
+    /// after construction and before timing `encodeChunkedCached`.
+    pub fn seedByteLevelBpe(self: *ChunkedEncodeCache, bpe: *const BpeModel) !void {
+        var max_piece: usize = 1;
+        var id: TokenId = 0;
+        while (id < bpe.count) : (id += 1) {
+            max_piece = @max(max_piece, bpe.idBytes(id).len);
+        }
+        const decoded_buf = try self.allocator.alloc(u8, max_piece);
+        defer self.allocator.free(decoded_buf);
+
+        id = 0;
+        while (id < bpe.count) : (id += 1) {
+            const raw = byte_level.decodeBytes(bpe.idBytes(id), decoded_buf);
+            if (raw.len == 0 or raw.len > pretoken_cache.max_key_bytes) continue;
+            for (self.workers) |*cache| cache.put(raw, &.{id});
+        }
+        // Seeding is setup, not corpus traffic; keep reported hit/miss/insert
+        // counters scoped to subsequent encode calls.
+        for (self.workers) |*cache| cache.stats = .{};
+    }
+};
+
+/// One source-ordered piece of a `ChunkedEncoding`. Token slices point into
+/// the result's owned `storage` and remain valid until `deinit`.
+pub const EncodedChunk = struct {
+    byte_start: usize,
+    byte_end: usize,
+    ids: []TokenId,
+};
+
+/// Ordered, non-contiguous output for dataset-scale consumers.
+///
+/// Unlike `encodeChunked`, this representation does not gather every worker's
+/// output into a second contiguous token buffer. Corpus analyzers can iterate
+/// `chunks` in source order and directly build histograms, n-grams, engrams,
+/// or dataset-derived training signals. The ordinary contiguous API remains
+/// unchanged and materializes this representation internally.
+pub const ChunkedEncoding = struct {
+    allocator: std.mem.Allocator,
+    storage: []TokenId,
+    chunks: []EncodedChunk,
+
+    pub fn deinit(self: *ChunkedEncoding) void {
+        if (self.storage.len != 0) self.allocator.free(self.storage);
+        if (self.chunks.len != 0) self.allocator.free(self.chunks);
+        self.* = .{ .allocator = self.allocator, .storage = &.{}, .chunks = &.{} };
+    }
+
+    pub fn tokenCount(self: *const ChunkedEncoding) usize {
+        var total: usize = 0;
+        for (self.chunks) |chunk| total += chunk.ids.len;
+        return total;
+    }
+
+    /// Produce a conventional contiguous ID slice. Dataset consumers that can
+    /// process ordered chunks should skip this copy.
+    pub fn materialize(
+        self: *const ChunkedEncoding,
+        allocator: std.mem.Allocator,
+    ) ![]TokenId {
+        const out = try allocator.alloc(TokenId, self.tokenCount());
+        var written: usize = 0;
+        for (self.chunks) |chunk| {
+            @memcpy(out[written..][0..chunk.ids.len], chunk.ids);
+            written += chunk.ids.len;
+        }
+        return out;
+    }
+};
+
 pub const Pipeline = struct {
     /// Selects which (if any) domain-specific normalizer populates the
     /// `opcode_class` / `operand_class` overlay channels. `.none` (the
@@ -195,8 +348,12 @@ pub const Pipeline = struct {
         text: []const u8,
         out: []TokenId,
     ) ![]TokenId {
-        const normalized = try self.normalizer.normalize(scratch, text);
-        defer scratch.free(normalized);
+        const owns_normalized = !self.normalizer.isIdentity();
+        const normalized = if (owns_normalized)
+            try self.normalizer.normalize(scratch, text)
+        else
+            text;
+        defer if (owns_normalized) scratch.free(normalized);
         var pr = try self.pre_tokenizer.split(scratch, normalized);
         defer pr.deinit(scratch);
         var n: usize = 0;
@@ -205,6 +362,192 @@ pub const Pipeline = struct {
             n += w.len;
         }
         return out[0..n];
+    }
+
+    /// Cached variant of `encodeText` for dataset/file chunk workers. The
+    /// cache stores only short pretokens with small outputs; every bypass or
+    /// miss executes the exact ordinary model path before optionally learning
+    /// the result. Tracing deliberately bypasses cache hits so trace output is
+    /// complete and inspectable.
+    fn encodeTextCached(
+        self: *const Pipeline,
+        scratch: std.mem.Allocator,
+        text: []const u8,
+        out: []TokenId,
+        cache: *pretoken_cache.Cache,
+    ) ![]TokenId {
+        // Chunked encoding has already established that the normalizer is
+        // identity. Borrow the caller's bytes instead of allocating and
+        // copying every chunk; non-identity configurations retain the exact
+        // owned-normalization path.
+        const owns_normalized = !self.normalizer.isIdentity();
+        const normalized = if (owns_normalized)
+            try self.normalizer.normalize(scratch, text)
+        else
+            text;
+        defer if (owns_normalized) scratch.free(normalized);
+
+        // Canonical GPT-2 ByteLevel can probe the cache on raw pretokens.
+        // The generic path first maps the entire chunk and allocates a full
+        // span table, doing most of that work even when 85-95% of pretokens
+        // are cache hits. Streaming keeps hits to split + hash + memcpy and
+        // maps only misses.
+        // Relative endpoints keep the hot arrays compact. Inputs larger than
+        // u32 retain the generic usize-based path below rather than truncating
+        // byte positions; normal chunked workers are far below this limit.
+        if (self.pre_tokenizer == .hf_byte_level and
+            normalized.len <= std.math.maxInt(u32))
+        {
+            const pretoken_chunk = 256;
+            const prefetch_distance = 16;
+            var ends: [pretoken_chunk + 8]u32 = undefined;
+            var prepared: [pretoken_chunk + prefetch_distance]pretoken_cache.PreparedKey = undefined;
+
+            var out_n: usize = 0;
+            var span_scanner = hf_bytelevel_pretok.SpanScanner.init(normalized);
+            const probe_view = if (cache.capacity() != 0) cache.probeView() else null;
+            while (true) {
+                // Phase A: pull a chunk of spans, derive packed keys, and
+                // stage their random cache lines into L2 while the scanner
+                // continues doing independent work.
+                const relative = span_scanner.fillRelativeEnds(&ends, pretoken_chunk);
+                const batch_raw_start = relative.base;
+                const count = relative.count;
+                var prepare_start = batch_raw_start;
+                for (ends[0..count], 0..) |relative_end, span_index| {
+                    const end = batch_raw_start + relative_end;
+                    prepared[span_index] = pretoken_cache.Cache.prepare(
+                        normalized[prepare_start..end],
+                    );
+                    cache.prefetchL2(prepared[span_index]);
+                    prepare_start = end;
+                }
+                if (count == 0) break;
+                @memset(prepared[count .. count + prefetch_distance], .{});
+
+                // Phase B: promote a short distance ahead into L1, probe,
+                // and emit. Packed keys/hashes are reused for insertion on a
+                // miss, avoiding a second variable-length hash.
+                const initial_prefetch = @min(count, prefetch_distance);
+                if (probe_view) |view| {
+                    for (prepared[0..initial_prefetch]) |key| view.prefetch(key);
+                }
+                var i: usize = 0;
+                while (i < count) : (i += 1) {
+                    if (probe_view) |view| view.prefetch(prepared[i + prefetch_distance]);
+                    if (self.trace == null) {
+                        // Nearly every corpus pretoken hits one of its home
+                        // pair's two slots. Probe that cache line branchlessly
+                        // and emit all four packed lanes without count-based
+                        // branches. Extra stores are harmless when the output
+                        // buffer has slack; only `out_n` advances by count.
+                        if (probe_view) |view| {
+                            const hit = view.probePair(prepared[i]);
+                            if (hit.found and (hit.value & pretoken_cache.spill_flag) == 0) {
+                                out[out_n] = @truncate(hit.value >> 8);
+                                out[out_n + 1] = @truncate(hit.value >> 32);
+                                out[out_n + 2] = @truncate(hit.extension);
+                                out[out_n + 3] = @truncate(hit.extension >> 32);
+                                const cached_n: usize = @intCast(hit.value & 0xFF);
+                                std.debug.assert(cached_n >= 1 and cached_n <= pretoken_cache.max_token_ids);
+                                out_n += cached_n;
+                                cache.recordHomeHit();
+                                continue;
+                            }
+                        }
+                        if (cache.getPrepared(prepared[i], out[out_n..])) |cached_n| {
+                            out_n += cached_n;
+                            continue;
+                        }
+                    }
+
+                    const raw_start = if (i == 0)
+                        batch_raw_start
+                    else
+                        batch_raw_start + ends[i - 1];
+                    const raw_end = batch_raw_start + ends[i];
+                    const raw_piece = normalized[raw_start..raw_end];
+                    // HF-loaded ByteLevel BPEs retain their ordered merge
+                    // graph and raw-byte initial symbol mapping. On a cache
+                    // miss, merge those token IDs directly; generic models,
+                    // traced calls, and unusual vocabs keep the exact mapped-
+                    // byte fallback below.
+                    const indexed = if (self.trace == null) switch (self.model) {
+                        .bpe => |bpe| bpe.encodeByteLevelRawScratch(
+                            scratch,
+                            raw_piece,
+                            out[out_n..],
+                        ),
+                        else => null,
+                    } else null;
+                    const w = if (indexed) |ids| ids else blk: {
+                        var stack_mapped: [512]u8 = undefined;
+                        const mapped_storage = if (raw_piece.len * 2 <= stack_mapped.len)
+                            stack_mapped[0 .. raw_piece.len * 2]
+                        else
+                            try scratch.alloc(u8, raw_piece.len * 2);
+                        const mapped = byte_level.encodeBytes(raw_piece, mapped_storage);
+                        break :blk try self.model.encodeTraced(
+                            scratch,
+                            mapped,
+                            out[out_n..],
+                            self.trace,
+                        );
+                    };
+                    if (self.trace == null) cache.putPrepared(prepared[i], w);
+                    out_n += w.len;
+                }
+            }
+            return out[0..out_n];
+        }
+
+        var pr = try self.pre_tokenizer.split(scratch, normalized);
+        defer pr.deinit(scratch);
+        var n: usize = 0;
+        for (pr.spans) |s| {
+            const piece = s.slice(pr.data);
+            if (self.trace == null) {
+                if (cache.get(piece, out[n..])) |cached_n| {
+                    n += cached_n;
+                    continue;
+                }
+            }
+            const w = try self.model.encodeTraced(scratch, piece, out[n..], self.trace);
+            if (self.trace == null) cache.put(piece, w);
+            n += w.len;
+        }
+        return out[0..n];
+    }
+
+    /// Worker-local added-token scan followed by ordinary/cached encoding of
+    /// its text pieces. Used only when strip semantics permit independent
+    /// chunks and no added-token spelling crosses the chosen safe cuts.
+    fn encodeTextChunkWithAdded(
+        self: *const Pipeline,
+        scratch: std.mem.Allocator,
+        scanner: *const added_tokens_mod.Scanner,
+        text: []const u8,
+        out: []TokenId,
+        cache: ?*pretoken_cache.Cache,
+    ) ![]TokenId {
+        const segments = try added_tokens_mod.scan(scanner, scratch, text);
+        defer scratch.free(segments);
+        var written: usize = 0;
+        for (segments) |segment| switch (segment) {
+            .special => |special| {
+                out[written] = special.id;
+                written += 1;
+            },
+            .text => |span| {
+                const piece = text[span.start..span.end];
+                const ids = if (cache) |worker_cache|
+                    try self.encodeTextCached(scratch, piece, out[written..], worker_cache)
+                else
+                    try self.encodeText(scratch, piece, out[written..]);
+                written += ids.len;
+            },
+        };
+        return out[0..written];
     }
 
     /// Same as `encodeText` but also populates `out_offsets`. `base_offset`
@@ -490,6 +833,67 @@ pub const Pipeline = struct {
         return .{ .ids = ids_final, .offsets = off_final };
     }
 
+    /// Experimental opt-in overlay over `encodeWithOffsets`.
+    ///
+    /// Ordinary tokenization is performed first and returned unchanged.
+    /// The accompanying plan only describes how downstream training code may
+    /// fuse those already-valid token embeddings. When special-token
+    /// preservation is enabled and the caller did not provide an explicit
+    /// mask, provenance metadata is used to keep scanner-injected specials
+    /// as singleton groups.
+    pub fn encodeWithSuperpositionPlan(
+        self: *const Pipeline,
+        allocator: std.mem.Allocator,
+        input: []const u8,
+        config: superposition.FixedSuperpositionConfig,
+    ) !superposition.EncodedSuperposition {
+        if (config.preserve_special_tokens and config.special_token_mask == null) {
+            var encoded = try self.encodeWithOverlays(allocator, input, &.{.provenance});
+            errdefer encoded.deinit(allocator);
+
+            const provenance = encoded.channel(.provenance) orelse
+                return error.MissingProvenanceOverlay;
+            const special_mask = try allocator.alloc(bool, provenance.len);
+            defer allocator.free(special_mask);
+            for (provenance, special_mask) |value, *is_special| {
+                is_special.* = value == Provenance.special;
+            }
+
+            var effective = config;
+            effective.special_token_mask = special_mask;
+            const plan = try superposition.buildFixedPlan(
+                allocator,
+                encoded.ids,
+                encoded.offsets,
+                effective,
+            );
+
+            // Transfer ids/offsets to the experimental result while releasing
+            // only the overlay channels that are no longer needed.
+            for (encoded.overlays) |overlay| allocator.free(overlay.values);
+            allocator.free(encoded.overlays);
+            return .{
+                .ids = encoded.ids,
+                .offsets = encoded.offsets,
+                .plan = plan,
+            };
+        }
+
+        var encoded = try self.encodeWithOffsets(allocator, input);
+        errdefer encoded.deinit(allocator);
+        const plan = try superposition.buildFixedPlan(
+            allocator,
+            encoded.ids,
+            encoded.offsets,
+            config,
+        );
+        return .{
+            .ids = encoded.ids,
+            .offsets = encoded.offsets,
+            .plan = plan,
+        };
+    }
+
     /// Encode `input` and return ids + offsets (as `encodeWithOffsets`)
     /// plus one annotation channel per entry in `want`, each aligned
     /// 1:1 with the id stream. The id stream is byte-identical to a
@@ -683,26 +1087,154 @@ pub const Pipeline = struct {
         input: []const u8,
         n_chunks: usize,
     ) ![]TokenId {
+        var encoded = try self.encodeChunkedRaggedImpl(result_allocator, pool, input, n_chunks, null);
+        defer encoded.deinit();
+        return materializeChunkedParallel(result_allocator, pool, &encoded);
+    }
+
+    /// Dataset-oriented chunked encoding that retains source order but skips
+    /// the final gather into a second contiguous token allocation.
+    pub fn encodeChunkedRagged(
+        self: *const Pipeline,
+        result_allocator: std.mem.Allocator,
+        pool: *BatchPool,
+        input: []const u8,
+        n_chunks: usize,
+    ) !ChunkedEncoding {
+        return self.encodeChunkedRaggedImpl(result_allocator, pool, input, n_chunks, null);
+    }
+
+    /// File/dataset-oriented equivalent of `encodeChunked` with a persistent,
+    /// caller-owned pretoken cache. Output is bit-identical to `encode`; the
+    /// cache changes only whether a deterministic model result is recomputed.
+    pub fn encodeChunkedCached(
+        self: *const Pipeline,
+        result_allocator: std.mem.Allocator,
+        pool: *BatchPool,
+        input: []const u8,
+        n_chunks: usize,
+        cache: *ChunkedEncodeCache,
+    ) ![]TokenId {
+        if (cache.workers.len != pool.workerCount()) return error.CacheWorkerCountMismatch;
+        var encoded = try self.encodeChunkedRaggedImpl(result_allocator, pool, input, n_chunks, cache);
+        defer encoded.deinit();
+        return materializeChunkedParallel(result_allocator, pool, &encoded);
+    }
+
+    /// Cached counterpart of `encodeChunkedRagged`. It is intended for
+    /// repeated corpus passes and downstream statistics/training-data
+    /// generation that can consume ordered token chunks directly.
+    pub fn encodeChunkedRaggedCached(
+        self: *const Pipeline,
+        result_allocator: std.mem.Allocator,
+        pool: *BatchPool,
+        input: []const u8,
+        n_chunks: usize,
+        cache: *ChunkedEncodeCache,
+    ) !ChunkedEncoding {
+        if (cache.workers.len != pool.workerCount()) return error.CacheWorkerCountMismatch;
+        return self.encodeChunkedRaggedImpl(result_allocator, pool, input, n_chunks, cache);
+    }
+
+    fn encodeSingleChunk(
+        self: *const Pipeline,
+        result_allocator: std.mem.Allocator,
+        input: []const u8,
+    ) !ChunkedEncoding {
+        const ids = try self.encode(result_allocator, input);
+        errdefer result_allocator.free(ids);
+        const chunks = try result_allocator.alloc(EncodedChunk, 1);
+        chunks[0] = .{ .byte_start = 0, .byte_end = input.len, .ids = ids };
+        return .{ .allocator = result_allocator, .storage = ids, .chunks = chunks };
+    }
+
+    fn encodeAddedAsSingleChunk(
+        self: *const Pipeline,
+        result_allocator: std.mem.Allocator,
+        pool: *BatchPool,
+        scanner: *const added_tokens_mod.Scanner,
+        input: []const u8,
+        n_chunks: usize,
+        cache_set: ?*ChunkedEncodeCache,
+    ) !ChunkedEncoding {
+        const ids = try self.encodeChunkedWithAddedTokens(
+            result_allocator,
+            pool,
+            scanner,
+            input,
+            n_chunks,
+            cache_set,
+        );
+        errdefer result_allocator.free(ids);
+        const chunks = try result_allocator.alloc(EncodedChunk, 1);
+        chunks[0] = .{ .byte_start = 0, .byte_end = input.len, .ids = ids };
+        return .{ .allocator = result_allocator, .storage = ids, .chunks = chunks };
+    }
+
+    fn materializeChunkedParallel(
+        result_allocator: std.mem.Allocator,
+        pool: *BatchPool,
+        encoded: *const ChunkedEncoding,
+    ) ![]TokenId {
+        if (encoded.chunks.len <= 1) return encoded.materialize(result_allocator);
+
+        const offsets = try result_allocator.alloc(usize, encoded.chunks.len + 1);
+        defer result_allocator.free(offsets);
+        offsets[0] = 0;
+        for (encoded.chunks, 0..) |chunk, idx| {
+            offsets[idx + 1] = offsets[idx] + chunk.ids.len;
+        }
+        const out = try result_allocator.alloc(TokenId, offsets[encoded.chunks.len]);
+        errdefer result_allocator.free(out);
+        hintHugeTokenBuffer(out);
+        const CopyCtx = struct {
+            chunks: []const EncodedChunk,
+            offsets: []const usize,
+            out: []TokenId,
+
+            pub fn run(c: *@This(), copy_idx: usize, _: usize) void {
+                const chunk = c.chunks[copy_idx];
+                @memcpy(c.out[c.offsets[copy_idx]..][0..chunk.ids.len], chunk.ids);
+            }
+        };
+        var copy_ctx: CopyCtx = .{
+            .chunks = encoded.chunks,
+            .offsets = offsets,
+            .out = out,
+        };
+        try pool.runBatchPartitioned(CopyCtx, &copy_ctx, encoded.chunks.len);
+        return out;
+    }
+
+    fn encodeChunkedRaggedImpl(
+        self: *const Pipeline,
+        result_allocator: std.mem.Allocator,
+        pool: *BatchPool,
+        input: []const u8,
+        n_chunks: usize,
+        cache_set: ?*ChunkedEncodeCache,
+    ) !ChunkedEncoding {
         // Splitting is correct only when normalization is byte-identical and
         // the pre-tokenizer exposes truly independent model spans. Identity
         // pre-tokenization presents the entire input as one model span, so
         // only byte_id can be divided without changing model decisions.
-        if (!self.normalizer.isIdentity()) return self.encode(result_allocator, input);
+        if (!self.normalizer.isIdentity()) return self.encodeSingleChunk(result_allocator, input);
         switch (self.pre_tokenizer) {
-            .identity => if (self.model != .byte_id) return self.encode(result_allocator, input),
+            .identity => if (self.model != .byte_id) return self.encodeSingleChunk(result_allocator, input),
             // Sequence chains currently use an approximate newline heuristic
             // rather than a proof for every supported operation.
-            .chain => return self.encode(result_allocator, input),
+            .chain => return self.encodeSingleChunk(result_allocator, input),
             else => {},
         }
-        if (self.added_tokens) |scanner| {
-            return self.encodeChunkedWithAddedTokens(result_allocator, pool, scanner, input, n_chunks);
-        }
+        const chunk_scanner = if (self.added_tokens) |scanner|
+            if (scanner.supportsIndependentChunks()) scanner else return self.encodeAddedAsSingleChunk(result_allocator, pool, scanner, input, n_chunks, cache_set)
+        else
+            null;
         const chunks = if (n_chunks == 0) 1 else n_chunks;
 
         // Single-chunk or trivially small input: skip the chunking dance.
         if (chunks == 1 or input.len < 2 * chunks) {
-            return self.encode(result_allocator, input);
+            return self.encodeSingleChunk(result_allocator, input);
         }
 
         // Compute safe chunk boundaries. We always produce `chunks`
@@ -725,7 +1257,19 @@ pub const Pipeline = struct {
         while (i < chunks) : (i += 1) {
             const desired = i * nominal;
             const snapped = self.pre_tokenizer.findSafeCut(input, desired, window) orelse
-                return self.encode(result_allocator, input);
+                return self.encodeSingleChunk(result_allocator, input);
+            if (chunk_scanner) |scanner| {
+                if (!scanner.isIndependentCut(input, snapped)) {
+                    return self.encodeAddedAsSingleChunk(
+                        result_allocator,
+                        pool,
+                        scanner,
+                        input,
+                        n_chunks,
+                        cache_set,
+                    );
+                }
+            }
             // Enforce monotonicity (snapping backwards into a previous
             // segment would create a zero-length slice; clamp instead).
             boundaries[i] = @max(snapped, boundaries[i - 1]);
@@ -743,43 +1287,69 @@ pub const Pipeline = struct {
         }
         if (out_count == 0) {
             // Entire input is empty.
-            return result_allocator.alloc(TokenId, 0);
+            const storage = try result_allocator.alloc(TokenId, 0);
+            errdefer result_allocator.free(storage);
+            const encoded_chunks = try result_allocator.alloc(EncodedChunk, 0);
+            return .{
+                .allocator = result_allocator,
+                .storage = storage,
+                .chunks = encoded_chunks,
+            };
         }
         if (out_count == 1) {
             // All chunks collapsed to one — just encode single-shot.
-            return self.encode(result_allocator, input);
+            return self.encodeSingleChunk(result_allocator, input);
         }
 
-        // Put worst-case partial outputs in the prewarmed worker-local
-        // arenas. They remain valid until the next batch-wide reset, so a
-        // worker may process multiple jobs without touching the shared GPA.
-        // Only the final right-sized result is globally allocated.
+        // One caller-owned workspace is divided into disjoint per-job output
+        // regions. This avoids taking the shared result allocator's lock for
+        // every chunk from every worker (a severe scaling limit on large-file
+        // encoding) while still allowing worker scratch to reset per job.
         const expansion = self.pre_tokenizer.maxByteExpansion();
-        const partials = try result_allocator.alloc([]const TokenId, out_count);
+        const region_offsets = try result_allocator.alloc(usize, out_count + 1);
+        defer result_allocator.free(region_offsets);
+        region_offsets[0] = 0;
+        for (0..out_count) |region_idx| {
+            const text_len = boundaries[region_idx + 1] - boundaries[region_idx];
+            region_offsets[region_idx + 1] = region_offsets[region_idx] +
+                self.model.maxTokensFor(text_len * expansion) +
+                (if (cache_set != null) pretoken_cache.max_token_ids else 0);
+        }
+        const workspace = try result_allocator.alloc(TokenId, region_offsets[out_count]);
+        errdefer result_allocator.free(workspace);
+        hintHugeTokenBuffer(workspace);
+        const partials = try result_allocator.alloc([]TokenId, out_count);
         defer result_allocator.free(partials);
         @memset(partials, &.{});
-        pool.resetAllArenas();
         const Ctx = struct {
             pipe: *const Pipeline,
             pool: *BatchPool,
             input: []const u8,
             boundaries: []const usize,
-            partials: [][]const TokenId,
+            partials: [][]TokenId,
+            workspace: []TokenId,
+            region_offsets: []const usize,
+            cache_set: ?*ChunkedEncodeCache,
+            added_scanner: ?*const added_tokens_mod.Scanner,
             expansion: usize,
             errored: std.atomic.Value(u32) = .init(0),
 
             pub fn run(c: *@This(), idx: usize, worker_idx: usize) void {
-                const scratch = c.pool.arenaAllocator(worker_idx);
+                const scratch = c.pool.resetArena(worker_idx);
                 const text = c.input[c.boundaries[idx]..c.boundaries[idx + 1]];
-                const cap = c.pipe.model.maxTokensFor(text.len * c.expansion);
-                const region = scratch.alloc(TokenId, cap) catch {
+                const region = c.workspace[c.region_offsets[idx]..c.region_offsets[idx + 1]];
+                const worker_cache = if (c.cache_set) |set| &set.workers[worker_idx] else null;
+                const written = if (c.added_scanner) |scanner|
+                    c.pipe.encodeTextChunkWithAdded(scratch, scanner, text, region, worker_cache)
+                else if (worker_cache) |cache|
+                    c.pipe.encodeTextCached(scratch, text, region, cache)
+                else
+                    c.pipe.encodeText(scratch, text, region);
+                const encoded = written catch {
                     _ = c.errored.fetchAdd(1, .acq_rel);
                     return;
                 };
-                c.partials[idx] = c.pipe.encodeText(scratch, text, region) catch {
-                    _ = c.errored.fetchAdd(1, .acq_rel);
-                    return;
-                };
+                c.partials[idx] = encoded;
             }
         };
         var ctx: Ctx = .{
@@ -788,20 +1358,30 @@ pub const Pipeline = struct {
             .input = input,
             .boundaries = boundaries[0 .. out_count + 1],
             .partials = partials,
+            .workspace = workspace,
+            .region_offsets = region_offsets,
+            .cache_set = cache_set,
+            .added_scanner = chunk_scanner,
             .expansion = expansion,
         };
-        try pool.runBatch(Ctx, &ctx, out_count);
+        if (cache_set != null) {
+            try pool.runBatchPartitioned(Ctx, &ctx, out_count);
+        } else {
+            try pool.runBatch(Ctx, &ctx, out_count);
+        }
         if (ctx.errored.load(.acquire) != 0) return error.BatchEncodeFailed;
 
-        var total: usize = 0;
-        for (partials) |partial| total += partial.len;
-        const out = try result_allocator.alloc(TokenId, total);
-        var written: usize = 0;
-        for (partials) |partial| {
-            @memcpy(out[written .. written + partial.len], partial);
-            written += partial.len;
-        }
-        return out;
+        const encoded_chunks = try result_allocator.alloc(EncodedChunk, out_count);
+        for (partials, 0..) |partial, partial_idx| encoded_chunks[partial_idx] = .{
+            .byte_start = boundaries[partial_idx],
+            .byte_end = boundaries[partial_idx + 1],
+            .ids = partial,
+        };
+        return .{
+            .allocator = result_allocator,
+            .storage = workspace,
+            .chunks = encoded_chunks,
+        };
     }
 
     /// One unit of work the chunked-with-added-tokens path hands to a
@@ -934,6 +1514,7 @@ pub const Pipeline = struct {
         scanner: *const added_tokens_mod.Scanner,
         input: []const u8,
         n_chunks: usize,
+        cache_set: ?*ChunkedEncodeCache,
     ) ![]TokenId {
         const segs = try added_tokens_mod.scan(scanner, result_allocator, input);
         defer result_allocator.free(segs);
@@ -959,45 +1540,59 @@ pub const Pipeline = struct {
         }
 
         const expansion = self.normalizer.maxByteExpansion() * self.pre_tokenizer.maxByteExpansion();
-        const partials = try result_allocator.alloc([]const TokenId, jobs.len);
+        const region_offsets = try result_allocator.alloc(usize, jobs.len + 1);
+        defer result_allocator.free(region_offsets);
+        region_offsets[0] = 0;
+        for (jobs, 0..) |job, region_idx| {
+            const cap = switch (job) {
+                .special => 1,
+                .text => |t| self.model.maxTokensFor((t.end - t.start) * expansion) +
+                    (if (cache_set != null) pretoken_cache.max_token_ids else 0),
+            };
+            region_offsets[region_idx + 1] = region_offsets[region_idx] + cap;
+        }
+        const workspace = try result_allocator.alloc(TokenId, region_offsets[jobs.len]);
+        defer result_allocator.free(workspace);
+        hintHugeTokenBuffer(workspace);
+        const partials = try result_allocator.alloc([]TokenId, jobs.len);
         defer result_allocator.free(partials);
         @memset(partials, &.{});
-        pool.resetAllArenas();
 
         const Ctx = struct {
             pipe: *const Pipeline,
             input: []const u8,
             jobs: []const ChunkJob,
-            partials: [][]const TokenId,
+            partials: [][]TokenId,
             expansion: usize,
             pool: *BatchPool,
+            result_allocator: std.mem.Allocator,
+            workspace: []TokenId,
+            region_offsets: []const usize,
+            cache_set: ?*ChunkedEncodeCache,
             errored: std.atomic.Value(u32),
 
             const Self = @This();
 
             pub fn run(c: *Self, idx: usize, worker_idx: usize) void {
                 const job = c.jobs[idx];
-                const scratch = c.pool.arenaAllocator(worker_idx);
+                const scratch = c.pool.resetArena(worker_idx);
+                const region = c.workspace[c.region_offsets[idx]..c.region_offsets[idx + 1]];
                 switch (job) {
                     .special => |id| {
-                        const region = scratch.alloc(TokenId, 1) catch {
-                            _ = c.errored.fetchAdd(1, .acq_rel);
-                            return;
-                        };
                         region[0] = id;
-                        c.partials[idx] = region;
+                        c.partials[idx] = region[0..1];
                     },
                     .text => |t| {
                         const text = c.input[t.start..t.end];
-                        const cap = c.pipe.model.maxTokensFor(text.len * c.expansion);
-                        const region = scratch.alloc(TokenId, cap) catch {
+                        const written_result = if (c.cache_set) |set|
+                            c.pipe.encodeTextCached(scratch, text, region, &set.workers[worker_idx])
+                        else
+                            c.pipe.encodeText(scratch, text, region);
+                        const written = written_result catch {
                             _ = c.errored.fetchAdd(1, .acq_rel);
                             return;
                         };
-                        c.partials[idx] = c.pipe.encodeText(scratch, text, region) catch {
-                            _ = c.errored.fetchAdd(1, .acq_rel);
-                            return;
-                        };
+                        c.partials[idx] = written;
                     },
                 }
             }
@@ -1010,19 +1605,39 @@ pub const Pipeline = struct {
             .partials = partials,
             .expansion = expansion,
             .pool = pool,
+            .result_allocator = result_allocator,
+            .workspace = workspace,
+            .region_offsets = region_offsets,
+            .cache_set = cache_set,
             .errored = .init(0),
         };
 
-        try pool.runBatch(Ctx, &ctx, jobs.len);
+        if (cache_set != null) {
+            try pool.runBatchPartitioned(Ctx, &ctx, jobs.len);
+        } else {
+            try pool.runBatch(Ctx, &ctx, jobs.len);
+        }
         if (ctx.errored.load(.acquire) != 0) return error.BatchEncodeFailed;
         var total: usize = 0;
-        for (partials) |partial| total += partial.len;
-        const out = try result_allocator.alloc(TokenId, total);
-        var written: usize = 0;
-        for (partials) |partial| {
-            @memcpy(out[written .. written + partial.len], partial);
-            written += partial.len;
+        for (partials, 0..) |partial, partial_idx| {
+            region_offsets[partial_idx] = total;
+            total += partial.len;
         }
+        region_offsets[jobs.len] = total;
+        const out = try result_allocator.alloc(TokenId, total);
+        hintHugeTokenBuffer(out);
+        const CopyCtx = struct {
+            partials: []const []const TokenId,
+            offsets: []const usize,
+            out: []TokenId,
+
+            pub fn run(c: *@This(), copy_idx: usize, _: usize) void {
+                const partial = c.partials[copy_idx];
+                @memcpy(c.out[c.offsets[copy_idx]..][0..partial.len], partial);
+            }
+        };
+        var copy_ctx: CopyCtx = .{ .partials = partials, .offsets = region_offsets, .out = out };
+        try pool.runBatchPartitioned(CopyCtx, &copy_ctx, jobs.len);
         return out;
     }
 
@@ -1554,6 +2169,46 @@ test "Pipeline.encodeWithOffsets with added_tokens specials" {
     try std.testing.expectEqual(@as(u32, 7), enc.offsets[2].end);
 }
 
+test "Pipeline superposition convenience preserves ordinary ids and protects specials" {
+    var vocab = Vocab.empty(std.testing.allocator);
+    defer vocab.deinit();
+    const added = [_]added_tokens_mod.AddedToken{
+        .{ .id = 50000, .content = "<EOS>" },
+    };
+    var scanner = try added_tokens_mod.Scanner.init(std.testing.allocator, &added);
+    defer scanner.deinit();
+    const pipe: Pipeline = .{
+        .normalizer = .identity,
+        .pre_tokenizer = .identity,
+        .model = .byte_id,
+        .decoder = .concat,
+        .vocab = &vocab,
+        .added_tokens = &scanner,
+    };
+    const text = "abcd<EOS>efgh";
+    const ordinary = try pipe.encode(std.testing.allocator, text);
+    defer std.testing.allocator.free(ordinary);
+    var encoded = try pipe.encodeWithSuperpositionPlan(
+        std.testing.allocator,
+        text,
+        .{ .group_size = 4 },
+    );
+    defer encoded.deinit(std.testing.allocator);
+
+    try std.testing.expectEqualSlices(TokenId, ordinary, encoded.ids);
+    var found_special = false;
+    for (encoded.plan.groups) |group| {
+        if (group.kind == .preserved_special) {
+            found_special = true;
+            try std.testing.expectEqual(@as(usize, 1), group.sources.len);
+            try std.testing.expectEqual(@as(TokenId, 50000), group.sources[0].token_id);
+            try std.testing.expectEqual(@as(u32, 4), group.byte_start);
+            try std.testing.expectEqual(@as(u32, 9), group.byte_end);
+        }
+    }
+    try std.testing.expect(found_special);
+}
+
 test "Pipeline.encodeWithOffsets lstrip absorbed ws goes to special" {
     var v = Vocab.empty(std.testing.allocator);
     defer v.deinit();
@@ -1780,6 +2435,40 @@ test "encodeChunked identity byte_id matches single-shot" {
     try expectChunkedMatchesSingleShot(&pipe, &bp, "x", 4);
     // Multi-byte UTF-8: ensure cuts don't land mid-codepoint.
     try expectChunkedMatchesSingleShot(&pipe, &bp, "αβγδεζηθικλμνξοπρστυφχψω", 4);
+}
+
+test "encodeChunkedRagged preserves source order and materializes exactly" {
+    var v = Vocab.empty(std.testing.allocator);
+    defer v.deinit();
+    const pipe: Pipeline = .{
+        .normalizer = .identity,
+        .pre_tokenizer = .identity,
+        .model = .byte_id,
+        .decoder = .concat,
+        .vocab = &v,
+    };
+    var bp = try BatchPool.init(std.testing.allocator, 4);
+    defer bp.deinit();
+
+    const input = "one two three four five six seven eight";
+    var ragged = try pipe.encodeChunkedRagged(std.testing.allocator, &bp, input, 4);
+    defer ragged.deinit();
+    try std.testing.expect(ragged.chunks.len > 1);
+    try std.testing.expectEqual(@as(usize, 0), ragged.chunks[0].byte_start);
+    for (ragged.chunks, 0..) |chunk, idx| {
+        try std.testing.expect(chunk.byte_start < chunk.byte_end);
+        if (idx != 0) {
+            try std.testing.expectEqual(ragged.chunks[idx - 1].byte_end, chunk.byte_start);
+        }
+    }
+    try std.testing.expectEqual(input.len, ragged.chunks[ragged.chunks.len - 1].byte_end);
+
+    const flat = try ragged.materialize(std.testing.allocator);
+    defer std.testing.allocator.free(flat);
+    const single = try pipe.encode(std.testing.allocator, input);
+    defer std.testing.allocator.free(single);
+    try std.testing.expectEqualSlices(TokenId, single, flat);
+    try std.testing.expectEqual(single.len, ragged.tokenCount());
 }
 
 test "encodeChunked identity BPE falls back instead of splitting a model span" {

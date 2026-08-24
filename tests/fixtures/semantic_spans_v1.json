@@ -1,0 +1,111 @@
+{
+  "schema": "ztok.semantic_spans.v1",
+  "image_id": "fixture-lighting",
+  "original_token_count": 18,
+  "captions": [
+    {
+      "caption_id": 0,
+      "section": "lighting",
+      "text": "A bright white light illuminates the room.",
+      "tokens": [],
+      "spans": [
+        {
+          "span_id": "c0-bright",
+          "token_start": 1,
+          "token_end": 2,
+          "byte_start": 2,
+          "byte_end": 8,
+          "text": "bright",
+          "role": "lighting_intensity",
+          "entity_id": "light-1",
+          "embedding": [1.0, 0.0, 0.0],
+          "confidence": 0.95,
+          "kind": "attribute"
+        },
+        {
+          "span_id": "c0-white",
+          "token_start": 2,
+          "token_end": 3,
+          "byte_start": 9,
+          "byte_end": 14,
+          "text": "white",
+          "role": "color",
+          "entity_id": "light-1",
+          "embedding": [0.0, 1.0, 0.0],
+          "confidence": 0.96,
+          "kind": "attribute"
+        },
+        {
+          "span_id": "c0-illuminates",
+          "token_start": 4,
+          "token_end": 5,
+          "byte_start": 21,
+          "byte_end": 32,
+          "text": "illuminates",
+          "role": "illumination_relation",
+          "entity_id": "light-1",
+          "embedding": [0.0, 0.0, 1.0],
+          "confidence": 0.98,
+          "kind": "relation",
+          "relation_from_entity_id": "light-1",
+          "relation_to_entity_id": "room-1"
+        }
+      ]
+    },
+    {
+      "caption_id": 1,
+      "section": "lighting",
+      "text": "A brilliant pale glow fills the chamber.",
+      "tokens": [],
+      "spans": [
+        {
+          "span_id": "c1-brilliant",
+          "token_start": 1,
+          "token_end": 2,
+          "byte_start": 2,
+          "byte_end": 11,
+          "text": "brilliant",
+          "role": "lighting_intensity",
+          "entity_id": "light-1",
+          "embedding": [0.999, 0.02, 0.0],
+          "confidence": 0.94,
+          "kind": "attribute"
+        },
+        {
+          "span_id": "c1-pale",
+          "token_start": 2,
+          "token_end": 3,
+          "byte_start": 12,
+          "byte_end": 16,
+          "text": "pale",
+          "role": "color",
+          "entity_id": "light-1",
+          "embedding": [0.02, 0.999, 0.0],
+          "confidence": 0.9,
+          "kind": "attribute"
+        }
+      ]
+    },
+    {
+      "caption_id": 2,
+      "section": "lighting",
+      "text": "An intense light reaches the interior.",
+      "tokens": [],
+      "spans": [
+        {
+          "span_id": "c2-intense",
+          "token_start": 1,
+          "token_end": 2,
+          "byte_start": 3,
+          "byte_end": 10,
+          "text": "intense",
+          "role": "lighting_intensity",
+          "entity_id": "light-1",
+          "embedding": [0.997, 0.04, 0.0],
+          "confidence": 0.93,
+          "kind": "attribute"
+        }
+      ]
+    }
+  ]
+}

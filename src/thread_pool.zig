@@ -506,6 +506,8 @@ const Shared = if (has_threads) struct {
     task_ctx: ?*anyopaque = null,
     task_total: usize = 0,
     task_cursor: std.atomic.Value(usize) = .init(0),
+    task_partitioned: u32 = 0,
+    task_workers: usize = 1,
 
     // generation: bumped each runBatch (and on deinit) so workers
     // know fresh work is available without losing wakeups.
@@ -569,10 +571,16 @@ fn helperMain(shared: *Shared, worker_idx: usize) void {
         const ctx = shared.task_ctx;
         const total = shared.task_total;
         if (run) |run_fn| if (ctx) |c| {
-            while (true) {
-                const i = shared.task_cursor.fetchAdd(1, .acq_rel);
-                if (i >= total) break;
-                run_fn(c, i, worker_idx);
+            if (shared.task_partitioned != 0) {
+                const start = total * worker_idx / shared.task_workers;
+                const end = total * (worker_idx + 1) / shared.task_workers;
+                for (start..end) |i| run_fn(c, i, worker_idx);
+            } else {
+                while (true) {
+                    const i = shared.task_cursor.fetchAdd(1, .acq_rel);
+                    if (i >= total) break;
+                    run_fn(c, i, worker_idx);
+                }
             }
         };
 
@@ -858,6 +866,29 @@ pub const BatchPool = struct {
         ctx: anytype,
         total_items: usize,
     ) !void {
+        return self.runBatchMode(Worker, ctx, total_items, false);
+    }
+
+    /// Run a batch with a stable contiguous index range per worker. This is
+    /// useful when worker-local state (such as an encoding cache) benefits
+    /// from deterministic ownership across repeated calls and items are
+    /// already close to equal cost.
+    pub fn runBatchPartitioned(
+        self: *BatchPool,
+        comptime Worker: type,
+        ctx: anytype,
+        total_items: usize,
+    ) !void {
+        return self.runBatchMode(Worker, ctx, total_items, true);
+    }
+
+    fn runBatchMode(
+        self: *BatchPool,
+        comptime Worker: type,
+        ctx: anytype,
+        total_items: usize,
+        partitioned: bool,
+    ) !void {
         if (total_items == 0) return;
 
         const n_workers = self.workerCount();
@@ -887,6 +918,8 @@ pub const BatchPool = struct {
             shared.task_run = &Trampoline.go;
             shared.task_ctx = @ptrCast(ctx);
             shared.task_total = total_items;
+            shared.task_partitioned = @intFromBool(partitioned);
+            shared.task_workers = n_workers;
             shared.task_cursor.store(0, .release);
             shared.done_count.store(0, .release);
 
@@ -895,10 +928,15 @@ pub const BatchPool = struct {
             futexWake(&shared.generation, n_helpers);
 
             // Caller participates as worker 0.
-            while (true) {
-                const i = shared.task_cursor.fetchAdd(1, .acq_rel);
-                if (i >= total_items) break;
-                Trampoline.go(@ptrCast(ctx), i, 0);
+            if (partitioned) {
+                const end = total_items / n_workers;
+                for (0..end) |i| Trampoline.go(@ptrCast(ctx), i, 0);
+            } else {
+                while (true) {
+                    const i = shared.task_cursor.fetchAdd(1, .acq_rel);
+                    if (i >= total_items) break;
+                    Trampoline.go(@ptrCast(ctx), i, 0);
+                }
             }
 
             // Wait for helpers to finish this batch.
@@ -951,6 +989,25 @@ test "BatchPool parallel fan-out covers every index exactly once" {
     };
     try bp.runBatch(W, &ctx, N);
     for (marks) |*m| try std.testing.expectEqual(@as(u32, 1), m.load(.acquire));
+}
+
+test "BatchPool partitioned mode assigns stable contiguous ranges" {
+    var bp = try BatchPool.init(std.testing.allocator, 4);
+    defer bp.deinit();
+    var owners: [103]usize = [_]usize{std.math.maxInt(usize)} ** 103;
+    const Ctx = struct {
+        owners: []usize,
+        pub fn run(c: *@This(), idx: usize, worker_idx: usize) void {
+            c.owners[idx] = worker_idx;
+        }
+    };
+    var ctx: Ctx = .{ .owners = &owners };
+    try bp.runBatchPartitioned(Ctx, &ctx, owners.len);
+    for (0..bp.workerCount()) |worker_idx| {
+        const start = owners.len * worker_idx / bp.workerCount();
+        const end = owners.len * (worker_idx + 1) / bp.workerCount();
+        for (owners[start..end]) |owner| try std.testing.expectEqual(worker_idx, owner);
+    }
 }
 
 test "BatchPool resetArena gives usable allocator" {

@@ -38,31 +38,49 @@ pub const SplitMapResult = struct {
 /// regex-match boundaries: any safe regex boundary is also a safe cut at
 /// the remap stage.
 ///
-/// `pos` is a safe cut iff:
-///   * `pos == 0` or `pos == input.len` (trivially), or
-///   * the byte at `pos - 1` is `\n`, AND
-///   * the byte at `pos` is NOT whitespace.
+/// Safe cuts used here are transitions at the START of an ASCII whitespace
+/// run (`non-ws | ws`), plus the historical single-newline boundary
+/// (`non-ws \n | non-ws`). No GPT-2 alternative can span the former: the
+/// whitespace belongs entirely to the right-hand pretokenization. The latter
+/// is safe only when that newline is the complete whitespace run.
 ///
-/// The "non-whitespace next" guard prevents cutting inside a whitespace
-/// run that pattern e/f would absorb across the boundary in single-shot
-/// mode (e.g. `\n` followed by spaces: single-shot pattern e would back
-/// off and yield one match for `\n` + the spaces, but cutting between
-/// them produces two separate ws spans).
+/// Cutting at the END of a multi-character whitespace run is not safe. For
+/// example, whole-input GPT-2 tokenization of `foo\n\nbar` splits the first
+/// newline via `\s+(?!\S)` and the second via `\s+`; tokenizing `foo\n\n`
+/// separately sees EOF and groups both newlines together. The old rule
+/// allowed this boundary and produced rare chunked-encode ID differences.
 pub fn isSafeCut(input: []const u8, pos: usize) bool {
     if (pos == 0 or pos == input.len) return true;
     if (pos > input.len) return false;
-    if (input[pos - 1] != '\n') return false;
-    const c = input[pos];
-    // ASCII whitespace check first — covers \r, \t, ' ', \n, \v, \f.
-    if (c == '\r' or c == '\n' or c == ' ' or c == '\t' or c == 0x0B or c == 0x0C) return false;
-    // Non-ASCII: 0x80..0xBF is a continuation byte (mid-codepoint) — reject.
-    // 0xC0..0xFF is a leading byte — decode and check Unicode whitespace.
-    if (c >= 0x80) {
-        if (c < 0xC0) return false;
+
+    const prev = input[pos - 1];
+    const next = input[pos];
+
+    // Start of an ASCII whitespace run. Restrict the left byte to ASCII so
+    // `pos` cannot be inside a multi-byte codepoint; rejecting a valid cut is
+    // harmless and the newline-heavy dataset path has abundant ASCII cuts.
+    if (prev < 0x80 and !isAsciiWhitespace(prev) and isAsciiWhitespace(next)) {
+        return true;
+    }
+
+    // End of a *single* newline run. A preceding whitespace byte would make
+    // this the unsafe `foo\n\n|bar` shape described above.
+    if (prev != '\n') return false;
+    if (pos >= 2) {
+        const before = input[pos - 2];
+        if (before >= 0x80 or isAsciiWhitespace(before)) return false;
+    }
+    if (isAsciiWhitespace(next)) return false;
+    if (next >= 0x80) {
+        if (next < 0xC0) return false;
         const d = decodeAt(input, pos) orelse return false;
         if (isWhitespace(d.cp)) return false;
     }
     return true;
+}
+
+inline fn isAsciiWhitespace(c: u8) bool {
+    return c == '\r' or c == '\n' or c == ' ' or c == '\t' or c == 0x0B or c == 0x0C;
 }
 
 /// Search for a safe HF byte-level cut position near `desired`. Scans
@@ -124,6 +142,306 @@ pub fn splitAndMap(allocator: std.mem.Allocator, input: []const u8) !SplitMapRes
     const mapped_shrunk = try allocator.realloc(mapped, w);
     const spans_shrunk = try allocator.realloc(spans, n_spans);
     return .{ .mapped = mapped_shrunk, .spans = spans_shrunk };
+}
+
+/// Return the exclusive end of the next canonical GPT-2 pretoken starting at
+/// `start`. This is the allocation-free streaming interface used by the
+/// dataset cache path; `splitAndMap` remains the ordinary bulk API.
+pub inline fn nextSpanEnd(input: []const u8, start: usize) usize {
+    if (start >= input.len) return input.len;
+    const took = matchOne(input, start);
+    return start + if (took == 0) 1 else took;
+}
+
+/// Allocation-free GPT-2 span walker with a 64-byte ASCII mask fast path.
+///
+/// The boundary-mask algebra is adapted from GigaToken's MIT-licensed r50k
+/// scanner (Copyright 2026 Marcel Rød). Batches containing non-ASCII bytes or
+/// apostrophes conservatively use the existing scalar matcher, so the SIMD
+/// path is an optimization only and cannot change segmentation.
+pub const SpanScanner = struct {
+    input: []const u8,
+    pos: usize = 0,
+    batch_base: usize = 0,
+    boundaries: u64 = 0,
+    mask_valid: bool = false,
+    scalar_until: usize = 0,
+
+    pub fn init(input: []const u8) SpanScanner {
+        return .{ .input = input };
+    }
+
+    /// Fill a caller-provided endpoint batch and commit scanner state once.
+    /// This is the dataset encoder interface: keeping the cursor fields in a
+    /// local copy lets LLVM retain them in registers across many spans.
+    pub inline fn fillEnds(self: *SpanScanner, out: []usize) usize {
+        var state = self.*;
+        var count: usize = 0;
+        while (count < out.len) : (count += 1) {
+            out[count] = state.next() orelse break;
+        }
+        self.* = state;
+        return count;
+    }
+
+    /// Batched endpoint pull with a monomorphized per-span visitor. This lets
+    /// dataset encoders derive packed keys and issue cache prefetches while
+    /// the scanner walks later spans, without coupling the pretokenizer to a
+    /// particular cache implementation.
+    pub inline fn fillEndsVisit(
+        self: *SpanScanner,
+        out: []usize,
+        visitor: anytype,
+    ) usize {
+        var state = self.*;
+        var count: usize = 0;
+        var start = state.pos;
+        while (count < out.len) : (count += 1) {
+            const end = state.next() orelse break;
+            out[count] = end;
+            visitor.onSpan(start, end, count);
+            start = end;
+        }
+        self.* = state;
+        return count;
+    }
+
+    pub const RelativeBatch = struct {
+        base: usize,
+        count: usize,
+    };
+
+    /// Harvest up to `max_count` endpoints as u32 offsets from the starting
+    /// scanner position. `out` must provide at least eight writable slack
+    /// lanes beyond `max_count` for the branchless mask flattener.
+    ///
+    /// Dataset chunks are deliberately kept well below 4 GiB; callers must
+    /// use `fillEnds`/`fillEndsVisit` for larger buffers.
+    pub inline fn fillRelativeEnds(
+        self: *SpanScanner,
+        out: []u32,
+        max_count: usize,
+    ) RelativeBatch {
+        std.debug.assert(out.len >= max_count + 8);
+        std.debug.assert(self.input.len - self.pos <= std.math.maxInt(u32));
+        var state = self.*;
+        const fill_base = state.pos;
+        var count: usize = 0;
+        while (count < max_count) {
+            if (state.boundaries != 0 and state.batch_base >= fill_base) {
+                const n: usize = @popCount(state.boundaries);
+                if (n <= max_count - count) {
+                    const relative_base: u32 = @intCast(state.batch_base - fill_base);
+                    _ = flattenBoundaryBits32(
+                        state.boundaries,
+                        relative_base,
+                        out[count..].ptr,
+                    );
+                    state.boundaries = 0;
+                    state.pos = fill_base + out[count + n - 1];
+                    count += n;
+                    continue;
+                }
+            }
+            const end = state.next() orelse break;
+            out[count] = @intCast(end - fill_base);
+            count += 1;
+        }
+        self.* = state;
+        return .{ .base = fill_base, .count = count };
+    }
+
+    /// Return the exclusive end of the next span, or null at EOF.
+    pub inline fn next(self: *SpanScanner) ?usize {
+        if (self.pos >= self.input.len) return null;
+        while (true) {
+            if (self.pos < self.scalar_until) {
+                const end = nextSpanEnd(self.input, self.pos);
+                self.pos = end;
+                return end;
+            }
+
+            if (self.boundaries != 0) {
+                // Token-start bits become the previous token's exclusive end.
+                const end = self.batch_base + @ctz(self.boundaries);
+                self.boundaries &= self.boundaries - 1;
+                self.pos = end;
+                return end;
+            }
+
+            if (self.mask_valid) {
+                self.batch_base += 64;
+                self.mask_valid = false;
+            }
+
+            // Keep the scanner on a fixed 64-byte grid even when a scalar
+            // token crossed a batch boundary.
+            const pos_base = (self.pos / 64) * 64;
+            if (self.batch_base < pos_base) self.batch_base = pos_base;
+            if (self.batch_base + 65 > self.input.len) {
+                self.scalar_until = std.math.maxInt(usize);
+                continue;
+            }
+
+            self.boundaries = asciiBoundaryMask(self.input, self.batch_base) orelse {
+                self.scalar_until = self.batch_base + 64;
+                self.batch_base += 64;
+                continue;
+            };
+            self.mask_valid = true;
+
+            // Discard the pending token's own start and any stale boundaries
+            // below a scalar overrun before entering the pop-only hot path.
+            if (self.pos >= self.batch_base) {
+                const rel = self.pos - self.batch_base;
+                if (rel < 64) {
+                    const keep = if (rel == 63) @as(u64, 0) else @as(u64, std.math.maxInt(u64)) << @as(u6, @intCast(rel + 1));
+                    self.boundaries &= keep;
+                } else {
+                    self.boundaries = 0;
+                }
+            }
+
+            // If `pos` was already inside this grid batch after a scalar
+            // overrun, the stale low bits are removed on the next iteration.
+            self.scalar_until = self.pos;
+        }
+    }
+};
+
+const bit_positions32 = blk: {
+    @setEvalBranchQuota(10_000);
+    var table: [256][8]u32 = @splat(@splat(0));
+    for (1..256) |byte| {
+        var written: usize = 0;
+        for (0..8) |bit| {
+            if (((byte >> @as(u3, @intCast(bit))) & 1) != 0) {
+                table[byte][written] = @intCast(bit);
+                written += 1;
+            }
+        }
+    }
+    break :blk table;
+};
+
+/// Straight-line set-bit flattening. Writes through popcount(mask)+7; the
+/// public harvester enforces the scratch-slack contract.
+inline fn flattenBoundaryBits32(mask: u64, relative_base: u32, out: [*]u32) usize {
+    var counts = mask;
+    counts -= (counts >> 1) & 0x5555_5555_5555_5555;
+    counts = (counts & 0x3333_3333_3333_3333) +
+        ((counts >> 2) & 0x3333_3333_3333_3333);
+    counts = (counts + (counts >> 4)) & 0x0F0F_0F0F_0F0F_0F0F;
+    const inclusive = counts *% 0x0101_0101_0101_0101;
+    const exclusive = inclusive << 8;
+    inline for (0..8) |octet| {
+        const byte: u8 = @truncate(mask >> (8 * octet));
+        const write_at: usize = @as(u8, @truncate(exclusive >> (8 * octet)));
+        const positions = bit_positions32[byte];
+        const offset: u32 = relative_base + @as(u32, 8 * octet);
+        inline for (0..8) |lane| out[write_at + lane] = offset + positions[lane];
+    }
+    return @truncate(inclusive >> 56);
+}
+
+inline fn vectorMask32(v: @Vector(32, bool)) u32 {
+    return @bitCast(@as(@Vector(32, u1), @intFromBool(v)));
+}
+
+/// Token-start bits for one pure-ASCII, contraction-free 64-byte batch.
+/// Returns null for a dirty batch so the caller uses the scalar oracle.
+inline fn asciiBoundaryMask(input: []const u8, base: usize) ?u64 {
+    const V = @Vector(32, u8);
+    const v0: V = input[base..][0..32].*;
+    const v1: V = input[base + 32 ..][0..32].*;
+
+    const upper_a: V = @splat('A');
+    const upper_z: V = @splat('Z');
+    const lower_a: V = @splat('a');
+    const lower_z: V = @splat('z');
+    const digit_0: V = @splat('0');
+    const digit_9: V = @splat('9');
+    const space: V = @splat(' ');
+    const ws_lo: V = @splat(0x09);
+    const ws_hi: V = @splat(0x0D);
+    const ascii_hi: V = @splat(0x80);
+    const apostrophe: V = @splat('\'');
+
+    const l0 = ((v0 >= upper_a) & (v0 <= upper_z)) | ((v0 >= lower_a) & (v0 <= lower_z));
+    const l1 = ((v1 >= upper_a) & (v1 <= upper_z)) | ((v1 >= lower_a) & (v1 <= lower_z));
+    const d0 = (v0 >= digit_0) & (v0 <= digit_9);
+    const d1 = (v1 >= digit_0) & (v1 <= digit_9);
+    const s0 = v0 == space;
+    const s1 = v1 == space;
+    const ws0 = s0 | ((v0 >= ws_lo) & (v0 <= ws_hi));
+    const ws1 = s1 | ((v1 >= ws_lo) & (v1 <= ws_hi));
+    const hi0 = v0 >= ascii_hi;
+    const hi1 = v1 >= ascii_hi;
+    const ap0 = v0 == apostrophe;
+    const ap1 = v1 == apostrophe;
+
+    const letters = @as(u64, vectorMask32(l0)) | (@as(u64, vectorMask32(l1)) << 32);
+    const digits = @as(u64, vectorMask32(d0)) | (@as(u64, vectorMask32(d1)) << 32);
+    const spaces = @as(u64, vectorMask32(s0)) | (@as(u64, vectorMask32(s1)) << 32);
+    const whitespace = @as(u64, vectorMask32(ws0)) | (@as(u64, vectorMask32(ws1)) << 32);
+    const apostrophes = @as(u64, vectorMask32(ap0)) | (@as(u64, vectorMask32(ap1)) << 32);
+    const dirty = vectorMask32(hi0) | vectorMask32(hi1);
+    // The lookahead participates in the whitespace-run split at bit 63.
+    if (dirty != 0 or input[base + 64] >= 0x80) return null;
+
+    const other = ~(letters | digits | whitespace);
+    var prev_l: u64 = 0;
+    var prev_d: u64 = 0;
+    var prev_s: u64 = 0;
+    var prev_ws: u64 = 0;
+    var prev_o: u64 = 0;
+    if (base > 0) {
+        const b = input[base - 1];
+        if (b >= 0x80 or b == '\'') return null;
+        prev_l = @intFromBool(simd_bytes.isAsciiLetter(b));
+        prev_d = @intFromBool(simd_bytes.isAsciiDigit(b));
+        prev_s = @intFromBool(b == ' ');
+        prev_ws = @intFromBool(simd_bytes.isAsciiWs(b));
+        prev_o = @intFromBool(!simd_bytes.isAsciiLetter(b) and
+            !simd_bytes.isAsciiDigit(b) and !simd_bytes.isAsciiWs(b));
+    }
+
+    const continued =
+        (letters & ((letters << 1) | prev_l)) |
+        (digits & ((digits << 1) | prev_d)) |
+        (other & ((other << 1) | prev_o));
+    const after_space = (spaces << 1) | prev_s;
+    const non_ws_boundaries = ~whitespace & ~continued & ~after_space;
+
+    var split_ok = whitespace & (~whitespace >> 1);
+    if (!simd_bytes.isAsciiWs(input[base + 64])) {
+        split_ok |= whitespace & (@as(u64, 1) << 63);
+    }
+    const preceded_by_ws = (whitespace << 1) | prev_ws;
+    const ws_boundaries = whitespace & (~preceded_by_ws | split_ok);
+    var boundaries = non_ws_boundaries | ws_boundaries;
+
+    // Contractions are the only ASCII exception to the class-run algebra.
+    // Fix their internal starts in the mask rather than throwing the whole
+    // 64-byte batch back to the scalar regex matcher.
+    var candidates = apostrophes & boundaries;
+    while (candidates != 0) {
+        const rel: usize = @ctz(candidates);
+        candidates &= candidates - 1;
+        if (rel >= 61) return null;
+        const contraction_len: usize = switch (input[base + rel + 1]) {
+            's', 't', 'm', 'd' => 2,
+            'r' => if (input[base + rel + 2] == 'e') 3 else 0,
+            'v' => if (input[base + rel + 2] == 'e') 3 else 0,
+            'l' => if (input[base + rel + 2] == 'l') 3 else 0,
+            else => 0,
+        };
+        if (contraction_len != 0) {
+            boundaries &= ~(@as(u64, 1) << @intCast(rel + 1));
+            boundaries |= @as(u64, 1) << @intCast(rel + contraction_len);
+        }
+    }
+    return boundaries;
 }
 
 // Try the 7 GPT-2 alternatives in order at position `i`. Return raw match length.
@@ -976,6 +1294,62 @@ test "empty input yields zero spans" {
     try std.testing.expectEqual(@as(usize, 0), res.mapped.len);
 }
 
+test "SpanScanner is endpoint-identical to scalar GPT-2 matching" {
+    const cases = [_][]const u8{
+        "",
+        "A bright white light fills the room. It isn't dark; it's radiant.\n",
+        "foo\n\nbar\t baz\r\nqux  ",
+        "L'été à Montréal — Καλημέρα κόσμε — 你好世界 1234567890",
+        "wordwordwordwordwordwordwordwordwordwordwordwordwordwordwordword" ++
+            " can't won't he'd she'll we're they've punctuation!!! next",
+    };
+    for (cases) |input| {
+        var scanner = SpanScanner.init(input);
+        var scalar_pos: usize = 0;
+        while (scalar_pos < input.len) {
+            const expected = nextSpanEnd(input, scalar_pos);
+            try std.testing.expectEqual(expected, scanner.next().?);
+            scalar_pos = expected;
+        }
+        try std.testing.expect(scanner.next() == null);
+    }
+
+    var random = std.Random.DefaultPrng.init(0x7A70_6B5F_4750_5432);
+    var buf: [4096]u8 = undefined;
+    const alphabet = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 '.,!?\t\r\n";
+    for (&buf) |*byte| byte.* = alphabet[random.random().uintLessThan(usize, alphabet.len)];
+    var scanner = SpanScanner.init(&buf);
+    var scalar_pos: usize = 0;
+    while (scalar_pos < buf.len) {
+        const expected = nextSpanEnd(&buf, scalar_pos);
+        try std.testing.expectEqual(expected, scanner.next().?);
+        scalar_pos = expected;
+    }
+    try std.testing.expect(scanner.next() == null);
+}
+
+test "SpanScanner relative batches are endpoint-identical to scalar matching" {
+    var random = std.Random.DefaultPrng.init(0x7265_6C61_7469_7665);
+    var input: [16 * 1024]u8 = undefined;
+    const alphabet = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 '.,!?\t\r\n";
+    for (&input) |*byte| byte.* = alphabet[random.random().uintLessThan(usize, alphabet.len)];
+
+    var scanner = SpanScanner.init(&input);
+    var relative_ends: [264]u32 = undefined;
+    var scalar_pos: usize = 0;
+    while (scalar_pos < input.len) {
+        const batch = scanner.fillRelativeEnds(&relative_ends, 256);
+        try std.testing.expectEqual(scalar_pos, batch.base);
+        try std.testing.expect(batch.count != 0);
+        for (relative_ends[0..batch.count]) |relative_end| {
+            const expected = nextSpanEnd(&input, scalar_pos);
+            try std.testing.expectEqual(expected, batch.base + relative_end);
+            scalar_pos = expected;
+        }
+    }
+    try std.testing.expectEqual(@as(usize, 0), scanner.fillRelativeEnds(&relative_ends, 256).count);
+}
+
 test "isSafeCut true at end of input and at zero" {
     const s = "hello world";
     try std.testing.expect(isSafeCut(s, 0));
@@ -986,8 +1360,9 @@ test "isSafeCut false mid-word" {
     const s = "hello world";
     // pos 3 is mid `hello` — prev is `l`, not `\n`.
     try std.testing.expect(!isSafeCut(s, 3));
-    // pos 5 is between `o` and ` ` — prev `o` not `\n`.
-    try std.testing.expect(!isSafeCut(s, 5));
+    // pos 5 is the start of the whitespace run and is safe: the leading
+    // space remains entirely on the right with ` world`.
+    try std.testing.expect(isSafeCut(s, 5));
     // pos 6 is between ` ` and `w` — prev ` ` not `\n` — unsafe even though
     // next is a letter (single-shot ` ?\p{L}+` would absorb the space).
     try std.testing.expect(!isSafeCut(s, 6));
@@ -1008,8 +1383,10 @@ test "isSafeCut false after newline when next char is whitespace" {
     const s2 = "foo\n\nbar";
     // pos 4: prev `\n`, next `\n` — unsafe.
     try std.testing.expect(!isSafeCut(s2, 4));
-    // pos 5: prev `\n`, next `b` — safe.
-    try std.testing.expect(isSafeCut(s2, 5));
+    // pos 5: end of a two-newline run — unsafe. The safe equivalent is
+    // pos 3, immediately before the run begins.
+    try std.testing.expect(!isSafeCut(s2, 5));
+    try std.testing.expect(isSafeCut(s2, 3));
 }
 
 test "isSafeCut handles UTF-8 continuation bytes after newline" {

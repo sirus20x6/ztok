@@ -25,6 +25,7 @@ typedef uint32_t ztok_token_id;
 typedef struct ztok_pipeline ztok_pipeline;     /* opaque */
 typedef struct ztok_batch_pool ztok_batch_pool; /* opaque */
 typedef struct ztok_stream ztok_stream;         /* opaque (streaming encode) */
+typedef struct ztok_superposition_plan ztok_superposition_plan; /* experimental, opaque */
 
 typedef enum {
     ZTOK_OK = 0,
@@ -235,6 +236,138 @@ typedef enum {
 /* Select the pipeline's overlay domain. An unrecognized `domain` value
  * leaves the pipeline unchanged and returns ZTOK_ERR_INVALID_INPUT. */
 ztok_status ztok_pipeline_set_overlay_domain(ztok_pipeline* p, ztok_overlay_domain domain);
+
+/* --- experimental fixed superposition plans -----------------------
+ *
+ * A plan is an owned descriptor over ordinary token IDs and offsets.
+ * It never adds synthetic IDs to the vocabulary or changes encode().
+ * All integer enum values and the JSON schema are versioned from v1. */
+
+typedef enum {
+    ZTOK_SUPERPOSITION_FUSION_MEAN = 0,
+    ZTOK_SUPERPOSITION_FUSION_WEIGHTED_MEAN = 1,
+    ZTOK_SUPERPOSITION_FUSION_NORM_PRESERVING_MEAN = 2
+} ztok_superposition_fusion;
+
+typedef enum {
+    ZTOK_SUPERPOSITION_GROUP_FIXED_WINDOW = 0,
+    ZTOK_SUPERPOSITION_GROUP_PARTIAL_WINDOW = 1,
+    ZTOK_SUPERPOSITION_GROUP_PRESERVED_SPECIAL = 2,
+    ZTOK_SUPERPOSITION_GROUP_PRESERVED_BOUNDARY = 3,
+    ZTOK_SUPERPOSITION_GROUP_UNCOVERED_TAIL = 4
+} ztok_superposition_group_kind;
+
+typedef struct {
+    uint16_t group_size;
+    uint16_t stride; /* 0 = group_size */
+    uint8_t fusion;
+    uint8_t preserve_special_tokens;
+    uint8_t preserve_boundary_tokens;
+    uint8_t allow_partial_final_group;
+} ztok_superposition_fixed_config;
+
+/* Optional token-aligned arrays used by ztok_superposition_plan_build().
+ * Boolean masks contain canonical bytes (0 or 1). NULL means absent.
+ * source_weights must be finite and non-negative; each group's copied
+ * weights are normalized to sum to one. */
+typedef struct {
+    const uint8_t* special_token_mask;
+    const uint8_t* boundary_token_mask;
+    const uint8_t* hard_boundary_before;
+    const float* source_weights;
+} ztok_superposition_metadata;
+
+typedef struct {
+    uint32_t token_index;
+    ztok_token_id token_id;
+    uint32_t byte_start;
+    uint32_t byte_end;
+    float weight;
+} ztok_superposition_source;
+
+/* source_start/source_count address a range in
+ * ztok_superposition_plan_sources(). position_end and byte_end are
+ * exclusive. */
+typedef struct {
+    uint32_t output_index;
+    uint32_t source_start;
+    uint32_t source_count;
+    uint8_t fusion;
+    uint8_t kind;
+    uint16_t reserved;
+    uint32_t position_start;
+    uint32_t position_end;
+    uint32_t byte_start;
+    uint32_t byte_end;
+    float center_position;
+    float normalized_center;
+} ztok_superposition_group;
+
+/* Build from a caller-supplied ordinary encoding. Input arrays are copied.
+ * config_or_null uses the v1 defaults (group size 4, norm-preserving mean).
+ * metadata_or_null supplies optional protected-token/boundary/weight arrays. */
+ztok_superposition_plan* ztok_superposition_plan_build(
+    const ztok_token_id* ids,
+    const uint32_t* byte_starts,
+    const uint32_t* byte_ends,
+    size_t token_count,
+    const ztok_superposition_fixed_config* config_or_null,
+    const ztok_superposition_metadata* metadata_or_null,
+    ztok_status* out_status
+);
+
+/* Convenience path: ordinary encode-with-offsets plus fixed plan. Special
+ * added tokens are automatically protected when requested by the config. */
+ztok_superposition_plan* ztok_pipeline_encode_superposition(
+    const ztok_pipeline* p,
+    const char* input,
+    size_t input_len,
+    const ztok_superposition_fixed_config* config_or_null,
+    ztok_status* out_status
+);
+
+void ztok_superposition_plan_free(ztok_superposition_plan* plan);
+uint32_t ztok_superposition_schema_version(void);
+size_t ztok_superposition_plan_original_token_count(const ztok_superposition_plan* plan);
+size_t ztok_superposition_plan_output_token_count(const ztok_superposition_plan* plan);
+size_t ztok_superposition_plan_source_count(const ztok_superposition_plan* plan);
+const ztok_token_id* ztok_superposition_plan_original_ids(const ztok_superposition_plan* plan);
+ztok_status ztok_superposition_plan_original_offset(
+    const ztok_superposition_plan* plan,
+    size_t index,
+    uint32_t* out_start,
+    uint32_t* out_end
+);
+const ztok_superposition_source* ztok_superposition_plan_sources(
+    const ztok_superposition_plan* plan
+);
+const ztok_superposition_group* ztok_superposition_plan_groups(
+    const ztok_superposition_plan* plan
+);
+
+/* Deterministic ztok.superposition.v1 JSON. Uses the ordinary sizing
+ * protocol: out=NULL queries required bytes and returns BUFFER_TOO_SMALL. */
+ztok_status ztok_superposition_plan_json(
+    const ztok_superposition_plan* plan,
+    char* out,
+    size_t out_cap,
+    size_t* out_len
+);
+
+/* Build a ztok.ccss.v1 plan from a ztok.semantic_spans.v1 JSON exchange
+ * document. config_json may be NULL/0 for conservative defaults. The input
+ * carries caller-generated contextual span embeddings; libztok performs no
+ * model inference. Output follows the standard sizing protocol. */
+ztok_status ztok_ccss_build_json(
+    const char* semantic_json,
+    size_t semantic_json_len,
+    const char* config_json,
+    size_t config_json_len,
+    char* out,
+    size_t out_cap,
+    size_t* out_len
+);
+uint32_t ztok_ccss_schema_version(void);
 
 /* --- batch encode ------------------------------------------------- */
 

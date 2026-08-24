@@ -1,0 +1,13 @@
+{
+  "default_cosine_threshold": 0.92,
+  "minimum_score": 0.92,
+  "role_thresholds": {
+    "lighting_intensity": 0.88,
+    "color": 0.94,
+    "illumination_relation": 0.97
+  },
+  "fusion": "norm-preserving-mean",
+  "minimum_support_count": 2,
+  "maximum_cluster_size": 12,
+  "verbose_diagnostics": true
+}

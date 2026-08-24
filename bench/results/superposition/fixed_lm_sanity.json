@@ -1,0 +1,72 @@
+{
+  "schema": "ztok.fixed_superposition_sanity.v1",
+  "git_commit": "72c52c2da8e2456dbf6e5b2e0cdee68b8cb0c320",
+  "git_dirty": true,
+  "seed": 20260731,
+  "device": "cuda",
+  "tokenizer_identifier": "ztok byte_id / identity / identity",
+  "vocabulary_identifier": "byte values 0..255",
+  "embedding_model": "trainable TinyDecoder token embedding",
+  "embedding_layer": "input embedding",
+  "span_extraction_policy": "fixed contiguous token windows",
+  "dataset_sequences": 10000,
+  "sequence_length": 64,
+  "phase_steps": 100,
+  "recovery_steps": 50,
+  "model": {
+    "width": 64,
+    "layers": 2,
+    "vocabulary": 256
+  },
+  "conditions": [
+    {
+      "condition": "ordinary_baseline",
+      "group_size": 1,
+      "sequence_length_reduction": 0.0,
+      "initial_ordinary_validation_loss": 5.704114615917206,
+      "phase_training_loss": 5.2308669090271,
+      "ordinary_validation_loss_before_recovery": 5.225366413593292,
+      "recovery_training_loss": 4.880192279815674,
+      "ordinary_validation_loss_after_recovery": 4.85977977514267,
+      "phase_seconds": 0.808444046007935,
+      "recovery_seconds": 0.27380189998075366,
+      "total_seconds": 1.0822459459886886,
+      "phase_source_tokens_per_second": 506652.25629725243,
+      "recovery_tokens_per_second": 747986.0439770359,
+      "final_loss_delta_vs_baseline": 0.0
+    },
+    {
+      "condition": "fixed_2",
+      "group_size": 2,
+      "sequence_length_reduction": 0.5,
+      "initial_ordinary_validation_loss": 5.704114615917206,
+      "phase_training_loss": 4.992798328399658,
+      "ordinary_validation_loss_before_recovery": 5.316864252090454,
+      "recovery_training_loss": 4.906960964202881,
+      "ordinary_validation_loss_after_recovery": 4.906752824783325,
+      "phase_seconds": 0.6149768579634838,
+      "recovery_seconds": 0.2716560260159895,
+      "total_seconds": 0.8866328839794733,
+      "phase_source_tokens_per_second": 666041.32284978,
+      "recovery_tokens_per_second": 753894.5592465731,
+      "final_loss_delta_vs_baseline": 0.04697304964065552
+    },
+    {
+      "condition": "fixed_4",
+      "group_size": 4,
+      "sequence_length_reduction": 0.75,
+      "initial_ordinary_validation_loss": 5.704114615917206,
+      "phase_training_loss": 4.832858562469482,
+      "ordinary_validation_loss_before_recovery": 5.441242754459381,
+      "recovery_training_loss": 5.030138969421387,
+      "ordinary_validation_loss_after_recovery": 5.014710247516632,
+      "phase_seconds": 0.6671874420135282,
+      "recovery_seconds": 0.30690987705020234,
+      "total_seconds": 0.9740973190637305,
+      "phase_source_tokens_per_second": 613920.4280641943,
+      "recovery_tokens_per_second": 667296.8689323092,
+      "final_loss_delta_vs_baseline": 0.1549304723739624
+    }
+  ],
+  "note": "Bag loss averages next-group token log-probabilities; this is a plumbing sanity check, not a paper reproduction."
+}

@@ -1,0 +1,14 @@
+{
+  "schema": "ztok.nanogpt_superposition.campaign.v1",
+  "started_unix": 1785512726.6436634,
+  "updated_unix": 1785512726.6436641,
+  "state": "failed",
+  "current_index": 0,
+  "current_config": "/thearray/git/ztok/experiments/nanogpt_superposition/configs/fixed2_lr8p485_to_6_50_0_50/ztok-superposition-fixed2-lr8p485-to-6-50-0-50-456m-rwkv-ordinary_bpe-fixed2-norm_preserving_mean-b2bytes.json",
+  "completed": [],
+  "returncode": 130,
+  "reason": "Canceled: experiment used contiguous fixed grouping rather than dataset-level semantic/grammatical mapping.",
+  "configs": [
+    "/thearray/git/ztok/experiments/nanogpt_superposition/configs/fixed2_lr8p485_to_6_50_0_50/ztok-superposition-fixed2-lr8p485-to-6-50-0-50-456m-rwkv-ordinary_bpe-fixed2-norm_preserving_mean-b2bytes.json"
+  ]
+}

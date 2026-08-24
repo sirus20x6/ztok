@@ -1,0 +1,38 @@
+{
+  "schema": "ztok.nanogpt_superposition.config.v1",
+  "run_name": "debug-transformer-ordinary",
+  "seed": 260506546,
+  "architecture": "transformer",
+  "tokenizer_condition": "byte_debug",
+  "data_dir": "experiments/nanogpt_superposition/data/debug",
+  "output_dir": "experiments/nanogpt_superposition/runs/debug-transformer",
+  "model": {
+    "vocab_size": 256,
+    "width": 128,
+    "layers": 4,
+    "heads": 4,
+    "mlp_multiple": 3,
+    "max_sequence_length": 256,
+    "tie_embeddings": true
+  },
+  "training": {
+    "representation": "ordinary",
+    "group_size": 1,
+    "fusion": "norm_preserving_mean",
+    "target": "bag",
+    "schedule": "50/25/25",
+    "batch_size": 16,
+    "context_tokens": 256,
+    "max_steps": 100,
+    "eval_interval": 25,
+    "eval_batches": 8,
+    "checkpoint_interval": 50,
+    "learning_rate": 0.0003,
+    "min_learning_rate": 0.00003,
+    "warmup_steps": 10,
+    "weight_decay": 0.1,
+    "grad_clip": 1.0,
+    "mixed_precision": false,
+    "device": "cpu"
+  }
+}

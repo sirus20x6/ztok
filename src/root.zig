@@ -19,11 +19,16 @@ pub const pretok = @import("pretok.zig");
 pub const model = @import("model.zig");
 pub const decoder = @import("decoder.zig");
 pub const pipeline = @import("pipeline.zig");
+pub const pretoken_cache = @import("pretoken_cache.zig");
 pub const fingerprint = @import("fingerprint.zig");
 pub const thread_pool = @import("thread_pool.zig");
 pub const connection_pool = @import("connection_pool.zig");
 pub const trace = @import("trace.zig");
 pub const ngram = @import("ngram.zig");
+pub const merge_graph = @import("merge_graph.zig");
+pub const superposition = @import("superposition.zig");
+pub const semantic_superposition = @import("semantic_superposition.zig");
+pub const semantic_exchange = @import("semantic_exchange.zig");
 
 // Models
 pub const bpe = @import("bpe.zig");
@@ -140,6 +145,9 @@ pub const Provenance = token.Provenance;
 pub const Pipeline = pipeline.Pipeline;
 pub const Overlay = pipeline.Overlay;
 pub const EncodingWithOverlays = pipeline.EncodingWithOverlays;
+pub const ChunkedEncodeCache = pipeline.ChunkedEncodeCache;
+pub const EncodedChunk = pipeline.EncodedChunk;
+pub const ChunkedEncoding = pipeline.ChunkedEncoding;
 pub const Normalizer = normalizer.Normalizer;
 pub const PreTokenizer = pretok.PreTokenizer;
 pub const Model = model.Model;
@@ -179,6 +187,9 @@ test {
     _ = pipeline;
     _ = fingerprint;
     _ = trace;
+    _ = superposition;
+    _ = semantic_superposition;
+    _ = semantic_exchange;
     _ = bpe;
     _ = simd_min;
     _ = simd_bytes;

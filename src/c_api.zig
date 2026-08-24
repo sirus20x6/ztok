@@ -41,6 +41,9 @@ const auto_detect = @import("auto_detect.zig");
 const StreamEncoder = @import("stream.zig").StreamEncoder;
 const ngram = @import("ngram.zig");
 const chunk = @import("chunk.zig");
+const superposition = @import("superposition.zig");
+const semantic_superposition = @import("semantic_superposition.zig");
+const semantic_exchange = @import("semantic_exchange.zig");
 
 // c_allocator (libc malloc) is universally safe across dlopen/.so
 // contexts. smp_allocator's threadlocal `thread_index` plus its global
@@ -76,6 +79,154 @@ const Config = extern struct {
     model: c_uint,
     decoder: c_uint,
 };
+
+const SuperpositionFixedConfig = extern struct {
+    group_size: u16,
+    /// Zero means "same as group_size".
+    stride: u16,
+    fusion: u8,
+    preserve_special_tokens: u8,
+    preserve_boundary_tokens: u8,
+    allow_partial_final_group: u8,
+};
+
+const SuperpositionMetadata = extern struct {
+    /// Optional arrays aligned 1:1 with the source token stream. Boolean
+    /// arrays use canonical bytes (0=false, 1=true).
+    special_token_mask: ?[*]const u8,
+    boundary_token_mask: ?[*]const u8,
+    hard_boundary_before: ?[*]const u8,
+    source_weights: ?[*]const f32,
+};
+
+const CSuperpositionSource = extern struct {
+    token_index: u32,
+    token_id: TokenId,
+    byte_start: u32,
+    byte_end: u32,
+    weight: f32,
+};
+
+const CSuperpositionGroup = extern struct {
+    output_index: u32,
+    source_start: u32,
+    source_count: u32,
+    fusion: u8,
+    kind: u8,
+    reserved: u16 = 0,
+    position_start: u32,
+    position_end: u32,
+    byte_start: u32,
+    byte_end: u32,
+    center_position: f32,
+    normalized_center: f32,
+};
+
+const SuperpositionPlanHandle = struct {
+    plan: superposition.SuperpositionPlan,
+    ids: []TokenId,
+    offsets: []@import("token.zig").Span,
+    c_sources: []CSuperpositionSource,
+    c_groups: []CSuperpositionGroup,
+};
+
+fn deinitSuperpositionHandle(h: *SuperpositionPlanHandle) void {
+    h.plan.deinit(gpa);
+    gpa.free(h.ids);
+    gpa.free(h.offsets);
+    gpa.free(h.c_sources);
+    gpa.free(h.c_groups);
+    gpa.destroy(h);
+}
+
+fn fixedConfigFromC(c_or_null: ?*const SuperpositionFixedConfig) !superposition.FixedSuperpositionConfig {
+    const c = c_or_null orelse return .{};
+    if (c.group_size == 0) return error.InvalidInput;
+    if (c.preserve_special_tokens > 1 or
+        c.preserve_boundary_tokens > 1 or
+        c.allow_partial_final_group > 1) return error.InvalidInput;
+
+    const fusion: superposition.FusionKind = switch (c.fusion) {
+        0 => .mean,
+        1 => .weighted_mean,
+        2 => .norm_preserving_mean,
+        else => return error.InvalidInput,
+    };
+    return .{
+        .group_size = c.group_size,
+        .stride = if (c.stride == 0) null else c.stride,
+        .fusion = fusion,
+        .preserve_special_tokens = c.preserve_special_tokens != 0,
+        .preserve_boundary_tokens = c.preserve_boundary_tokens != 0,
+        .allow_partial_final_group = c.allow_partial_final_group != 0,
+    };
+}
+
+fn boolMaskFromC(ptr: ?[*]const u8, len: usize) !?[]bool {
+    const values = ptr orelse return null;
+    const result = try gpa.alloc(bool, len);
+    errdefer gpa.free(result);
+    for (values[0..len], 0..) |value, i| {
+        if (value > 1) return error.InvalidInput;
+        result[i] = value != 0;
+    }
+    return result;
+}
+
+fn makeSuperpositionHandle(
+    ids: []TokenId,
+    offsets: []@import("token.zig").Span,
+    plan: superposition.SuperpositionPlan,
+) !*SuperpositionPlanHandle {
+    errdefer {
+        gpa.free(ids);
+        gpa.free(offsets);
+        var owned_plan = plan;
+        owned_plan.deinit(gpa);
+    }
+
+    const c_sources = try gpa.alloc(CSuperpositionSource, plan.source_storage.len);
+    errdefer gpa.free(c_sources);
+    for (plan.source_storage, 0..) |source, i| {
+        c_sources[i] = .{
+            .token_index = source.token_index,
+            .token_id = source.token_id,
+            .byte_start = source.byte_start,
+            .byte_end = source.byte_end,
+            .weight = source.weight,
+        };
+    }
+
+    const c_groups = try gpa.alloc(CSuperpositionGroup, plan.groups.len);
+    errdefer gpa.free(c_groups);
+    var source_start: usize = 0;
+    for (plan.groups, 0..) |group, i| {
+        c_groups[i] = .{
+            .output_index = group.output_index,
+            .source_start = @intCast(source_start),
+            .source_count = @intCast(group.sources.len),
+            .fusion = @intFromEnum(group.fusion),
+            .kind = @intFromEnum(group.kind),
+            .position_start = group.position_start,
+            .position_end = group.position_end,
+            .byte_start = group.byte_start,
+            .byte_end = group.byte_end,
+            .center_position = group.center_position,
+            .normalized_center = group.normalized_center,
+        };
+        source_start += group.sources.len;
+    }
+
+    const h = try gpa.create(SuperpositionPlanHandle);
+    h.* = .{
+        .plan = plan,
+        .ids = ids,
+        .offsets = offsets,
+        .c_sources = c_sources,
+        .c_groups = c_groups,
+    };
+    return h;
+}
 
 // --- handle ----------------------------------------------------------
 
@@ -756,6 +907,262 @@ export fn ztok_encode_with_overlays(
     @memcpy(out_ids.?[0..n], enc.ids[0..n]);
     for (chans, 0..) |c, i| @memcpy(c.out.?[0..n], enc.overlays[i].values[0..n]);
     return ZTOK_OK;
+}
+
+// --- experimental fixed superposition plans -------------------------
+//
+// These functions are strictly additive. They build an owned descriptor
+// over ordinary token ids and offsets; no synthetic ids enter the pipeline
+// or vocabulary.
+
+export fn ztok_superposition_plan_build(
+    ids_ptr: ?[*]const TokenId,
+    byte_starts_ptr: ?[*]const u32,
+    byte_ends_ptr: ?[*]const u32,
+    token_count: usize,
+    config_ptr: ?*const SuperpositionFixedConfig,
+    metadata_ptr: ?*const SuperpositionMetadata,
+    out_status: ?*c_int,
+) ?*SuperpositionPlanHandle {
+    if (token_count > 0 and
+        (ids_ptr == null or byte_starts_ptr == null or byte_ends_ptr == null))
+    {
+        setStatus(out_status, ZTOK_ERR_INVALID_INPUT);
+        return null;
+    }
+
+    var config = fixedConfigFromC(config_ptr) catch {
+        setStatus(out_status, ZTOK_ERR_INVALID_INPUT);
+        return null;
+    };
+
+    const special_mask = boolMaskFromC(
+        if (metadata_ptr) |m| m.special_token_mask else null,
+        token_count,
+    ) catch |e| {
+        setStatus(out_status, if (e == error.OutOfMemory) ZTOK_ERR_OUT_OF_MEMORY else ZTOK_ERR_INVALID_INPUT);
+        return null;
+    };
+    defer if (special_mask) |mask| gpa.free(mask);
+    const boundary_mask = boolMaskFromC(
+        if (metadata_ptr) |m| m.boundary_token_mask else null,
+        token_count,
+    ) catch |e| {
+        setStatus(out_status, if (e == error.OutOfMemory) ZTOK_ERR_OUT_OF_MEMORY else ZTOK_ERR_INVALID_INPUT);
+        return null;
+    };
+    defer if (boundary_mask) |mask| gpa.free(mask);
+    const hard_boundary = boolMaskFromC(
+        if (metadata_ptr) |m| m.hard_boundary_before else null,
+        token_count,
+    ) catch |e| {
+        setStatus(out_status, if (e == error.OutOfMemory) ZTOK_ERR_OUT_OF_MEMORY else ZTOK_ERR_INVALID_INPUT);
+        return null;
+    };
+    defer if (hard_boundary) |mask| gpa.free(mask);
+
+    config.special_token_mask = special_mask;
+    config.boundary_token_mask = boundary_mask;
+    config.hard_boundary_before = hard_boundary;
+    if (metadata_ptr) |metadata| {
+        if (metadata.source_weights) |weights| {
+            config.source_weights = weights[0..token_count];
+        }
+    }
+
+    const ids = gpa.alloc(TokenId, token_count) catch {
+        setStatus(out_status, ZTOK_ERR_OUT_OF_MEMORY);
+        return null;
+    };
+    const offsets = gpa.alloc(@import("token.zig").Span, token_count) catch {
+        gpa.free(ids);
+        setStatus(out_status, ZTOK_ERR_OUT_OF_MEMORY);
+        return null;
+    };
+
+    if (token_count > 0) {
+        @memcpy(ids, ids_ptr.?[0..token_count]);
+        for (offsets, 0..) |*offset, i| {
+            offset.* = .{
+                .start = byte_starts_ptr.?[i],
+                .end = byte_ends_ptr.?[i],
+            };
+        }
+    }
+
+    const plan = superposition.buildFixedPlan(gpa, ids, offsets, config) catch |e| {
+        gpa.free(ids);
+        gpa.free(offsets);
+        setStatus(out_status, if (e == error.OutOfMemory) ZTOK_ERR_OUT_OF_MEMORY else ZTOK_ERR_INVALID_INPUT);
+        return null;
+    };
+    const handle = makeSuperpositionHandle(ids, offsets, plan) catch |e| {
+        setStatus(out_status, mapErr(e));
+        return null;
+    };
+    setStatus(out_status, ZTOK_OK);
+    return handle;
+}
+
+export fn ztok_pipeline_encode_superposition(
+    p: ?*const Pipeline,
+    input: [*]const u8,
+    input_len: usize,
+    config_ptr: ?*const SuperpositionFixedConfig,
+    out_status: ?*c_int,
+) ?*SuperpositionPlanHandle {
+    const pp = p orelse {
+        setStatus(out_status, ZTOK_ERR_INVALID_INPUT);
+        return null;
+    };
+    const config = fixedConfigFromC(config_ptr) catch {
+        setStatus(out_status, ZTOK_ERR_INVALID_INPUT);
+        return null;
+    };
+    const h = handleFromConstPtr(pp);
+    const encoded = h.pipeline.encodeWithSuperpositionPlan(
+        gpa,
+        input[0..input_len],
+        config,
+    ) catch |e| {
+        setStatus(out_status, if (e == error.OutOfMemory) ZTOK_ERR_OUT_OF_MEMORY else ZTOK_ERR_INVALID_INPUT);
+        return null;
+    };
+    const handle = makeSuperpositionHandle(encoded.ids, encoded.offsets, encoded.plan) catch |e| {
+        setStatus(out_status, mapErr(e));
+        return null;
+    };
+    setStatus(out_status, ZTOK_OK);
+    return handle;
+}
+
+export fn ztok_superposition_plan_free(plan: ?*SuperpositionPlanHandle) void {
+    if (plan) |p| deinitSuperpositionHandle(p);
+}
+
+export fn ztok_superposition_schema_version() u32 {
+    return superposition.SuperpositionSchemaVersion;
+}
+
+export fn ztok_superposition_plan_original_token_count(plan: ?*const SuperpositionPlanHandle) usize {
+    return if (plan) |p| p.ids.len else 0;
+}
+
+export fn ztok_superposition_plan_output_token_count(plan: ?*const SuperpositionPlanHandle) usize {
+    return if (plan) |p| p.c_groups.len else 0;
+}
+
+export fn ztok_superposition_plan_source_count(plan: ?*const SuperpositionPlanHandle) usize {
+    return if (plan) |p| p.c_sources.len else 0;
+}
+
+export fn ztok_superposition_plan_original_ids(
+    plan: ?*const SuperpositionPlanHandle,
+) ?[*]const TokenId {
+    const p = plan orelse return null;
+    return if (p.ids.len == 0) null else p.ids.ptr;
+}
+
+export fn ztok_superposition_plan_original_offset(
+    plan: ?*const SuperpositionPlanHandle,
+    index: usize,
+    out_start: ?*u32,
+    out_end: ?*u32,
+) c_int {
+    const p = plan orelse return ZTOK_ERR_INVALID_INPUT;
+    if (index >= p.offsets.len or out_start == null or out_end == null)
+        return ZTOK_ERR_INVALID_INPUT;
+    out_start.?.* = p.offsets[index].start;
+    out_end.?.* = p.offsets[index].end;
+    return ZTOK_OK;
+}
+
+export fn ztok_superposition_plan_sources(
+    plan: ?*const SuperpositionPlanHandle,
+) ?[*]const CSuperpositionSource {
+    const p = plan orelse return null;
+    return if (p.c_sources.len == 0) null else p.c_sources.ptr;
+}
+
+export fn ztok_superposition_plan_groups(
+    plan: ?*const SuperpositionPlanHandle,
+) ?[*]const CSuperpositionGroup {
+    const p = plan orelse return null;
+    return if (p.c_groups.len == 0) null else p.c_groups.ptr;
+}
+
+export fn ztok_superposition_plan_json(
+    plan: ?*const SuperpositionPlanHandle,
+    out: ?[*]u8,
+    out_cap: usize,
+    out_len: ?*usize,
+) c_int {
+    const p = plan orelse return ZTOK_ERR_INVALID_INPUT;
+    const len_ptr = out_len orelse return ZTOK_ERR_INVALID_INPUT;
+    const json = superposition.toJsonAlloc(gpa, &p.plan) catch |e| return mapErr(e);
+    defer gpa.free(json);
+    len_ptr.* = json.len;
+    if (out == null or out_cap < json.len) return ZTOK_ERR_BUFFER_TOO_SMALL;
+    @memcpy(out.?[0..json.len], json);
+    return ZTOK_OK;
+}
+
+/// Build a complete `ztok.ccss.v1` plan from a
+/// `ztok.semantic_spans.v1` JSON document. This exchange-oriented entry
+/// point keeps model embeddings outside libztok while giving every language
+/// binding one stable, versioned ABI.
+export fn ztok_ccss_build_json(
+    semantic_json_ptr: ?[*]const u8,
+    semantic_json_len: usize,
+    config_json_ptr: ?[*]const u8,
+    config_json_len: usize,
+    out: ?[*]u8,
+    out_cap: usize,
+    out_len: ?*usize,
+) c_int {
+    const input_ptr = semantic_json_ptr orelse return ZTOK_ERR_INVALID_INPUT;
+    const len_ptr = out_len orelse return ZTOK_ERR_INVALID_INPUT;
+    if (config_json_len > 0 and config_json_ptr == null)
+        return ZTOK_ERR_INVALID_INPUT;
+
+    var owned = semantic_exchange.loadFromBytes(
+        gpa,
+        input_ptr[0..semantic_json_len],
+    ) catch |e| return if (e == error.OutOfMemory)
+        ZTOK_ERR_OUT_OF_MEMORY
+    else
+        ZTOK_ERR_INVALID_INPUT;
+    defer owned.deinit();
+    const config = if (config_json_ptr) |config_ptr|
+        owned.loadConfig(config_ptr[0..config_json_len]) catch |e| return if (e == error.OutOfMemory)
+            ZTOK_ERR_OUT_OF_MEMORY
+        else
+            ZTOK_ERR_INVALID_INPUT
+    else
+        owned.defaultConfig() catch |e| return mapErr(e);
+    var plan = semantic_superposition.buildSemanticPlan(
+        gpa,
+        owned.input,
+        config,
+    ) catch |e| return if (e == error.OutOfMemory)
+        ZTOK_ERR_OUT_OF_MEMORY
+    else
+        ZTOK_ERR_INVALID_INPUT;
+    defer plan.deinit(gpa);
+    const json = semantic_superposition.toJsonAlloc(
+        gpa,
+        owned.input,
+        &plan,
+    ) catch |e| return mapErr(e);
+    defer gpa.free(json);
+    len_ptr.* = json.len;
+    if (out == null or out_cap < json.len) return ZTOK_ERR_BUFFER_TOO_SMALL;
+    @memcpy(out.?[0..json.len], json);
+    return ZTOK_OK;
+}
+
+export fn ztok_ccss_schema_version() u32 {
+    return semantic_superposition.CcssSchemaVersion;
 }
 
 // Select which domain overlay channels (e.g. x86-64 opcode_class /
@@ -1950,6 +2357,144 @@ test "ids_free handles per-input buffer with header intact after batch" {
             ztok_ids_free(out_ids[0]);
         }
     }
+}
+
+test "C ABI fixed superposition plan preserves ids offsets metadata and JSON" {
+    const ids = [_]TokenId{ 10, 11, 99, 12, 13 };
+    const starts = [_]u32{ 0, 1, 2, 7, 8 };
+    const ends = [_]u32{ 1, 2, 7, 8, 9 };
+    const specials = [_]u8{ 0, 0, 1, 0, 0 };
+    const metadata: SuperpositionMetadata = .{
+        .special_token_mask = &specials,
+        .boundary_token_mask = null,
+        .hard_boundary_before = null,
+        .source_weights = null,
+    };
+    const config: SuperpositionFixedConfig = .{
+        .group_size = 4,
+        .stride = 0,
+        .fusion = 2,
+        .preserve_special_tokens = 1,
+        .preserve_boundary_tokens = 1,
+        .allow_partial_final_group = 1,
+    };
+    var status: c_int = -1;
+    const plan = ztok_superposition_plan_build(
+        &ids,
+        &starts,
+        &ends,
+        ids.len,
+        &config,
+        &metadata,
+        &status,
+    );
+    try testing.expect(plan != null);
+    defer ztok_superposition_plan_free(plan);
+    try testing.expectEqual(ZTOK_OK, status);
+    try testing.expectEqual(@as(u32, 1), ztok_superposition_schema_version());
+    try testing.expectEqual(ids.len, ztok_superposition_plan_original_token_count(plan));
+    try testing.expectEqual(@as(usize, 3), ztok_superposition_plan_output_token_count(plan));
+    try testing.expectEqualSlices(TokenId, &ids, ztok_superposition_plan_original_ids(plan).?[0..ids.len]);
+
+    var start: u32 = 0;
+    var end: u32 = 0;
+    try testing.expectEqual(
+        ZTOK_OK,
+        ztok_superposition_plan_original_offset(plan, 2, &start, &end),
+    );
+    try testing.expectEqual(@as(u32, 2), start);
+    try testing.expectEqual(@as(u32, 7), end);
+
+    const groups = ztok_superposition_plan_groups(plan).?;
+    try testing.expectEqual(@intFromEnum(superposition.FixedGroupKind.preserved_special), groups[1].kind);
+    try testing.expectEqual(@as(u32, 1), groups[1].source_count);
+
+    var json_len: usize = 0;
+    try testing.expectEqual(
+        ZTOK_ERR_BUFFER_TOO_SMALL,
+        ztok_superposition_plan_json(plan, null, 0, &json_len),
+    );
+    const json = try testing.allocator.alloc(u8, json_len);
+    defer testing.allocator.free(json);
+    try testing.expectEqual(
+        ZTOK_OK,
+        ztok_superposition_plan_json(plan, json.ptr, json.len, &json_len),
+    );
+    try testing.expect(std.mem.indexOf(u8, json, "\"schema\":\"ztok.superposition.v1\"") != null);
+}
+
+test "C ABI pipeline superposition is opt-in and ordinary ids are identical" {
+    const cfg: Config = .{ .normalizer = 0, .pre_tokenizer = 0, .model = 0, .decoder = 0 };
+    const pipeline = ztok_pipeline_new(&cfg, null);
+    defer ztok_pipeline_free(pipeline);
+    const input = "superposition";
+
+    var ordinary: [64]TokenId = undefined;
+    var ordinary_len: usize = 0;
+    try testing.expectEqual(
+        ZTOK_OK,
+        ztok_encode(pipeline, input.ptr, input.len, &ordinary, ordinary.len, &ordinary_len),
+    );
+
+    var status: c_int = -1;
+    const plan = ztok_pipeline_encode_superposition(
+        pipeline,
+        input.ptr,
+        input.len,
+        null,
+        &status,
+    );
+    try testing.expect(plan != null);
+    defer ztok_superposition_plan_free(plan);
+    try testing.expectEqual(ZTOK_OK, status);
+    try testing.expectEqualSlices(
+        TokenId,
+        ordinary[0..ordinary_len],
+        ztok_superposition_plan_original_ids(plan).?[0..ordinary_len],
+    );
+}
+
+test "C ABI CCSS JSON exchange produces versioned auditable plan" {
+    const input =
+        \\{"schema":"ztok.semantic_spans.v1","image_id":"c-api","captions":[
+        \\{"caption_id":0,"text":"bright","spans":[
+        \\{"span_id":"a","token_start":0,"token_end":1,"byte_start":0,"byte_end":6,
+        \\"role":"lighting_intensity","entity_id":"light","embedding":[1.0,0.0]}]},
+        \\{"caption_id":1,"text":"brilliant","spans":[
+        \\{"span_id":"b","token_start":0,"token_end":1,"byte_start":0,"byte_end":9,
+        \\"role":"lighting_intensity","entity_id":"light","embedding":[0.999,0.02]}]}
+        \\]}
+    ;
+    try testing.expectEqual(@as(u32, 1), ztok_ccss_schema_version());
+    var output_len: usize = 0;
+    try testing.expectEqual(
+        ZTOK_ERR_BUFFER_TOO_SMALL,
+        ztok_ccss_build_json(
+            input.ptr,
+            input.len,
+            null,
+            0,
+            null,
+            0,
+            &output_len,
+        ),
+    );
+    const output = try testing.allocator.alloc(u8, output_len);
+    defer testing.allocator.free(output);
+    try testing.expectEqual(
+        ZTOK_OK,
+        ztok_ccss_build_json(
+            input.ptr,
+            input.len,
+            null,
+            0,
+            output.ptr,
+            output.len,
+            &output_len,
+        ),
+    );
+    try testing.expect(std.mem.indexOf(u8, output, "\"schema\":\"ztok.ccss.v1\"") != null);
+    try testing.expect(std.mem.indexOf(u8, output, "\"members\":[\"a\",\"b\"]") != null);
 }
 
 // --- post-1.18 agent C: auto_detect + streaming C ABI -----------------

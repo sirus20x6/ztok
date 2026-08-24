@@ -1,0 +1,12 @@
+{
+  "schema": "ztok.nanogpt_superposition.campaign.v1",
+  "started_unix": 1785510847.3812194,
+  "updated_unix": 1785511422.6103044,
+  "state": "completed",
+  "completed": [
+    "/thearray/git/ztok/experiments/nanogpt_superposition/configs/fixed2_6p5_grad_sqrt2_phase12/ztok-superposition-fixed2-6p5-grad-sqrt2-phase12-456m-rwkv-ordinary_bpe-fixed2-norm_preserving_mean-b2bytes.json"
+  ],
+  "configs": [
+    "/thearray/git/ztok/experiments/nanogpt_superposition/configs/fixed2_6p5_grad_sqrt2_phase12/ztok-superposition-fixed2-6p5-grad-sqrt2-phase12-456m-rwkv-ordinary_bpe-fixed2-norm_preserving_mean-b2bytes.json"
+  ]
+}

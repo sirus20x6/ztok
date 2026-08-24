@@ -1,0 +1,49 @@
+{
+  "alternative_count_distribution": {
+    "2": 2378,
+    "3": 889,
+    "4": 559,
+    "5": 526,
+    "6": 356,
+    "7": 179
+  },
+  "answer_counts": {
+    "False": 2713,
+    "True": 2713,
+    "Unknown": 4574
+  },
+  "context_count": 2713,
+  "dataset": "wentingzhao/proofwriter",
+  "eligible_row_count": 7282,
+  "eligible_row_fraction": 0.7282,
+  "expanded_slot_kinds": {
+    "entity": 457,
+    "predicate": 4430
+  },
+  "expanded_statement_kinds": {
+    "fact": 4635,
+    "rule": 252
+  },
+  "expansion_count": 4887,
+  "expansion_inventory_compression_ratio": 0.3189878826725269,
+  "expansion_inventory_output_logical_units": 20902,
+  "expansion_inventory_source_logical_units": 65526,
+  "maximum_alternatives": 8,
+  "revision": "c468a2e9a467cc3ed8a90c2caa318e620fe59f41",
+  "row_count": 10000,
+  "safety": {
+    "one_logical_slot_only": true,
+    "same_context_only": true,
+    "same_statement_kind": true,
+    "same_truth_class": true,
+    "single_ztok_token_alternatives_only": true
+  },
+  "schema": "ztok.proofwriter_statement_expansions.v1",
+  "split": "train",
+  "statement_counts": {
+    "fact": 22320,
+    "question": 10000,
+    "rule": 11019
+  },
+  "tokenizer": "/thearray/git/ztok/experiments/nanogpt_superposition/data/fineweb_edu_100m/bpe32k.tiktoken"
+}

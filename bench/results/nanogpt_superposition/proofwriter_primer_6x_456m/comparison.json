@@ -1,0 +1,46 @@
+{
+  "schema": "ztok.nanogpt_superposition.comparison.v1",
+  "conclusion": "negative",
+  "baseline_run": "ztok-superposition-lrablation-6x-456m-rwkv-ordinary_bpe-ordinary1-norm_preserving_mean-b2bytes",
+  "primer_run": "ztok-rwkv-6x-proofwriter-statement-primer-1epoch-456m",
+  "seed": 260506546,
+  "parameters": 35124096,
+  "git_commit": "72c52c2da8e2456dbf6e5b2e0cdee68b8cb0c320",
+  "tokenizer_sha256": "cdf67b315ad2299aef10bd6a8b4894a0d982570bda2c4b06d000024dda2d7995",
+  "primer": {
+    "inventory_expansions": 121146,
+    "usable_expansions": 111685,
+    "usable_fraction": 0.921904148713123,
+    "epochs": 1,
+    "optimizer_steps": 449,
+    "explicit_source_bytes": 5400712,
+    "token_equivalents": 652000,
+    "model_positions": 540315,
+    "estimated_flops": 125713958549760,
+    "gpu_seconds": 31.37667352682911
+  },
+  "matched_ordinary_training": {
+    "optimizer_steps": 7003,
+    "source_bytes": 455725318,
+    "token_equivalents": 106725720,
+    "model_positions": 106669696,
+    "estimated_flops": 24818614588637184
+  },
+  "baseline": {
+    "ordinary_validation_loss": 3.8954076766967773,
+    "validation_bits_per_byte": 1.341767664494937,
+    "gpu_seconds": 714.7271631716285
+  },
+  "primer_then_ordinary": {
+    "ordinary_validation_loss": 3.982454001903534,
+    "validation_bits_per_byte": 1.3717506480923245,
+    "ordinary_gpu_seconds": 683.9555405246792,
+    "total_gpu_seconds": 715.3322140515083
+  },
+  "delta": {
+    "validation_bits_per_byte_percent": 2.234588326338427,
+    "ordinary_validation_loss_percent": 2.2345883263384048,
+    "estimated_flops_percent": 0.5065309270216726,
+    "measured_total_gpu_seconds_percent": 0.08465480410664306
+  }
+}
