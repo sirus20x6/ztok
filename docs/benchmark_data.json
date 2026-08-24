@@ -114,5 +114,57 @@
       "ztok_ids": 2887647,
       "reference_ids": 2889763
     }
-  ]
+  ],
+  "gpt2_gigatoken": {
+    "measured_on": "2026-08-24",
+    "source_commit": "84850d0d0b44dad039869f833bf275e0bba1d91f",
+    "corpus": {
+      "bytes": 500000000,
+      "sha256": "53049083be4789a6c42ef9003a34f968614ae03fdc12a98cb544f66f00ad4528",
+      "description": "deterministic 500 MB FineWeb-derived English corpus"
+    },
+    "tokenizer": {
+      "name": "GPT-2 HF ByteLevel BPE",
+      "vocab_size": 50257,
+      "output_ids": 108735122
+    },
+    "shape": {
+      "workers": 32,
+      "chunks": 1024,
+      "ztok_iterations": 5,
+      "ztok_cache_entries_per_worker": 262144
+    },
+    "ztok": {
+      "contiguous": {
+        "aggregate_mb_s": 3895.7,
+        "cold_mb_s": 3145.2,
+        "warm_mb_s": 4142.8
+      },
+      "ordered_no_gather": {
+        "aggregate_mb_s": 4154.4,
+        "cold_mb_s": 3551.7,
+        "warm_mb_s": 4338.5
+      }
+    },
+    "gigatoken": {
+      "commit": "fac0114b37120ec8a76362e9ee8e1c742aaafaef",
+      "workers": 32,
+      "one_pass_mb_s": [4394, 4060, 4228, 4154, 4159, 3850, 3713, 3768, 3934, 4103],
+      "median_mb_s": 4081.5,
+      "minimum_mb_s": 3713,
+      "maximum_mb_s": 4394
+    },
+    "pre_optimization_baseline": {
+      "cold_mb_s": 1790,
+      "warm_mb_s": 2610
+    },
+    "correctness": {
+      "exact_id_match": true
+    },
+    "notes": [
+      "ztok cold and warm values are measured inside a persistent five-iteration process.",
+      "GigaToken values are ten independent fresh-process one-pass samples; host load varied.",
+      "Ordered no-gather returns chunk-ordered ID spans and excludes final contiguous gathering."
+    ]
+  }
 }

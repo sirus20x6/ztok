@@ -1,5 +1,32 @@
 # Benchmark results — ztok 1.28.0 vs competitors
 
+## GPT-2 dataset throughput versus GigaToken — 2026-08-24
+
+Reference host: AMD EPYC 7473X (24 cores / 48 threads), 32 workers,
+Zig ReleaseFast. Both implementations encoded the same deterministic
+500,000,000-byte FineWeb-derived corpus with the GPT-2 HF ByteLevel BPE
+vocabulary and emitted exactly **108,735,122 identical token IDs**.
+
+| implementation / output shape | cold MB/s | warm MB/s | aggregate MB/s |
+|---|---:|---:|---:|
+| ztok contiguous IDs | 3,145.2 | 4,142.8 | 3,895.7 |
+| ztok ordered no-gather spans | 3,551.7 | 4,338.5 | 4,154.4 |
+| GigaToken fresh-process one-pass | 3,713–4,394 | median 4,081.5 | median 4,081.5 |
+
+The ztok values come from one persistent five-iteration process; “cold”
+is its first iteration and “warm” summarizes subsequent iterations.
+GigaToken commit `fac0114b37120ec8a76362e9ee8e1c742aaafaef` was measured in ten
+independent fresh-process, one-pass samples. Because those lifetimes differ,
+the chart reports the modes separately and does not claim the warm result as
+an end-to-end startup-latency win. The ordered no-gather API returns
+chunk-ordered ID spans and intentionally excludes final contiguous gathering.
+
+Against ztok's pre-optimization measurements on this workload, contiguous
+cold throughput improved from approximately 1,790 to 3,145 MB/s (**+75.7%**),
+and warm throughput from approximately 2,610 to 4,143 MB/s (**+58.7%**).
+Corpus SHA-256, raw samples, shape parameters, and chart inputs are recorded
+in `docs/benchmark_data.json`.
+
 ## 1.28 chart refresh — 2026-07-10
 
 Reference host: AMD EPYC 7473X (24 cores / 48 threads), Zig 0.16,

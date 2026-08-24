@@ -76,6 +76,13 @@ single-thread, same 9 MB corpus and respective vocab per pair:
 
 <sub>Median of three runs: **1.9×** vs tiktoken (cl100k), **7.3×** vs HF tokenizers (gpt2), **2.1×** vs SentencePiece BPE (llama2), **1.6×** vs SentencePiece Unigram (t5). Counts are exact for cl100k/Llama-2 BPE and differ by less than 0.1% for GPT-2/T5. Raw data: `docs/benchmark_data.json`. Regenerate with `python3 docs/competitors_chart.py`.</sub>
 
+For the high-throughput dataset path, ztok now reaches GigaToken-class
+performance on a 500 MB exact-output GPT-2 comparison:
+
+![ztok versus GigaToken GPT-2 throughput on the same 500 MB corpus](docs/gigatoken.png)
+
+<sub>ztok contiguous: **3.145 GB/s cold, 4.143 GB/s warm**; ordered no-gather: **3.552 GB/s cold, 4.339 GB/s warm**. GigaToken median: **4.082 GB/s** across ten fresh-process samples (3.713–4.394 GB/s). Same 500,000,000 bytes, vocabulary, 32 workers, and **108,735,122 bit-identical IDs**. The process-lifetime difference is shown explicitly rather than treated as an apples-to-apples latency result. Raw data: `docs/benchmark_data.json`. Regenerate with `python3 docs/gigatoken_chart.py`.</sub>
+
 ## Beyond bit-identical (post-1.25)
 
 ztok matches tiktoken / HF / SentencePiece bit-for-bit (13/13 pairs at
@@ -199,8 +206,24 @@ pub fn main() !void {
     var results: [3][]ztok.TokenId = undefined;
     try pipe.encodeBatch(a, &pool, &inputs, &results);
     defer for (results) |r| a.free(r);
+
+    // Dataset-scale consumers can skip the final contiguous gather. Chunks
+    // remain in source-byte order and can feed n-gram/engram histograms or
+    // other dataset-derived training-signal builders directly.
+    var ragged = try pipe.encodeChunkedRagged(a, &pool, large_corpus, 1024);
+    defer ragged.deinit();
+    for (ragged.chunks) |chunk| {
+        consumeTokenChunk(chunk.byte_start, chunk.byte_end, chunk.ids);
+    }
 }
 ```
+
+`encodeChunkedRaggedCached` combines the same ordered, non-gathered result
+with a persistent caller-owned `ChunkedEncodeCache` for repeated corpus
+passes. These APIs emit ordinary tokenizer IDs only. The inspectable
+`merge_graph.Graph.relations()` view is kept separate from its immutable
+lookup accelerator so future corpus mapping and engram tooling can use the
+ordered source relations without depending on the current hot-path layout.
 
 ## Python
 
@@ -712,6 +735,28 @@ include/
 refs/               — vendored read-only clones of the reference libs
 COMPARISON.md       — feature matrix vs reference libs
 ```
+
+## Experimental superposition overlays
+
+Superposition is opt-in metadata over ordinary IDs and contextual spans;
+`Pipeline.encode`, batch/streaming APIs, tokenizer files, and vocabulary IDs
+are unchanged.
+
+```bash
+ztok superpose fixed --model tokenizer.json --group-size 4 \
+  --fusion norm-preserving-mean --text "A bright white light." --json
+
+ztok superpose semantic --input semantic_spans.json \
+  --config ccss_config.json --output ccss_plan.json
+ztok superpose inspect --plan ccss_plan.json
+```
+
+Fixed plans use the versioned `ztok.superposition.v1` schema. Cross-caption
+semantic plans use `ztok.semantic_spans.v1` input and `ztok.ccss.v1` output,
+with cross-caption, role/entity, contradiction, and complete-link safety
+constraints. Model embeddings and fusion execution remain outside tokenizer
+core. See [`experiments/superposition/README.md`](experiments/superposition/README.md)
+for the PyTorch adapter and falsification-oriented benchmarks.
 
 ## Roadmap
 
